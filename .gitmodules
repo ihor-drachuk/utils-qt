@@ -1,0 +1,3 @@
+[submodule "3rd-party/utils-cpp"]
+	path = 3rd-party/utils-cpp
+	url = https://github.com/ihor-drachuk/utils-cpp.git
