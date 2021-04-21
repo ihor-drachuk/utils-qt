@@ -1,4 +1,4 @@
-#include "qmlutils.h"
+#include "utils-qt/qmlutils.h"
 
 #include <QQmlEngine>
 #include <QImageReader>

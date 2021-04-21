@@ -1,7 +1,6 @@
 #pragma once
 #include <QObject>
-#include "pimpl.h"
-
+#include <utils-cpp/pimpl.h>
 
 class QmlUtils : public QObject
 {

@@ -1,4 +1,4 @@
-#include "multibinding_item.h"
+#include "utils-qt/multibinding_item.h"
 
 #include <QQmlProperty>
 
