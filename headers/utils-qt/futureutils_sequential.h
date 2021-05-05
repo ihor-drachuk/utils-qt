@@ -1,5 +1,5 @@
 #pragma once
-#include "futureutils.h"
+#include <utils-qt/futureutils.h>
 
 // Reminder.
 // connectFutureSeq(QFuture<T>)
