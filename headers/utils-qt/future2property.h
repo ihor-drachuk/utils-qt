@@ -88,8 +88,9 @@ struct Future2propertyCtx
             timeoutTimer->start();
 
         watcher.reset(new QFutureWatcher<Type>);
-        QObject::connect(watcher.get(), &QFutureWatcherBase::finished, [this](){ onFinished(); });
+        if (!future.isFinished()) QObject::connect(watcher.get(), &QFutureWatcherBase::finished, [this](){ onFinished(); });
         watcher->setFuture(future);
+        if (future.isFinished())  onFinished();
     }
 };
 
