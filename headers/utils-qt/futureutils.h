@@ -1,6 +1,7 @@
 #pragma once
 #include <type_traits>
 #include <optional>
+#include <memory>
 #include <QObject>
 #include <QFuture>
 #include <QFutureWatcher>
@@ -15,13 +16,60 @@
 
 namespace FutureUtilsInternals {
 
+template<typename T>
+class QFutureInterfaceWrapper
+{
+public:
+    QFutureInterfaceWrapper(QFutureInterface<T> interface)
+        : m_interface(interface)
+    {
+        if (!m_interface.isStarted() && !m_interface.isFinished()) m_interface.reportStarted();
+    }
+
+    QFutureInterfaceWrapper(const QFutureInterfaceWrapper<T>&) = delete;
+    QFutureInterfaceWrapper(QFutureInterfaceWrapper<T>&&) = delete;
+
+    ~QFutureInterfaceWrapper()
+    {
+        if (!m_interface.isFinished())
+            cancel();
+    }
+
+    QFutureInterfaceWrapper<T>& operator= (const QFutureInterfaceWrapper<T>&) = delete;
+    QFutureInterfaceWrapper<T>& operator= (QFutureInterfaceWrapper<T>&&) = delete;
+
+    void reportResult(const T& result)
+    {
+        assert(!m_interface.isFinished());
+        m_interface.reportResult(result);
+        m_interface.reportFinished();
+    }
+
+    void cancel()
+    {
+        assert(!m_interface.isFinished());
+        m_interface.reportCanceled();
+        m_interface.reportFinished();
+    }
+
+    QFuture<T> future() { return m_interface.future(); }
+
+private:
+    QFutureInterface<T> m_interface;
+};
+
+template<typename T>
+using QFutureInterfaceWrapperPtr = std::shared_ptr<QFutureInterfaceWrapper<T>>;
+
 template <typename C, typename T>
-void call(const C& c, const QFuture<T>& future) {
+void call(const C& c, const QFuture<T>& future)
+{
     c(future.result());
 }
 
 template <typename C>
-void call(const C& c, const QFuture<void>&) {
+void call(const C& c, const QFuture<void>&)
+{
     c();
 }
 
@@ -220,4 +268,11 @@ QFuture<T> createTimedCanceledFuture(int time)
     timer->start(time);
 
     return interface.future();
+}
+
+template<typename T>
+FutureUtilsInternals::QFutureInterfaceWrapperPtr<T> createFuture()
+{
+    QFutureInterface<T> interface;
+    return std::make_shared<FutureUtilsInternals::QFutureInterfaceWrapper<T>>(interface);
 }
