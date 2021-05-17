@@ -13,16 +13,9 @@ void Multibinding::setValue(const QVariant& value)
     if (m_value == value)
         return;
 
-    m_recursionBlocking = true;
-
-    for (auto item: childItems()) {
-        if (auto destProp = qobject_cast<MultibindingItem*>(item))
-            destProp->write(value);
-    }
-
-    m_recursionBlocking = false;
-
     m_value = value;
+    sync();
+
     emit valueChanged(m_value);
 }
 
@@ -42,6 +35,18 @@ void Multibinding::connectChildren()
     if (auto first = qobject_cast<MultibindingItem*>(childItems().first())) {
         onChanged(first);
     }
+}
+
+void Multibinding::sync()
+{
+    m_recursionBlocking = true;
+
+    for (auto item: childItems()) {
+        if (auto destProp = qobject_cast<MultibindingItem*>(item))
+            destProp->write(m_value);
+    }
+
+    m_recursionBlocking = false;
 }
 
 void Multibinding::componentComplete()

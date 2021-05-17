@@ -13,6 +13,8 @@ public:
     Multibinding(QQuickItem* parent = nullptr): QQuickItem(parent) { }
     void connectChildren();
 
+    Q_INVOKABLE void sync();
+
 // Properties support
 public:
     QVariant value() const { return m_value; }

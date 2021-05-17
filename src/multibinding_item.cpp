@@ -25,11 +25,14 @@ QVariant MultibindingItem::read() const
 
 void MultibindingItem::write(const QVariant& value)
 {
+    if (!m_enableW)
+        return;
+
     assert(object());
     assert(!propertyName().isEmpty());
     assert(QQmlProperty(object(), propertyName()).isValid());
 
-    if (read() == value)
+    if (m_enableR && read() == value)
         return;
 
     QQmlProperty::write(object(), propertyName(), value);
@@ -61,6 +64,72 @@ void MultibindingItem::setPropertyName(const QString& value)
     emit propertyNameChanged(m_propertyName);
 }
 
+void MultibindingItem::setEnableR(bool value)
+{
+    if (m_enableR == value)
+        return;
+
+    m_enableR = value;
+    emit enableRChanged(m_enableR);
+
+    updateRW();
+
+    if (value && m_resyncR)
+        emit changed();
+}
+
+void MultibindingItem::setEnableW(bool value)
+{
+    if (m_enableW == value)
+        return;
+
+    m_enableW = value;
+    emit enableWChanged(m_enableW);
+
+    updateRW();
+
+    if (value && m_resyncW)
+        emit needSync();
+}
+
+void MultibindingItem::setEnableRW(bool value)
+{
+    m_enableRW = value;
+    setEnableR(value);
+    setEnableW(value);
+    emit enableRWChanged(m_enableRW);
+}
+
+void MultibindingItem::updateRW()
+{
+    auto newValue = m_enableR  &&  m_enableW ? true  :
+                    !m_enableR && !m_enableW ? false :
+                                               m_enableRW;
+
+    if (m_enableRW != newValue) {
+        m_enableRW = newValue;
+        emit enableRWChanged(newValue);
+    }
+}
+
+void MultibindingItem::setResyncR(bool value)
+{
+    if (m_resyncR == value)
+        return;
+
+    m_resyncR = value;
+    emit resyncRChanged(m_resyncR);
+}
+
+void MultibindingItem::setResyncW(bool value)
+{
+    if (m_resyncW == value)
+        return;
+
+    m_resyncW = value;
+    emit resyncWChanged(m_resyncW);
+}
+
 void MultibindingItem::detachProperty()
 {
     if (m_object)
@@ -84,9 +153,15 @@ void MultibindingItem::attachProperty()
     });
 
     auto qmpProp = QQmlProperty(object(), propertyName());
-    qmpProp.connectNotifySignal(this, SIGNAL(changed()));
+    qmpProp.connectNotifySignal(this, SLOT(changedHandler()));
 
     emit needSync();
 
     m_connected = true;
+}
+
+void MultibindingItem::changedHandler()
+{
+    if (m_enableR)
+        emit changed();
 }
