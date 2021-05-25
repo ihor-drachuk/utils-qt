@@ -1,5 +1,6 @@
 #include "utils-qt/multibinding.h"
 
+#include <QQmlEngine>
 #include "utils-qt/multibinding_item.h"
 
 
@@ -7,6 +8,7 @@ void Multibinding::registerTypes(const char* url)
 {
     qmlRegisterType<Multibinding>(url, 1, 0, "Multibinding");
 }
+
 
 void Multibinding::setValue(const QVariant& value)
 {

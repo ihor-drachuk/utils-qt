@@ -1,5 +1,6 @@
 #include "utils-qt/multibinding_item.h"
 
+#include <QQmlEngine>
 #include <QQmlProperty>
 
 
