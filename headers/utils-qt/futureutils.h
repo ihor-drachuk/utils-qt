@@ -16,8 +16,13 @@
 
 namespace FutureUtilsInternals {
 
+class QFutureInterfaceWrapperBase : public QObject
+{
+    Q_OBJECT
+};
+
 template<typename T>
-class QFutureInterfaceWrapper
+class QFutureInterfaceWrapper : public QFutureInterfaceWrapperBase
 {
 public:
     QFutureInterfaceWrapper(QFutureInterface<T> interface)
@@ -31,7 +36,7 @@ public:
 
     ~QFutureInterfaceWrapper()
     {
-        if (!m_interface.isFinished())
+        if (!isFinished())
             cancel();
     }
 
@@ -40,17 +45,21 @@ public:
 
     void reportResult(const T& result)
     {
-        assert(!m_interface.isFinished());
+        assert(!isFinished());
+
         m_interface.reportResult(result);
         m_interface.reportFinished();
     }
 
     void cancel()
     {
-        assert(!m_interface.isFinished());
+        assert(!isFinished());
+
         m_interface.reportCanceled();
         m_interface.reportFinished();
     }
+
+    bool isFinished() const { return m_interface.isFinished(); }
 
     QFuture<T> future() { return m_interface.future(); }
 
