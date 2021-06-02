@@ -137,7 +137,7 @@ void connectFuture(const QFuture<Type>& future,
 
 template<typename Type, typename Obj, typename Callable,
          typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
-void connectFuture2(const QFuture<Type>& future,
+void connectFutureOnResult(const QFuture<Type>& future,
                     Obj* context,
                     const Callable& callable,
                     Qt::ConnectionType connectionType = Qt::AutoConnection)
@@ -157,7 +157,7 @@ void connectFuture2(const QFuture<Type>& future,
 
 template<typename Type, typename Obj,
          typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
-void connectFuture2(const QFuture<Type>& future,
+void connectFutureOnResult(const QFuture<Type>& future,
                     Obj* object,
                     void (Obj::* member)(const Type&),
                     Qt::ConnectionType connectionType = Qt::AutoConnection)
@@ -167,7 +167,37 @@ void connectFuture2(const QFuture<Type>& future,
 
     auto callable = [object, member](const Type& param){ (object->*member)(param); };
 
-    connectFuture2(future, object, callable, connectionType);
+    connectFutureOnResult(future, object, callable, connectionType);
+}
+
+
+template<typename Type, typename Obj, typename Callable,
+         typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
+void connectFutureOnCanceled(const QFuture<Type>& future,
+                   Obj* context,
+                   const Callable& callable,
+                   Qt::ConnectionType connectionType = Qt::AutoConnection)
+{
+    connectFuture(future, context, [callable](const std::optional<Type>& value) {
+        if (!value)
+            callable();
+    }, connectionType);
+}
+
+
+template<typename Type, typename Obj,
+         typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
+void connectFutureOnCanceled(const QFuture<Type>& future,
+                   Obj* object,
+                   void (Obj::* member)(const std::optional<Type>&),
+                   Qt::ConnectionType connectionType = Qt::AutoConnection)
+{
+    Q_ASSERT(object);
+    Q_ASSERT(member);
+
+    auto callable = [object, member](const std::optional<Type>& param){ (object->*member)(param); };
+
+    connectFutureOnCanceled(future, object, callable, connectionType);
 }
 
 
