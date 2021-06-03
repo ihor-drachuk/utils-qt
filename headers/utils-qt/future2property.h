@@ -9,24 +9,26 @@
 
 namespace Internal {
 
-template<typename Getter, typename Setter, typename ErrorHandler>
+template<typename Getter, typename Setter, typename TimeoutHandler, typename ErrorHandler>
 struct Future2propertyCtx
 {
     using Type1 = typename std::result_of_t<Getter()>;
     using Type = decltype(Type1().result());
 
-    Future2propertyCtx(const Getter& dataGetter, const Setter& propSetter, const ErrorHandler& errorHandler):
+    Future2propertyCtx(const Getter& dataGetter, const Setter& propSetter, const TimeoutHandler& timeoutHandler, const ErrorHandler& errorHandler):
         dataGetter(dataGetter),
         propSetter(propSetter),
+        timeoutHandler(timeoutHandler),
         errorHandler(errorHandler)
     { }
 
     ~Future2propertyCtx() {
     }
 
-    Getter dataGetter;         // QFuture<T> func();
-    Setter propSetter;         // void func(const T& value);
-    ErrorHandler errorHandler; // void func();
+    Getter dataGetter;             // QFuture<T> func();
+    Setter propSetter;             // void func(const T& value);
+    TimeoutHandler timeoutHandler; // void func();
+    ErrorHandler errorHandler;     // void func();
 
     QObject tracker;
     std::unique_ptr<QTimer> timeoutTimer;
@@ -37,6 +39,7 @@ struct Future2propertyCtx
 
     void onTimeout() {
         watcher.reset();
+        timeoutHandler();
         onRetryReq();
     }
 
@@ -97,17 +100,18 @@ struct Future2propertyCtx
 } // namespace Internal
 
 
-template<typename Getter, typename Setter, typename ErrorHandler>
+template<typename Getter, typename Setter, typename TimeoutHandler, typename ErrorHandler>
 void future2property(const QObject* context,
-                     const Getter& dataGetter,         // QFuture<T> func();
-                     const Setter& propSetter,         // void func(const T& value);
-                     const ErrorHandler& errorHandler, // void func();
+                     const Getter& dataGetter,             // QFuture<T> func();
+                     const Setter& propSetter,             // void func(const T& value);
+                     const TimeoutHandler& timeoutHandler, // void func();
+                     const ErrorHandler& errorHandler,     // void func();
                      unsigned int retryCount = 3,
                      unsigned int timeout = 2000,
                      unsigned int retryInterval = 100
                      )
 {
-    auto ctx = new Internal::Future2propertyCtx<Getter, Setter, ErrorHandler>(dataGetter, propSetter, errorHandler);
+    auto ctx = new Internal::Future2propertyCtx<Getter, Setter, TimeoutHandler, ErrorHandler>(dataGetter, propSetter, timeoutHandler, errorHandler);
     QObject::connect(context, &QObject::destroyed, &ctx->tracker, [ctx](){ delete ctx; });
 
     ctx->retryCnt = retryCount;
@@ -127,4 +131,18 @@ void future2property(const QObject* context,
     }
 
     ctx->request();
+}
+
+
+template<typename Getter, typename Setter, typename ErrorHandler>
+void future2property(const QObject* context,
+                     const Getter& dataGetter,         // QFuture<T> func();
+                     const Setter& propSetter,         // void func(const T& value);
+                     const ErrorHandler& errorHandler, // void func();
+                     unsigned int retryCount = 3,
+                     unsigned int timeout = 2000,
+                     unsigned int retryInterval = 100
+                     )
+{
+    future2property(context, dataGetter, propSetter, [](){}, errorHandler, retryCount, timeout, retryInterval);
 }
