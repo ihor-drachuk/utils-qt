@@ -161,3 +161,41 @@ TEST(UtilsQt, FutureBridgeTest_Timed)
         ASSERT_FALSE(ok);
     }
 }
+
+TEST(UtilsQt, FutureBridgeTest_Destruction)
+{
+    {
+        bool ok = false;
+        QFuture<int> resultFuture;
+
+        {
+            auto f = createTimedFuture(20, 100);
+
+            auto conv = convertFuture<int, int>(f, [&](int value) -> std::optional<int> { ok = true; return value + 1; });
+            ASSERT_FALSE(conv.future.isFinished());
+            resultFuture = conv.future;
+        }
+
+        ASSERT_TRUE(resultFuture.isFinished());
+        ASSERT_TRUE(resultFuture.isCanceled());
+        ASSERT_FALSE(ok);
+    }
+
+    {
+        bool ok = false;
+        QFuture<int> resultFuture;
+
+        {
+            auto f = createFuture<int>();
+
+            auto conv = convertFuture<int, int>(f->future(), [&](int value) -> std::optional<int> { ok = true; return value + 1; });
+            f->reportResult(170); // Will not handle in time
+            ASSERT_FALSE(conv.future.isFinished());
+            resultFuture = conv.future;
+        }
+
+        ASSERT_TRUE(resultFuture.isFinished());
+        ASSERT_TRUE(resultFuture.isCanceled());
+        ASSERT_FALSE(ok);
+    }
+}
