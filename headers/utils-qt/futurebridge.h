@@ -9,12 +9,44 @@
 #include <QPair>
 #include <utils-cpp/pimpl.h>
 
-// Reminder.
-//
-// convertFuture
-//    QFuture<Src>                      --->   Bundle
-//    Conv. func: optional<Dest>(Src)             Anon. bridge (to save)
-//                                                QFuture<Dest>
+/*            Reminder
+  -------------------------------
+
+  convertFuture
+     QFuture<Src>                      --->   Bundle
+     Conv. func: optional<Dest>(Src)             Anon. bridge (to save)
+                                                 QFuture<Dest>
+
+  -------------------------------
+
+  FutureBridgesList futuresList;
+  ---
+
+  auto f = createFuture<int>();    // QFuture<int>
+
+  auto bundle = convertFuture<int, std::string>(f, [](int value) -> std::optional<std::string>
+  {
+      return std::to_string(value);
+  }
+
+  futuresList.append(bundle.bridge);
+
+  auto newFuture = bundle.future;  // QFuture<std::string>
+
+  -------------------------------
+
+  Converted future will be canceled if/when:
+   - Source future canceled
+   - Converter returned nothing / nullopt
+   - Bridge destroyed (it controls converter lifetime)
+
+  Converted future will return result:
+   - IF/WHEN  Source future has result
+   - THEN     Converter returned new result
+   - WHILE    Bridge still alive
+
+  To store bridges use FutureBridgesList.
+*/
 
 
 class AnonymousFutureBridge : public QObject
