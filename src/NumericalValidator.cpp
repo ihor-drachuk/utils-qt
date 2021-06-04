@@ -194,7 +194,7 @@ bool NumericalValidator::validateFixup(QString& input) const
 {
     bool result = false;
 
-    if (input.back() != '.') {
+    if (*input.rbegin() != '.') {
         if (input.toDouble() < impl().rangeBottom.toDouble())
             input = QString::number(impl().rangeBottom.toDouble());
 

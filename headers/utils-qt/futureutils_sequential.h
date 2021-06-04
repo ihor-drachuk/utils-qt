@@ -1,5 +1,6 @@
 #pragma once
 #include <utils-qt/futureutils.h>
+#include <utils-qt/invokeMethod.h>
 
 // Reminder.
 // connectFutureSeq(QFuture<T>)
@@ -44,7 +45,7 @@ struct Context {
 
     void errorOccured() {
         if (errorHandler) {
-            QMetaObject::invokeMethod(
+            UtilsQt::invokeMethod(
                         context,
                         [handler = errorHandler, ex = ex](){ handler(ex); },
                         connectionType);

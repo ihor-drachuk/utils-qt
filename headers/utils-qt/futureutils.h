@@ -6,6 +6,7 @@
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QTimer>
+#include <utils-qt/invokeMethod.h>
 
 // Reminder.
 // 1) QFuture<Type>  -->  std::optional<Type>   (is called both if fired and if cancelled)
@@ -104,7 +105,7 @@ void connectFuture(const QFuture<Type>& future,
 
     if (future.isFinished()) {
         // If already done
-        QMetaObject::invokeMethod(context, resultHandler, connectionType);
+        UtilsQt::invokeMethod(context, resultHandler, connectionType);
     } else {
         // If not finished yet...
         auto watcherPtr = new QFutureWatcher<Type>();
