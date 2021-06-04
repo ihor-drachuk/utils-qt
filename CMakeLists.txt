@@ -18,8 +18,10 @@ set_property(TARGET utils-qt PROPERTY AUTOMOC ON)
 
 target_compile_definitions(utils-qt PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 target_link_libraries(utils-qt PUBLIC Qt5::Core Qt5::Quick utils-cpp)
-
 target_include_directories(utils-qt PUBLIC headers)
 
-add_subdirectory(tests)
+if (UTILS_QT_CI_RUN)
+    target_compile_definitions(utils-qt PUBLIC UTILS_QT_CI_RUN)
+endif()
 
+add_subdirectory(tests)

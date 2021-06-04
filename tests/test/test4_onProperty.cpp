@@ -5,6 +5,11 @@
 #include <QElapsedTimer>
 #include <QEventLoop>
 
+#ifdef UTILS_QT_CI_RUN
+constexpr float timeFactor = 2;
+#else
+constexpr float timeFactor = 1;
+#endif
 
 class TestObject : public QObject
 {
@@ -63,8 +68,8 @@ TEST(UtilsQt, onProperty_once)
 
     ASSERT_EQ(triggeredCount, 1);
     ASSERT_EQ(testObject.counter(), 4);
-    ASSERT_LE(elapsedTimer.elapsed(), 450);
-    ASSERT_GE(elapsedTimer.elapsed(), 350);
+    ASSERT_GE(elapsedTimer.elapsed(), 350 / timeFactor);
+    ASSERT_LE(elapsedTimer.elapsed(), 450 * timeFactor);
 
     waitForFuture<QEventLoop>(createTimedFuture(400));
     ASSERT_EQ(triggeredCount, 1);
@@ -82,8 +87,8 @@ TEST(UtilsQt, onProperty_multiple)
     });
 
     waitForFuture<QEventLoop>(createTimedFuture(800));
-    ASSERT_GE(triggeredCount, 3);
-    ASSERT_LE(triggeredCount, 5);
+    ASSERT_GE(triggeredCount, 3 / timeFactor);
+    ASSERT_LE(triggeredCount, 5 * timeFactor);
 
     auto savedCount = triggeredCount;
     delete context; context = nullptr;
