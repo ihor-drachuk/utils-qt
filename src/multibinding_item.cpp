@@ -2,6 +2,7 @@
 
 #include <QQmlEngine>
 #include <QQmlProperty>
+#include <cassert>
 
 
 void MultibindingItem::registerTypes(const char* url)

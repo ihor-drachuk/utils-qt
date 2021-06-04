@@ -4,6 +4,7 @@
 #include <QChar>
 #include <string>
 #include <optional>
+#include <cassert>
 
 
 namespace {
@@ -69,14 +70,14 @@ QString dataToString(const void* data, size_t sz)
 
     for (auto it = str.cbegin(), itEnd = str.cend() + 1; it != itEnd; it++, i++) {
         if (isPrintablePart) {
-            if (it->isPrint() && it != QChar('\xFF')) {
+            if (it->isPrint() && *it != QChar('\xFF')) {
                 len++;
             } else {
                 isPrintablePart = false;
                 ranges.append(QPair<int, int>(start, len));
             }
         } else {
-            if (it->isPrint() && it != QChar('\xFF')) {
+            if (it->isPrint() && *it != QChar('\xFF')) {
                 start = i;
                 len = 1;
                 isPrintablePart = true;

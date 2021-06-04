@@ -1,6 +1,7 @@
 #include "utils-qt/multibinding.h"
 
 #include <QQmlEngine>
+#include <cassert>
 #include "utils-qt/multibinding_item.h"
 
 
