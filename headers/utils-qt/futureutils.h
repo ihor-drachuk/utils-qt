@@ -6,7 +6,7 @@
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QTimer>
-#include <utils-qt/invokeMethod.h>
+#include <utils-qt/invoke_method.h>
 
 /*
           Content

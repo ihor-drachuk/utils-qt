@@ -1,6 +1,6 @@
 #pragma once
 #include <utils-qt/futureutils.h>
-#include <utils-qt/invokeMethod.h>
+#include <utils-qt/invoke_method.h>
 
 // Reminder.
 // connectFutureSeq(QFuture<T>)
