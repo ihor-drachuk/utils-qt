@@ -33,13 +33,56 @@ protected:
 using AnonymousFutureBridgePtr = QSharedPointer<AnonymousFutureBridge>;
 
 
+namespace FutureBridgeInternals {
+
+template<typename Source, typename Target>
+struct FutureBridgeConverterType
+{
+    using Converter = std::function<std::optional<Target>(const Source&)>;
+};
+
+template<typename Target>
+struct FutureBridgeConverterType<void, Target>
+{
+    using Converter = std::function<std::optional<Target>()>;
+};
+
+template <typename SrcFutureType, typename Converter, typename DstFutureType>
+bool finished(const QFuture<SrcFutureType>& srcFuture, const Converter& converter, QFutureInterface<DstFutureType>& interface)
+{
+    const auto result = converter(srcFuture.result());
+
+    if (result) {
+        interface.reportResult(*result);
+        interface.reportFinished();
+    }
+
+    return result.has_value();
+}
+
+template <typename Converter, typename DstFutureType>
+bool finished(const QFuture<void>& /*srcFuture*/, const Converter& converter, QFutureInterface<DstFutureType>& interface)
+{
+    const auto result = converter();
+
+    if (result) {
+        interface.reportResult(*result);
+        interface.reportFinished();
+    }
+
+    return result.has_value();
+}
+
+} // namespace FutureBridgeInternals
+
+
 template<typename Source, typename Target>
 class FutureBridge : public AnonymousFutureBridge
 {
 public:
     using SourceFuture = QFuture<Source>;
     using SourceWatcher = QFutureWatcher<Source>;
-    using Converter = std::function<std::optional<Target>(const Source&)>;
+    using Converter = typename FutureBridgeInternals::FutureBridgeConverterType<Source, Target>::Converter;
 
     FutureBridge(const SourceFuture& future, const Converter& converter)
         : m_converter(converter)
@@ -73,13 +116,10 @@ private:
         if (future.isCanceled()) {
             doCancel();
         } else {
-            const auto result = m_converter(future.result());
-            if (result) {
-                m_targetFutureInterface.reportResult(*result);
-                m_targetFutureInterface.reportFinished();
-            } else {
+            auto convertResult = FutureBridgeInternals::finished(future, m_converter, m_targetFutureInterface);
+
+            if (!convertResult)
                 doCancel();
-            }
         }
 
         emitFinished();
