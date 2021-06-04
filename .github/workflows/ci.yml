@@ -54,6 +54,7 @@ jobs:
        echo "CORES=$NUMBER_OF_PROCESSORS" >> $GITHUB_ENV
        echo "QT_HOST=windows" >> $GITHUB_ENV
        echo "QT_ARCH=win32_msvc2019" >> $GITHUB_ENV
+       echo "MSVC_ARCH=-A Win32" >> $GITHUB_ENV
 
     - name: Cache Qt
       id: cache-qt
@@ -97,6 +98,6 @@ jobs:
       working-directory: ${{github.workspace}}/src
       shell: bash
       run: |
-       cmake -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "${{env.GENERATOR}}" -S "${{github.workspace}}/src" -B "${{github.workspace}}/build"
+       cmake -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" ${{env.MSVC_ARCH}} -G "${{env.GENERATOR}}" -S "${{github.workspace}}/src" -B "${{github.workspace}}/build"
        cmake --build "${{github.workspace}}/build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
        ctest --rerun-failed --output-on-failure --timeout 20 -C "${{matrix.build_type}}" --test-dir "${{github.workspace}}/build/tests"
