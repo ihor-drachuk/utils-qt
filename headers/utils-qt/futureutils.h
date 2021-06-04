@@ -8,11 +8,44 @@
 #include <QTimer>
 #include <utils-qt/invokeMethod.h>
 
-// Reminder.
-// 1) QFuture<Type>  -->  std::optional<Type>   (is called both if fired and if cancelled)
-// 2) QFuture<Type>  -->  Type                  (is called only if fired)
+/*
+          Content
+--------------------------
 
-// If 'Type' is 'void', then #1 behaves as #2.
+ * QFuture<Type>  -->  std::optional<Type>
+
+   onFinished(QFuture<T>, context, handler);
+      - if [Type == void] then behaves as `onResult` by default.
+
+
+ * QFuture<Type>  -->  Type  (only on success)
+
+   onResult(QFuture<T>, context, handler);
+
+
+ * QFuture<Type>  -->  void  (only on cancel)
+
+   onCanceled(QFuture<T>, context, handler);
+
+
+ * waitForFuture<QEventLoop>(future);
+
+
+ * QFuture<T> createReadyFuture<T = void>();
+ * QFuture<T> createReadyFuture<T>(T value);
+ * QFuture<T> createCanceledFuture<T>();
+
+ * QFuture<T> createTimedFuture<T>(int time, T value);
+ * QFuture<T> createTimedFuture<void>(int time);
+ * QFuture<T> createTimedCanceledFuture<T>();
+
+ * QFutureWrapper<T> createFuture<T>();
+     -> finish(T);
+     -> cancel();
+     -> isFinished();
+     -> future();
+*/
+
 
 
 namespace FutureUtilsInternals {
@@ -44,7 +77,7 @@ public:
     QFutureInterfaceWrapper<T>& operator= (const QFutureInterfaceWrapper<T>&) = delete;
     QFutureInterfaceWrapper<T>& operator= (QFutureInterfaceWrapper<T>&&) = delete;
 
-    void reportResult(const T& result)
+    void finish(const T& result)
     {
         assert(!isFinished());
 
@@ -101,11 +134,11 @@ void callCanceled(const Callable& callable, const QFuture<void>&, bool callOnVoi
 
 template<typename Type, typename Obj, typename Callable,
          typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
-void connectFuture(const QFuture<Type>& future,
-                   Obj* context,
-                   const Callable& callable,
-                   bool callOnVoidCancel = false,
-                   Qt::ConnectionType connectionType = Qt::AutoConnection)
+void onFinished(const QFuture<Type>& future,
+                Obj* context,
+                const Callable& callable,
+                bool callOnVoidCancel = false,
+                Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
     auto resultHandler = [future, callOnVoidCancel, callable] () {
         if (future.isCanceled()) {
@@ -134,34 +167,34 @@ void connectFuture(const QFuture<Type>& future,
 
 template<typename Type, typename Obj,
          typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
-void connectFuture(const QFuture<Type>& future,
-                   Obj* object,
-                   void (Obj::* member)(const std::optional<Type>&),
-                   bool callOnVoidCancel = false,
-                   Qt::ConnectionType connectionType = Qt::AutoConnection)
+void onFinished(const QFuture<Type>& future,
+                Obj* object,
+                void (Obj::* member)(const std::optional<Type>&),
+                bool callOnVoidCancel = false,
+                Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
     Q_ASSERT(object);
     Q_ASSERT(member);
 
     auto callable = [object, member](const std::optional<Type>& param){ (object->*member)(param); };
 
-    connectFuture(future, object, callable, callOnVoidCancel, connectionType);
+    onFinished(future, object, callable, callOnVoidCancel, connectionType);
 }
 
 
 template<typename Type, typename Obj, typename Callable,
          typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
-void connectFutureOnResult(const QFuture<Type>& future,
-                    Obj* context,
-                    const Callable& callable,
-                    Qt::ConnectionType connectionType = Qt::AutoConnection)
+void onResult(const QFuture<Type>& future,
+              Obj* context,
+              const Callable& callable,
+              Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
     if constexpr (std::is_same<Type,void>::value) {
-        connectFuture(future, context, [callable]() {
+        onFinished(future, context, [callable]() {
             callable();
         }, false, connectionType);
     } else {
-        connectFuture(future, context, [callable](const std::optional<Type>& value) {
+        onFinished(future, context, [callable](const std::optional<Type>& value) {
             if (value)
                 callable(*value);
         }, false, connectionType);
@@ -171,34 +204,34 @@ void connectFutureOnResult(const QFuture<Type>& future,
 
 template<typename Type, typename Obj,
          typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
-void connectFutureOnResult(const QFuture<Type>& future,
-                    Obj* object,
-                    void (Obj::* member)(const Type&),
-                    Qt::ConnectionType connectionType = Qt::AutoConnection)
+void onResult(const QFuture<Type>& future,
+              Obj* object,
+              void (Obj::* member)(const Type&),
+              Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
     Q_ASSERT(object);
     Q_ASSERT(member);
 
     auto callable = [object, member](const Type& param){ (object->*member)(param); };
 
-    connectFutureOnResult(future, object, callable, connectionType);
+    onResult(future, object, callable, connectionType);
 }
 
 
 template<typename Type, typename Obj, typename Callable,
          typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
-void connectFutureOnCanceled(const QFuture<Type>& future,
-                   Obj* context,
-                   const Callable& callable,
-                   Qt::ConnectionType connectionType = Qt::AutoConnection)
+void onCanceled(const QFuture<Type>& future,
+                Obj* context,
+                const Callable& callable,
+                Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
     if constexpr (std::is_same<Type, void>::value) {
-        connectFuture(future, context, [callable, future]() {
+        onFinished(future, context, [callable, future]() {
             if (future.isCanceled())
                 callable();
         }, true, connectionType);
     } else {
-        connectFuture(future, context, [callable](const std::optional<Type>& value) {
+        onFinished(future, context, [callable](const std::optional<Type>& value) {
             if (!value)
                 callable();
         }, false, connectionType);
@@ -208,17 +241,17 @@ void connectFutureOnCanceled(const QFuture<Type>& future,
 
 template<typename Type, typename Obj,
          typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
-void connectFutureOnCanceled(const QFuture<Type>& future,
-                   Obj* object,
-                   void (Obj::* member)(const std::optional<Type>&),
-                   Qt::ConnectionType connectionType = Qt::AutoConnection)
+void onCanceled(const QFuture<Type>& future,
+                Obj* object,
+                void (Obj::* member)(const std::optional<Type>&),
+                Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
     Q_ASSERT(object);
     Q_ASSERT(member);
 
     auto callable = [object, member](const std::optional<Type>& param){ (object->*member)(param); };
 
-    connectFutureOnCanceled(future, object, callable, connectionType);
+    onCanceled(future, object, callable, connectionType);
 }
 
 
@@ -269,7 +302,7 @@ QFuture<T> createCanceledFuture()
 
 
 template<typename T>
-QFuture<T> createTimedFuture(const T& value, int time)
+QFuture<T> createTimedFuture2(int time, const T& value)
 {
     if (!time)
         return createReadyFuture(value);
