@@ -22,3 +22,4 @@ target_link_libraries(utils-qt PUBLIC Qt5::Core Qt5::Quick utils-cpp)
 target_include_directories(utils-qt PUBLIC headers)
 
 add_subdirectory(tests)
+

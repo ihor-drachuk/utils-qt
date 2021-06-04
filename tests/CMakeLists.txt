@@ -98,6 +98,7 @@ enable_testing()
 
 if (UTILS_QT_ENABLE_TESTS)
     add_subdirectory(test)
+    add_subdirectory(test2)
 endif()
 
 if (UTILS_QT_ENABLE_BENCHMARK)

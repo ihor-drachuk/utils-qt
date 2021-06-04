@@ -4,6 +4,7 @@ set(PROJECT_TEST_NAME test-${PROJECT_NAME})
 
 add_executable(${PROJECT_TEST_NAME} ${SOURCES})
 set_property(TARGET ${PROJECT_TEST_NAME} PROPERTY CXX_STANDARD 17)
+set_property(TARGET ${PROJECT_TEST_NAME} PROPERTY AUTOMOC ON)
 
 target_link_libraries(${PROJECT_TEST_NAME} gtest gmock_main ${PROJECT_NAME})
 
