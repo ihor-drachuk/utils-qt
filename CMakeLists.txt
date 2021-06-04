@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 PROJECT(utils-qt)
 
+option(UTILS_QT_ENABLE_TESTS     "utils-qt: Enable tests" OFF)
+option(UTILS_QT_ENABLE_BENCHMARK "utils-qt: Enable benchmark" OFF)
+
 if (NOT TARGET utils-cpp)
     add_subdirectory(3rd-party/utils-cpp)
 endif()
@@ -17,3 +20,5 @@ target_compile_definitions(utils-qt PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelW
 target_link_libraries(utils-qt PUBLIC Qt5::Core Qt5::Quick utils-cpp)
 
 target_include_directories(utils-qt PUBLIC headers)
+
+add_subdirectory(tests)
