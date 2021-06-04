@@ -83,6 +83,19 @@ void call(const C& c, const QFuture<void>&)
     c();
 }
 
+template <typename Callable, typename T>
+void callCanceled(const Callable& callable, const QFuture<T>&, bool)
+{
+    callable({});
+}
+
+template <typename Callable>
+void callCanceled(const Callable& callable, const QFuture<void>&, bool callOnVoidCancel)
+{
+    if (callOnVoidCancel)
+        callable();
+}
+
 } // namespace FutureUtilsInternals
 
 
@@ -96,13 +109,7 @@ void connectFuture(const QFuture<Type>& future,
 {
     auto resultHandler = [future, callOnVoidCancel, callable] () {
         if (future.isCanceled()) {
-            if constexpr (!std::is_same<Type,void>::value) {
-                callable({});
-            } else {
-                // Don't call <void> handler if cancelled. Behave as option #2.  (by default)
-                if (callOnVoidCancel)
-                    callable();
-            }
+            FutureUtilsInternals::callCanceled(callable, future, callOnVoidCancel);
         } else {
             FutureUtilsInternals::call(callable, future);
         }
