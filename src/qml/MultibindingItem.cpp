@@ -1,4 +1,4 @@
-#include "utils-qt/multibinding_item.h"
+#include "utils-qt/qml/MultibindingItem.h"
 
 #include <QQmlEngine>
 #include <QQmlProperty>
