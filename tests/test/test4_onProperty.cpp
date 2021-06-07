@@ -50,29 +50,57 @@ private:
 
 TEST(UtilsQt, onProperty_once)
 {
-    int triggeredCount = 0;
-    QObject context;
-    QElapsedTimer elapsedTimer;
-
-    TestObject testObject;
-    elapsedTimer.start();
-
-    QEventLoop loop;
-
-    onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 4, true, &context, [&]()
     {
-        triggeredCount++;
-        loop.quit();
-    });
-    loop.exec();
+        int triggeredCount = 0;
+        QObject context;
+        QElapsedTimer elapsedTimer;
 
-    ASSERT_EQ(triggeredCount, 1);
-    ASSERT_EQ(testObject.counter(), 4);
-    ASSERT_GE(elapsedTimer.elapsed(), 350 / timeFactor);
-    ASSERT_LE(elapsedTimer.elapsed(), 450 * timeFactor);
+        TestObject testObject;
+        elapsedTimer.start();
 
-    waitForFuture<QEventLoop>(createTimedFuture(400));
-    ASSERT_EQ(triggeredCount, 1);
+        QEventLoop loop;
+
+        onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 4, true, &context, [&]()
+        {
+            triggeredCount++;
+            loop.quit();
+        });
+        loop.exec();
+
+        ASSERT_EQ(triggeredCount, 1);
+        ASSERT_EQ(testObject.counter(), 4);
+        ASSERT_GE(elapsedTimer.elapsed(), 350 / timeFactor);
+        ASSERT_LE(elapsedTimer.elapsed(), 450 * timeFactor);
+
+        waitForFuture<QEventLoop>(createTimedFuture(400));
+        ASSERT_EQ(triggeredCount, 1);
+    }
+
+    {
+        int triggeredCount = 0;
+        QObject context;
+        QElapsedTimer elapsedTimer;
+
+        TestObject testObject;
+        elapsedTimer.start();
+
+        QEventLoop loop;
+
+        onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 4, false, &context, [&]()
+        {
+            triggeredCount++;
+            loop.quit();
+        });
+        loop.exec();
+
+        ASSERT_EQ(triggeredCount, 1);
+        ASSERT_EQ(testObject.counter(), 4);
+        ASSERT_GE(elapsedTimer.elapsed(), 350 / timeFactor);
+        ASSERT_LE(elapsedTimer.elapsed(), 450 * timeFactor);
+
+        waitForFuture<QEventLoop>(createTimedFuture(400));
+        ASSERT_EQ(triggeredCount, 1);
+    }
 }
 
 TEST(UtilsQt, onProperty_multiple)
