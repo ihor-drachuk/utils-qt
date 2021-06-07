@@ -1,10 +1,11 @@
 #include <gtest/gtest.h>
 #include <utils-qt/futureutils.h>
+#include <QCoreApplication>
 #include <QEventLoop>
 #include <QTimer>
 
 
-TEST(UtilsQt, FutureUtilsTest_Finished)
+TEST(UtilsQt, FutureUtilsTest_createFinished)
 {
     {
         auto f = createReadyFuture();
@@ -106,7 +107,7 @@ TEST(UtilsQt, FutureUtilsTest_Future)
 }
 
 
-TEST(UtilsQt, FutureUtilsTest_connectFuture_Finished)
+TEST(UtilsQt, FutureUtilsTest_onFinished)
 {
     {
         QObject ctx;
@@ -146,7 +147,7 @@ TEST(UtilsQt, FutureUtilsTest_connectFuture_Finished)
         onFinished(f, &ctx, [&ok](){ ok = true; });
         onResult(f, &ctx, [&ok2](){ ok2 = true; });
         onCanceled(f, &ctx, [&ok3](){ ok3 = true; });
-        ASSERT_FALSE(ok); // connectFuture<void> is NOT triggered on Cancel
+        ASSERT_FALSE(ok); // onFinished<void> is NOT triggered on Cancel by default
         ASSERT_FALSE(ok2);
         ASSERT_TRUE(ok3);
     }
@@ -166,7 +167,7 @@ TEST(UtilsQt, FutureUtilsTest_connectFuture_Finished)
     }
 }
 
-TEST(UtilsQt, FutureUtilsTest_connectFuture_Timed)
+TEST(UtilsQt, FutureUtilsTest_Timed_onFinished)
 {
     {
         QObject ctx;
@@ -227,5 +228,56 @@ TEST(UtilsQt, FutureUtilsTest_connectFuture_Timed)
         ASSERT_FALSE(result.has_value());
         ASSERT_EQ(result2, -1);
         ASSERT_TRUE(ok3);
+    }
+}
+
+
+TEST(UtilsQt, FutureUtilsTest_context)
+{
+    auto obj = new QObject();
+    auto f = createTimedFuture2(20, 170, obj);
+
+    qApp->processEvents();
+    qApp->processEvents();
+
+    delete obj; obj = nullptr;
+
+    qApp->processEvents();
+    qApp->processEvents();
+
+    ASSERT_TRUE(f.isFinished());
+    ASSERT_TRUE(f.isCanceled());
+}
+
+TEST(UtilsQt, FutureUtilsTest_reference)
+{
+    {
+        QObject obj;
+        int value = 170;
+        auto f = createTimedFuture2Ref(20, value, &obj);
+        qApp->processEvents();
+        qApp->processEvents();
+        value = 210;
+        waitForFuture<QEventLoop>(f);
+        ASSERT_TRUE(f.isFinished());
+        ASSERT_FALSE(f.isCanceled());
+        ASSERT_EQ(f.result(), 210);
+    }
+
+    {
+        auto obj = new QObject();
+        int value = 170;
+        auto f = createTimedFuture2Ref(20, value, obj);
+        qApp->processEvents();
+        qApp->processEvents();
+        value = 210;
+
+        delete obj; obj = nullptr;
+
+        qApp->processEvents();
+        qApp->processEvents();
+
+        ASSERT_TRUE(f.isFinished());
+        ASSERT_TRUE(f.isCanceled());
     }
 }

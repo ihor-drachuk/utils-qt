@@ -33,6 +33,7 @@ struct Context {
               connectionType(connectionType)
     { }
 
+    QObject ownContext;
     QObject* context;
     Qt::ConnectionType connectionType;
 
@@ -70,13 +71,22 @@ public:
     { }
 
 
-    void onError(const std::function<void(std::exception_ptr)>& callable) {
+    FutureResultBase& onError(const std::function<void(std::exception_ptr)>& callable) {
         m_internalContext->errorHandler = callable;
 
         if (getContext()->delayedError) {
             getContext()->delayedError = false;
             getContext()->errorOccured();
         }
+
+        return *this;
+    }
+
+    QFuture<void> readyPromise()
+    {
+        auto f = createFuture<void>();
+        QObject::connect(&getContext()->ownContext, &QObject::destroyed, [f]() { f->finish(); });
+        return f->future();
     }
 
 protected:
@@ -95,7 +105,7 @@ public:
           m_context(context),
           m_connectionType(connectionType)
     {
-        connectFuture(future, context, [ctx = getContext()](const std::optional<T>& result) {
+        onFinished(future, context, [ctx = getContext()](const std::optional<T>& result) {
             if (!result) {
                 ctx->errorOccured_Internal();
             }
@@ -121,9 +131,9 @@ public:
         QFutureInterface<RetFutureType> interface;
         interface.reportStarted();
 
-        connectFuture(m_future, m_context,
-                      [interface, callable, internalContext = getContext(), m_context = m_context, m_connectionType = m_connectionType]
-                      (const std::optional<T>& result) {
+        onFinished(m_future, m_context,
+                   [interface, callable, internalContext = getContext(), m_context = m_context, m_connectionType = m_connectionType]
+                   (const std::optional<T>& result) {
             auto interface2 = interface;
 
             if (result) {
@@ -137,7 +147,7 @@ public:
                     internalContext->ex = std::current_exception();
                 }
 
-                connectFuture(nextFuture, m_context, [interface, internalContext](const std::optional<RetFutureType>& result) {
+                onFinished(nextFuture, m_context, [interface, internalContext](const std::optional<RetFutureType>& result) {
                     auto interface2 = interface;
 
                     if (result) {
@@ -178,7 +188,7 @@ public:
     FutureResultBase then(const Callable& callable) {
         getContext()->needInternalHandler = false;
 
-        connectFuture(m_future, m_context, [callable, internalContext = getContext()](const std::optional<T>& result) {
+        onFinished(m_future, m_context, [callable, internalContext = getContext()](const std::optional<T>& result) {
             if (result) {
                 assert(!internalContext->errorFlag);
                 try {
