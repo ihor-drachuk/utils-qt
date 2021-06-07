@@ -55,7 +55,7 @@ public:
 
 private:
     Getter m_getter;
-    const T& m_expectedValue;
+    T m_expectedValue;
 };
 
 
