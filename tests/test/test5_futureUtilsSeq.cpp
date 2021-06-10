@@ -35,7 +35,7 @@ TEST(UtilsQt, FutureUtilsSeqTest_exception)
     auto done =
     connectFutureSeq(createTimedFuture2(20, 170), &ctx)
          .then([](const std::optional<int>& value) -> QFuture<std::string> { return createReadyFuture(std::to_string(value.value() + 1)); })
-         .then([](const std::optional<std::string>& value) -> QFuture<float> { throw 1; return {}; })
+         .then([](const std::optional<std::string>& /*value*/) -> QFuture<float> { throw 1; return {}; })
          .then([&result](const std::optional<float>& value) { result = value.value(); })
          .onError([&errorFlag](std::exception_ptr) { errorFlag = true; })
          .readyPromise();
