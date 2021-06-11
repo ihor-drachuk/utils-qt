@@ -39,7 +39,7 @@
  * QFuture<T> createTimedFuture<void>(int time);
  * QFuture<T> createTimedCanceledFuture<T>();
 
- * QFutureWrapper<T> createFuture<T>();
+ * QFutureWrapper<T> createPromise<T>();
      -> finish(T);
      -> cancel();
      -> isFinished();
@@ -109,6 +109,7 @@ public:
     bool isFinished() const { return m_interface.isFinished(); }
 
     QFuture<T> future() { return m_interface.future(); }
+    QFutureInterface<T> interface() { return m_interface; };
 
 private:
     QFutureInterface<T> m_interface;
@@ -231,6 +232,22 @@ void onResult(const QFuture<Type>& future,
 }
 
 
+template<typename Obj,
+         typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
+void onResult_void(const QFuture<void>& future,
+              Obj* object,
+              void (Obj::* member)(),
+              Qt::ConnectionType connectionType = Qt::AutoConnection)
+{
+    Q_ASSERT(object);
+    Q_ASSERT(member);
+
+    auto callable = [object, member](){ (object->*member)(); };
+
+    onResult(future, object, callable, connectionType);
+}
+
+
 template<typename Type, typename Obj, typename Callable,
          typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
 void onCanceled(const QFuture<Type>& future,
@@ -285,7 +302,7 @@ void waitForFuture(const QFuture<T>& future)
 
 
 template<typename T>
-QFuture<T> createReadyFuture(const T& value)
+[[nodiscard]] QFuture<T> createReadyFuture(const T& value)
 {
     QFutureInterface<T> interface;
     interface.reportStarted();
@@ -294,7 +311,7 @@ QFuture<T> createReadyFuture(const T& value)
     return interface.future();
 }
 
-static QFuture<void> createReadyFuture()
+[[nodiscard]] static QFuture<void> createReadyFuture()
 {
     QFutureInterface<void> interface;
     interface.reportStarted();
@@ -304,7 +321,7 @@ static QFuture<void> createReadyFuture()
 
 
 template<typename T>
-QFuture<T> createCanceledFuture()
+[[nodiscard]] QFuture<T> createCanceledFuture()
 {
     QFutureInterface<T> interface;
     interface.reportStarted();
@@ -315,7 +332,7 @@ QFuture<T> createCanceledFuture()
 
 
 template<typename T>
-QFuture<T> createTimedFuture2(int time, const T& value, QObject* ctx = nullptr)
+[[nodiscard]] QFuture<T> createTimedFuture2(int time, const T& value, QObject* ctx = nullptr)
 {
     if (!time)
         return createReadyFuture(value);
@@ -345,7 +362,7 @@ QFuture<T> createTimedFuture2(int time, const T& value, QObject* ctx = nullptr)
 }
 
 template<typename T>
-QFuture<T> createTimedFuture2Ref(int time, const T& value, QObject* ctx)
+[[nodiscard]] QFuture<T> createTimedFuture2Ref(int time, const T& value, QObject* ctx)
 {
     assert(ctx);
 
@@ -374,7 +391,7 @@ QFuture<T> createTimedFuture2Ref(int time, const T& value, QObject* ctx)
     return interface.future();
 }
 
-static QFuture<void> createTimedFuture(int time, QObject* ctx = nullptr)
+[[nodiscard]] static QFuture<void> createTimedFuture(int time, QObject* ctx = nullptr)
 {
     if (!time)
         return createReadyFuture();
@@ -404,7 +421,7 @@ static QFuture<void> createTimedFuture(int time, QObject* ctx = nullptr)
 
 
 template<typename T>
-QFuture<T> createTimedCanceledFuture(int time, QObject* ctx = nullptr)
+[[nodiscard]] QFuture<T> createTimedCanceledFuture(int time, QObject* ctx = nullptr)
 {
     if (!time)
         return createCanceledFuture<T>();
@@ -431,7 +448,7 @@ QFuture<T> createTimedCanceledFuture(int time, QObject* ctx = nullptr)
 }
 
 template<typename T>
-FutureUtilsInternals::QFutureInterfaceWrapperPtr<T> createFuture()
+[[nodiscard]] FutureUtilsInternals::QFutureInterfaceWrapperPtr<T> createPromise()
 {
     QFutureInterface<T> interface;
     return std::make_shared<FutureUtilsInternals::QFutureInterfaceWrapper<T>>(interface);

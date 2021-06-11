@@ -78,7 +78,7 @@ TEST(UtilsQt, FutureUtilsTest_Future)
     {
         QObject ctx;
 
-        auto f = createFuture<int>();
+        auto f = createPromise<int>();
         ASSERT_FALSE(f->isFinished());
 
         QTimer::singleShot(20, &ctx, [f](){ f->finish(120); });
@@ -93,7 +93,7 @@ TEST(UtilsQt, FutureUtilsTest_Future)
     {
         QObject ctx;
 
-        auto f = createFuture<int>();
+        auto f = createPromise<int>();
         ASSERT_FALSE(f->isFinished());
 
         QTimer::singleShot(20, &ctx, [f](){ f->cancel(); });
