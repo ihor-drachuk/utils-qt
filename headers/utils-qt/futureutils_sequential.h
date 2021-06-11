@@ -84,7 +84,7 @@ public:
 
     QFuture<void> readyPromise()
     {
-        auto f = createFuture<void>();
+        auto f = createPromise<void>();
         QObject::connect(&getContext()->ownContext, &QObject::destroyed, [f]() { f->finish(); });
         return f->future();
     }
@@ -213,6 +213,11 @@ public:
         }, m_connectionType);
 
         return FutureResultBase(getContext());
+    }
+
+    FutureResult<T>& getFuture(QFuture<T>& future) {
+        future = m_future;
+        return *this;
     }
 
 private:

@@ -22,7 +22,7 @@
   FutureBridgesList futuresList;
   ---
 
-  auto f = createFuture<int>();    // QFuture<int>
+  auto f = QFuture<int>();
 
   auto bundle = convertFuture<int, std::string>(f, [](int value) -> std::optional<std::string>
   {
@@ -54,6 +54,8 @@ class AnonymousFutureBridge : public QObject
     Q_OBJECT
 public:
     //virtual ~AnonymousFutureBridge() = default;
+
+    virtual bool isFinished() const = 0;
 
 signals:
     void finished();
@@ -135,6 +137,10 @@ public:
             doCancel();
     }
 
+    bool isFinished() const override {
+        return m_targetFutureInterface.isFinished();
+    }
+
     QFuture<Target> getTargetFuture() {
         return m_targetFutureInterface.future();
     }
@@ -169,6 +175,30 @@ private:
 };
 
 
+template<typename T>
+class FutureBridgeRaw : public AnonymousFutureBridge
+{
+public:
+    FutureBridgeRaw(const QFutureInterface<T>& interface)
+        : m_interface(interface)
+    { };
+
+    ~FutureBridgeRaw() override {
+        if (!m_interface.isFinished()) {
+            m_interface.reportCanceled();
+            m_interface.reportFinished();
+        }
+    }
+
+    bool isFinished() const override {
+        return m_interface.isFinished();
+    }
+
+private:
+    QFutureInterface<T> m_interface;
+};
+
+
 template<typename Target>
 struct FutureBundle {
     AnonymousFutureBridgePtr bridge;
@@ -200,6 +230,9 @@ public:
     FutureBridgesList();
     ~FutureBridgesList();
     void append(const AnonymousFutureBridgePtr& bridge);
+
+    template<typename T>
+    void appendRaw(const QFutureInterface<T>& interface) { append(qSharedPointerCast<AnonymousFutureBridge>(QSharedPointer<FutureBridgeRaw<T>>::create(interface))); }
     void clear();
 
 private slots:

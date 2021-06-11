@@ -20,6 +20,7 @@ FutureBridgesList::~FutureBridgesList()
 void FutureBridgesList::append(const AnonymousFutureBridgePtr& bridge)
 {
     if (!bridge) return;
+    if (bridge->isFinished()) return;
 
     connect(bridge.data(), &AnonymousFutureBridge::finished, this, &FutureBridgesList::onFinished);
     impl().bridges.insert(bridge.data(), bridge);

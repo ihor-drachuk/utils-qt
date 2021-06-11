@@ -186,7 +186,7 @@ TEST(UtilsQt, FutureBridgeTest_Destruction)
         QFuture<int> resultFuture;
 
         {
-            auto f = createFuture<int>();
+            auto f = createPromise<int>();
 
             auto conv = convertFuture<int, int>(f->future(), [&](int value) -> std::optional<int> { ok = true; return value + 1; });
             f->finish(170); // Will not handle in time
