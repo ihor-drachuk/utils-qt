@@ -12,9 +12,9 @@ TEST(UtilsQt, FutureUtilsSeqTest_basic)
     bool errorFlag = false;
 
     auto done =
-    connectFutureSeq(createTimedFuture2(20, 170), &ctx)
+    connectFutureSeq(createTimedFuture(20, 170), &ctx)
          .then([](const std::optional<int>& value) -> QFuture<std::string> { return createReadyFuture(std::to_string(value.value() + 1)); })
-         .then([](const std::optional<std::string>& value) -> QFuture<float> { return createTimedFuture2(40, (float)std::stoi(value.value())); })
+         .then([](const std::optional<std::string>& value) -> QFuture<float> { return createTimedFuture(40, (float)std::stoi(value.value())); })
          .then([&result](const std::optional<float>& value) { result = value.value(); })
          .onError([&errorFlag](std::exception_ptr) { errorFlag = true; })
          .readyPromise();
@@ -41,7 +41,7 @@ TEST(UtilsQt, FutureUtilsSeqTest_cancel_getFuture)
     QFuture<float> result3;
 
     auto done =
-    connectFutureSeq(createTimedFuture2(20, 170), &ctx)
+    connectFutureSeq(createTimedFuture(20, 170), &ctx)
          .getFuture(result1)
          .then([&](const std::optional<int>& value) -> QFuture<std::string> { visited[0] = true; valueProvided[0] = value.has_value(); return createReadyFuture(std::to_string(value.value() + 1)); })
          .getFuture(result2)
@@ -82,7 +82,7 @@ TEST(UtilsQt, FutureUtilsSeqTest_exception)
     bool errorFlag = false;
 
     auto done =
-    connectFutureSeq(createTimedFuture2(20, 170), &ctx)
+    connectFutureSeq(createTimedFuture(20, 170), &ctx)
          .then([](const std::optional<int>& value) -> QFuture<std::string> { return createReadyFuture(std::to_string(value.value() + 1)); })
          .then([](const std::optional<std::string>& /*value*/) -> QFuture<float> { throw 1; return {}; })
          .then([&result](const std::optional<float>& value) { result = value.value(); })
@@ -104,9 +104,9 @@ TEST(UtilsQt, FutureUtilsSeqTest_context)
     bool value3Called = false;
 
     auto done =
-    connectFutureSeq(createTimedFuture2(20, 170), ctx)
+    connectFutureSeq(createTimedFuture(20, 170), ctx)
          .then([](const std::optional<int>& value) -> QFuture<std::string> { return createReadyFuture(std::to_string(value.value() + 1)); })
-         .then([&ctx](const std::optional<std::string>& value) -> QFuture<float> { ctx->deleteLater(); return createTimedFuture2(40, (float)std::stoi(value.value())); })
+         .then([&ctx](const std::optional<std::string>& value) -> QFuture<float> { ctx->deleteLater(); return createTimedFuture(40, (float)std::stoi(value.value())); })
          .then([&](const std::optional<float>& value) { value3Called = true; result = value.value(); })
          .onError([&errorFlag](std::exception_ptr) { errorFlag = true; })
          .readyPromise();
