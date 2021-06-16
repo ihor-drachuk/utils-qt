@@ -80,7 +80,7 @@ TEST(UtilsQt, FutureBridgeTest)
 TEST(UtilsQt, FutureBridgeTest_Timed)
 {
     {
-        auto f = createTimedFuture2(20, 170);
+        auto f = createTimedFuture(20, 170);
 
         int input = -1;
         const char* const result = "Test";
@@ -95,7 +95,7 @@ TEST(UtilsQt, FutureBridgeTest_Timed)
     }
 
     {
-        auto f = createTimedFuture2(20, 170);
+        auto f = createTimedFuture(20, 170);
 
         int input = -1;
 
@@ -169,7 +169,7 @@ TEST(UtilsQt, FutureBridgeTest_Destruction)
         QFuture<int> resultFuture;
 
         {
-            auto f = createTimedFuture2(100, 20);
+            auto f = createTimedFuture(100, 20);
 
             auto conv = convertFuture<int, int>(f, [&](int value) -> std::optional<int> { ok = true; return value + 1; });
             ASSERT_FALSE(conv.future.isFinished());

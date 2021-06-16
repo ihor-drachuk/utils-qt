@@ -45,7 +45,7 @@ TEST(UtilsQt, FutureUtilsTest_Timed)
     }
 
     {
-        auto f = createTimedFuture2(20, false);
+        auto f = createTimedFuture(20, false);
         ASSERT_FALSE(f.isFinished());
         ASSERT_FALSE(f.isCanceled());
         waitForFuture<QEventLoop>(f);
@@ -147,7 +147,7 @@ TEST(UtilsQt, FutureUtilsTest_onFinished)
         onFinished(f, &ctx, [&ok](){ ok = true; });
         onResult(f, &ctx, [&ok2](){ ok2 = true; });
         onCanceled(f, &ctx, [&ok3](){ ok3 = true; });
-        ASSERT_FALSE(ok); // onFinished<void> is NOT triggered on Cancel by default
+        ASSERT_TRUE(ok);
         ASSERT_FALSE(ok2);
         ASSERT_TRUE(ok3);
     }
@@ -189,7 +189,7 @@ TEST(UtilsQt, FutureUtilsTest_Timed_onFinished)
         std::optional<int> result;
         int result2 = -1;
         bool ok3 = false;
-        auto f = createTimedFuture2(20, 170);
+        auto f = createTimedFuture(20, 170);
         onFinished(f, &ctx, [&result](const std::optional<int>& value){ result = value; });
         onResult(f, &ctx, [&result2](int value){ result2 = value; });
         onCanceled(f, &ctx, [&ok3](){ ok3 = true; });
@@ -210,7 +210,7 @@ TEST(UtilsQt, FutureUtilsTest_Timed_onFinished)
         onResult(f, &ctx, [&ok2](){ ok2 = true; });
         onCanceled(f, &ctx, [&ok3](){ ok3 = true; });
         waitForFuture<QEventLoop>(f);
-        ASSERT_FALSE(ok); // connectFuture<void> is NOT triggered on Cancel
+        ASSERT_TRUE(ok);
         ASSERT_FALSE(ok2);
         ASSERT_TRUE(ok3);
     }
@@ -235,7 +235,7 @@ TEST(UtilsQt, FutureUtilsTest_Timed_onFinished)
 TEST(UtilsQt, FutureUtilsTest_context)
 {
     auto obj = new QObject();
-    auto f = createTimedFuture2(20, 170, obj);
+    auto f = createTimedFuture(20, 170, obj);
 
     qApp->processEvents();
     qApp->processEvents();
@@ -254,7 +254,7 @@ TEST(UtilsQt, FutureUtilsTest_reference)
     {
         QObject obj;
         int value = 170;
-        auto f = createTimedFuture2Ref(20, value, &obj);
+        auto f = createTimedFutureRef(20, value, &obj);
         qApp->processEvents();
         qApp->processEvents();
         value = 210;
@@ -267,7 +267,7 @@ TEST(UtilsQt, FutureUtilsTest_reference)
     {
         auto obj = new QObject();
         int value = 170;
-        auto f = createTimedFuture2Ref(20, value, obj);
+        auto f = createTimedFutureRef(20, value, obj);
         qApp->processEvents();
         qApp->processEvents();
         value = 210;
