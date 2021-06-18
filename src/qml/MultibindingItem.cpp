@@ -10,6 +10,21 @@ void MultibindingItem::registerTypes(const char* url)
     qmlRegisterType<MultibindingItem>(url, 1, 0, "MultibindingItem");
 }
 
+namespace {
+
+bool isFloat(const QVariant& value) {
+    return value.type() == QVariant::Type::Double ||
+           value.type() == (QVariant::Type)QMetaType::Type::Float;
+}
+
+bool comapre(const QVariant& a, const QVariant& b) {
+    if (isFloat(a) || isFloat(b))
+        return qFuzzyCompare(a.toDouble(), b.toDouble());
+    else
+        return (a == b);
+}
+
+} // namespace
 
 void MultibindingItem::initialize()
 {
@@ -34,7 +49,7 @@ void MultibindingItem::write(const QVariant& value)
     assert(!propertyName().isEmpty());
     assert(QQmlProperty(object(), propertyName()).isValid());
 
-    if (m_enableR && read() == value)
+    if (m_enableR && comapre(read(), value))
         return;
 
     QQmlProperty::write(object(), propertyName(), value);
