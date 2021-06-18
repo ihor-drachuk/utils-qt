@@ -1,8 +1,8 @@
-#include "utils-qt/qml/Multibinding.h"
+#include <utils-qt/qml/Multibinding/Multibinding.h>
 
 #include <QQmlEngine>
 #include <cassert>
-#include "utils-qt/qml/MultibindingItem.h"
+#include <utils-qt/qml/Multibinding/MultibindingItem.h>
 
 
 void Multibinding::registerTypes(const char* url)
@@ -46,7 +46,8 @@ void Multibinding::sync()
 
     for (auto item: childItems()) {
         if (auto destProp = qobject_cast<MultibindingItem*>(item))
-            destProp->write(m_value);
+            if (!destProp->delayedWPending())
+                destProp->write(m_value);
     }
 
     m_recursionBlocking = false;
