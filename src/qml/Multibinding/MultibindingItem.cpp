@@ -195,6 +195,15 @@ void MultibindingItem::setDelayedWPending(bool value)
     emit delayedWPendingChanged(m_delayedWPending);
 }
 
+void MultibindingItem::setMaster(bool value)
+{
+    if (m_master == value)
+        return;
+
+    m_master = value;
+    emit masterChanged(m_master);
+}
+
 void MultibindingItem::setDelayedRW(bool value)
 {
     m_delayedRW = value;
@@ -251,7 +260,11 @@ void MultibindingItem::attachProperty()
     auto qmpProp = QQmlProperty(object(), propertyName());
     qmpProp.connectNotifySignal(this, SLOT(changedHandler()));
 
-    emit needSync();
+    if (m_master) {
+        emit changed();
+    } else {
+        emit needSync();
+    }
 
     m_connected = true;
 }

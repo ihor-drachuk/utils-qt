@@ -36,6 +36,7 @@ void Multibinding::connectChildren()
     }
 
     if (auto first = qobject_cast<MultibindingItem*>(childItems().first())) {
+        first->setMaster(true);
         onChanged(first);
     }
 }
