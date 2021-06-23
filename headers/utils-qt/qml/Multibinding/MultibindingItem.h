@@ -5,12 +5,14 @@ class AbstractTransformer;
 
 class MultibindingItem : public QQuickItem
 {
+    friend class Multibinding;
     Q_OBJECT
 public:
     Q_PROPERTY(QObject* object READ object WRITE setObject NOTIFY objectChanged)
     Q_PROPERTY(QString propertyName READ propertyName WRITE setPropertyName NOTIFY propertyNameChanged)
     Q_PROPERTY(QVariant value READ read WRITE write NOTIFY changed)
     Q_PROPERTY(AbstractTransformer* transformer READ transformer WRITE setTransformer NOTIFY transformerChanged)
+    Q_PROPERTY(bool master READ master /*WRITE setMaster*/ NOTIFY masterChanged)
 
     Q_PROPERTY(bool enableR READ enableR WRITE setEnableR NOTIFY enableRChanged)
     Q_PROPERTY(bool enableW READ enableW WRITE setEnableW NOTIFY enableWChanged)
@@ -43,6 +45,7 @@ public:
     QObject* object() const { return m_object; }
     QString propertyName() const { return m_propertyName; }
     AbstractTransformer* transformer() const { return m_transformer; }
+    bool master() const { return m_master; }
     bool enableR() const { return m_enableR; }
     bool enableW() const { return m_enableW; }
     bool enableRW() const { return m_enableRW; }
@@ -57,6 +60,9 @@ public slots:
     void setObject(QObject* value);
     void setPropertyName(const QString& value);
     void setTransformer(AbstractTransformer* value);
+private:
+    void setMaster(bool value);
+public slots:
     void setEnableR(bool value);
     void setEnableW(bool value);
     void setEnableRW(bool value);
@@ -69,10 +75,12 @@ public slots:
     void updateDelayedRW();
     void setDelayedWPending(bool value);
 
+
 signals:
     void objectChanged(QObject* object);
     void propertyNameChanged(const QString& propertyName);
     void transformerChanged(AbstractTransformer* transformer);
+    void masterChanged(bool master);
     void enableRChanged(bool enableR);
     void enableWChanged(bool enableW);
     void enableRWChanged(bool enableRW);
@@ -110,4 +118,5 @@ private:
     AbstractTransformer* m_transformer { nullptr };
     QVariant m_orig;
     bool m_delayedWPending { false };
+    bool m_master { false };
 };
