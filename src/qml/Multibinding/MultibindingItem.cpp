@@ -26,6 +26,7 @@ bool comapre(const QVariant& a, const QVariant& b) {
 void MultibindingItem::registerTypes(const char* url)
 {
     qRegisterMetaType<ReAttachBehavior>("ReAttachBehavior");
+    qRegisterMetaType<DelayBehvior>("DelayBehvior");
     qmlRegisterType<MultibindingItem>(url, 1, 0, "MultibindingItem");
 }
 
@@ -62,7 +63,10 @@ void MultibindingItem::write(const QVariant& value)
 
     if (m_delayMsW) {
         m_delayedWriteValue = value;
-        m_delayMsWTimer.start(m_delayMsW);
+
+        if (m_delayBehW == RestartTimerOnChange || !m_delayMsWTimer.isActive()) {
+            m_delayMsWTimer.start(m_delayMsW);
+        }
     } else {
         writeImpl(value);
     }
@@ -226,6 +230,24 @@ void MultibindingItem::setDelayMsW(int value)
     emit delayMsWChanged(m_delayMsW);
 }
 
+void MultibindingItem::setDelayBehR(MultibindingItem::DelayBehvior value)
+{
+    if (m_delayBehR == value)
+        return;
+
+    m_delayBehR = value;
+    emit delayBehRChanged(m_delayBehR);
+}
+
+void MultibindingItem::setDelayBehW(MultibindingItem::DelayBehvior value)
+{
+    if (m_delayBehW == value)
+        return;
+
+    m_delayBehW = value;
+    emit delayBehWChanged(m_delayBehW);
+}
+
 void MultibindingItem::setReAttachBehvior(MultibindingItem::ReAttachBehavior value)
 {
     m_reAttachBehviorIsSet = true;
@@ -333,7 +355,9 @@ void MultibindingItem::changedHandler()
 {
     if (m_enableR) {
         if (m_delayMsR) {
-            m_delayMsRTimer.start(m_delayMsR);
+            if (m_delayBehR == RestartTimerOnChange || !m_delayMsRTimer.isActive()) {
+                m_delayMsRTimer.start(m_delayMsR);
+            }
         } else {
             changedHandler2();
         }
