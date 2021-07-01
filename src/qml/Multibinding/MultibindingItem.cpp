@@ -9,6 +9,7 @@
 
 void MultibindingItem::registerTypes(const char* url)
 {
+    qRegisterMetaType<ReAttachBehavior>("ReAttachBehavior");
     qmlRegisterType<MultibindingItem>(url, 1, 0, "MultibindingItem");
 }
 
@@ -195,13 +196,21 @@ void MultibindingItem::setQueuedWPending(bool value)
     emit queuedWPendingChanged(m_queuedWPending);
 }
 
-void MultibindingItem::setMaster(bool value)
+void MultibindingItem::setReAttachBehvior(MultibindingItem::ReAttachBehavior value)
 {
-    if (m_master == value)
+    m_reAttachBehviorIsSet = true;
+
+    if (m_reAttachBehvior == value)
         return;
 
-    m_master = value;
-    emit masterChanged(m_master);
+    m_reAttachBehvior = value;
+    emit reAttachBehviorChanged(m_reAttachBehvior);
+}
+
+void MultibindingItem::initReAttachBehvior(MultibindingItem::ReAttachBehavior value)
+{
+    if (!m_reAttachBehviorIsSet)
+        setReAttachBehvior(value);
 }
 
 void MultibindingItem::setQueuedRW(bool value)
@@ -216,7 +225,7 @@ void MultibindingItem::updateQueuedRW()
 {
     auto newValue = m_queuedR  &&  m_queuedW ? true  :
                     !m_queuedR && !m_queuedW ? false :
-                                                 m_queuedRW;
+                                               m_queuedRW;
 
     if (m_queuedRW != newValue) {
         m_queuedRW = newValue;
@@ -260,10 +269,14 @@ void MultibindingItem::attachProperty()
     auto qmpProp = QQmlProperty(object(), propertyName());
     qmpProp.connectNotifySignal(this, SLOT(changedHandler()));
 
-    if (m_master) {
-        emit changed();
-    } else {
-        emit needSync();
+    switch (m_reAttachBehvior) {
+        case SyncMultibinding:
+            emit changed();
+            break;
+
+        case SyncNewProperty:
+            emit needSync();
+            break;
     }
 
     m_connected = true;

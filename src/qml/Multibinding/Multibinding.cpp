@@ -36,7 +36,7 @@ void Multibinding::connectChildren()
     }
 
     if (auto first = qobject_cast<MultibindingItem*>(childItems().first())) {
-        first->setMaster(true);
+        first->initReAttachBehvior(MultibindingItem::SyncMultibinding);
         onChanged(first);
     }
 }
