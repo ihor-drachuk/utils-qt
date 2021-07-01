@@ -51,8 +51,8 @@ void MultibindingItem::write(const QVariant& value)
     if (!m_enableW)
         return;
 
-    if (m_delayedW) {
-        setDelayedWPending(true);
+    if (m_queuedW) {
+        setQueuedWPending(true);
         UtilsQt::invokeMethod(this, [this, value](){ writeImpl(value); }, Qt::QueuedConnection);
     } else {
         writeImpl(value);
@@ -175,24 +175,24 @@ void MultibindingItem::setTransformer(AbstractTransformer* value)
     emit transformerChanged(m_transformer);
 }
 
-void MultibindingItem::setDelayedW(bool value)
+void MultibindingItem::setQueuedW(bool value)
 {
-    if (m_delayedW == value)
+    if (m_queuedW == value)
         return;
 
-    m_delayedW = value;
-    emit delayedWChanged(m_delayedW);
+    m_queuedW = value;
+    emit queuedWChanged(m_queuedW);
 
-    updateDelayedRW();
+    updateQueuedRW();
 }
 
-void MultibindingItem::setDelayedWPending(bool value)
+void MultibindingItem::setQueuedWPending(bool value)
 {
-    if (m_delayedWPending == value)
+    if (m_queuedWPending == value)
         return;
 
-    m_delayedWPending = value;
-    emit delayedWPendingChanged(m_delayedWPending);
+    m_queuedWPending = value;
+    emit queuedWPendingChanged(m_queuedWPending);
 }
 
 void MultibindingItem::setMaster(bool value)
@@ -204,35 +204,35 @@ void MultibindingItem::setMaster(bool value)
     emit masterChanged(m_master);
 }
 
-void MultibindingItem::setDelayedRW(bool value)
+void MultibindingItem::setQueuedRW(bool value)
 {
-    m_delayedRW = value;
-    setDelayedR(value);
-    setDelayedW(value);
-    emit delayedRWChanged(m_delayedRW);
+    m_queuedRW = value;
+    setQueuedR(value);
+    setQueuedW(value);
+    emit queuedRWChanged(m_queuedRW);
 }
 
-void MultibindingItem::updateDelayedRW()
+void MultibindingItem::updateQueuedRW()
 {
-    auto newValue = m_delayedR  &&  m_delayedW ? true  :
-                    !m_delayedR && !m_delayedW ? false :
-                                                 m_delayedRW;
+    auto newValue = m_queuedR  &&  m_queuedW ? true  :
+                    !m_queuedR && !m_queuedW ? false :
+                                                 m_queuedRW;
 
-    if (m_delayedRW != newValue) {
-        m_delayedRW = newValue;
+    if (m_queuedRW != newValue) {
+        m_queuedRW = newValue;
         emit enableRWChanged(newValue);
     }
 }
 
-void MultibindingItem::setDelayedR(bool value)
+void MultibindingItem::setQueuedR(bool value)
 {
-    if (m_delayedR == value)
+    if (m_queuedR == value)
         return;
 
-    m_delayedR = value;
-    emit delayedRChanged(m_delayedR);
+    m_queuedR = value;
+    emit queuedRChanged(m_queuedR);
 
-    updateDelayedRW();
+    updateQueuedRW();
 }
 
 void MultibindingItem::detachProperty()
@@ -289,7 +289,7 @@ bool MultibindingItem::isReady() const
 void MultibindingItem::changedHandler()
 {
     if (m_enableR) {
-        if (m_delayedR) {
+        if (m_queuedR) {
             UtilsQt::invokeMethod(this, &MultibindingItem::changed, Qt::QueuedConnection);
         } else {
             emit changed();
@@ -299,7 +299,7 @@ void MultibindingItem::changedHandler()
 
 void MultibindingItem::writeImpl(QVariant value)
 {
-    setDelayedWPending(false);
+    setQueuedWPending(false);
 
     if (!m_enableW)
         return;

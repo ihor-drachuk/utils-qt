@@ -47,7 +47,7 @@ void Multibinding::sync()
 
     for (auto item: childItems()) {
         if (auto destProp = qobject_cast<MultibindingItem*>(item))
-            if (!destProp->delayedWPending())
+            if (!destProp->queuedWPending())
                 destProp->write(m_value);
     }
 

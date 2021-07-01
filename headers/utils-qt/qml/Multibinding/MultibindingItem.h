@@ -21,10 +21,10 @@ public:
     Q_PROPERTY(bool resyncR READ resyncR WRITE setResyncR NOTIFY resyncRChanged)
     Q_PROPERTY(bool resyncW READ resyncW WRITE setResyncW NOTIFY resyncWChanged)
 
-    Q_PROPERTY(bool delayedR READ delayedR WRITE setDelayedR NOTIFY delayedRChanged)
-    Q_PROPERTY(bool delayedW READ delayedW WRITE setDelayedW NOTIFY delayedWChanged)
-    Q_PROPERTY(bool delayedRW READ delayedRW WRITE setDelayedRW NOTIFY delayedRWChanged)
-    Q_PROPERTY(bool delayedWPending READ delayedWPending NOTIFY delayedWPendingChanged)
+    Q_PROPERTY(bool queuedR READ queuedR WRITE setQueuedR NOTIFY queuedRChanged)
+    Q_PROPERTY(bool queuedW READ queuedW WRITE setQueuedW NOTIFY queuedWChanged)
+    Q_PROPERTY(bool queuedRW READ queuedRW WRITE setQueuedRW NOTIFY queuedRWChanged)
+    Q_PROPERTY(bool queuedWPending READ queuedWPending NOTIFY queuedWPendingChanged)
 
     static void registerTypes(const char* url);
 
@@ -51,10 +51,10 @@ public:
     bool enableRW() const { return m_enableRW; }
     bool resyncR() const { return m_resyncR; }
     bool resyncW() const { return m_resyncW; }
-    bool delayedR() const { return m_delayedR; }
-    bool delayedW() const { return m_delayedW; }
-    bool delayedRW() const { return m_delayedRW; }
-    bool delayedWPending() const { return m_delayedWPending; }
+    bool queuedR() const { return m_queuedR; }
+    bool queuedW() const { return m_queuedW; }
+    bool queuedRW() const { return m_queuedRW; }
+    bool queuedWPending() const { return m_queuedWPending; }
 
 public slots:
     void setObject(QObject* value);
@@ -69,11 +69,11 @@ public slots:
     void updateRW();
     void setResyncR(bool value);
     void setResyncW(bool value);
-    void setDelayedR(bool value);
-    void setDelayedW(bool value);
-    void setDelayedRW(bool value);
-    void updateDelayedRW();
-    void setDelayedWPending(bool value);
+    void setQueuedR(bool value);
+    void setQueuedW(bool value);
+    void setQueuedRW(bool value);
+    void updateQueuedRW();
+    void setQueuedWPending(bool value);
 
 
 signals:
@@ -86,10 +86,10 @@ signals:
     void enableRWChanged(bool enableRW);
     void resyncRChanged(bool resyncR);
     void resyncWChanged(bool resyncW);
-    void delayedRChanged(bool delayedR);
-    void delayedWChanged(bool delayedW);
-    void delayedRWChanged(bool delayedRW);
-    void delayedWPendingChanged(bool delayedWPending);
+    void queuedRChanged(bool queuedR);
+    void queuedWChanged(bool queuedW);
+    void queuedRWChanged(bool queuedRW);
+    void queuedWPendingChanged(bool queuedWPending);
 // ----
 
 private slots:
@@ -112,11 +112,11 @@ private:
     bool m_enableRW { true };
     bool m_resyncR { true };
     bool m_resyncW { true };
-    bool m_delayedR { false };
-    bool m_delayedW { false };
-    bool m_delayedRW { false };
+    bool m_queuedR { false };
+    bool m_queuedW { false };
+    bool m_queuedRW { false };
     AbstractTransformer* m_transformer { nullptr };
     QVariant m_orig;
-    bool m_delayedWPending { false };
+    bool m_queuedWPending { false };
     bool m_master { false };
 };
