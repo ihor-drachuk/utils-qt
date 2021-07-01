@@ -6,13 +6,6 @@
 #include <QQmlProperty>
 #include <cassert>
 
-
-void MultibindingItem::registerTypes(const char* url)
-{
-    qRegisterMetaType<ReAttachBehavior>("ReAttachBehavior");
-    qmlRegisterType<MultibindingItem>(url, 1, 0, "MultibindingItem");
-}
-
 namespace {
 
 bool isFloat(const QVariant& value) {
@@ -28,6 +21,21 @@ bool comapre(const QVariant& a, const QVariant& b) {
 }
 
 } // namespace
+
+
+void MultibindingItem::registerTypes(const char* url)
+{
+    qRegisterMetaType<ReAttachBehavior>("ReAttachBehavior");
+    qmlRegisterType<MultibindingItem>(url, 1, 0, "MultibindingItem");
+}
+
+
+MultibindingItem::MultibindingItem(QQuickItem* parent)
+    : QQuickItem(parent)
+{
+    QObject::connect(&m_delayMsRTimer, &QTimer::timeout, this, &MultibindingItem::changedHandler2);
+    QObject::connect(&m_delayMsWTimer, &QTimer::timeout, this, [this](){ writeImpl(m_delayedWriteValue); });
+}
 
 void MultibindingItem::initialize()
 {
@@ -52,9 +60,9 @@ void MultibindingItem::write(const QVariant& value)
     if (!m_enableW)
         return;
 
-    if (m_queuedW) {
-        setQueuedWPending(true);
-        UtilsQt::invokeMethod(this, [this, value](){ writeImpl(value); }, Qt::QueuedConnection);
+    if (m_delayMsW) {
+        m_delayedWriteValue = value;
+        m_delayMsWTimer.start(m_delayMsW);
     } else {
         writeImpl(value);
     }
@@ -196,6 +204,28 @@ void MultibindingItem::setQueuedWPending(bool value)
     emit queuedWPendingChanged(m_queuedWPending);
 }
 
+void MultibindingItem::setDelayMsR(int value)
+{
+    assert(value >= 0);
+
+    if (m_delayMsR == value)
+        return;
+
+    m_delayMsR = value;
+    emit delayMsRChanged(m_delayMsR);
+}
+
+void MultibindingItem::setDelayMsW(int value)
+{
+    assert(value >= 0);
+
+    if (m_delayMsW == value)
+        return;
+
+    m_delayMsW = value;
+    emit delayMsWChanged(m_delayMsW);
+}
+
 void MultibindingItem::setReAttachBehvior(MultibindingItem::ReAttachBehavior value)
 {
     m_reAttachBehviorIsSet = true;
@@ -302,15 +332,34 @@ bool MultibindingItem::isReady() const
 void MultibindingItem::changedHandler()
 {
     if (m_enableR) {
-        if (m_queuedR) {
-            UtilsQt::invokeMethod(this, &MultibindingItem::changed, Qt::QueuedConnection);
+        if (m_delayMsR) {
+            m_delayMsRTimer.start(m_delayMsR);
         } else {
-            emit changed();
+            changedHandler2();
         }
     }
 }
 
-void MultibindingItem::writeImpl(QVariant value)
+void MultibindingItem::changedHandler2()
+{
+    if (m_queuedR) {
+        UtilsQt::invokeMethod(this, &MultibindingItem::changed, Qt::QueuedConnection);
+    } else {
+        emit changed();
+    }
+}
+
+void MultibindingItem::writeImpl(const QVariant& value)
+{
+    if (m_queuedW) {
+        setQueuedWPending(true);
+        UtilsQt::invokeMethod(this, [this, value](){ writeImpl2(value); }, Qt::QueuedConnection);
+    } else {
+        writeImpl2(value);
+    }
+}
+
+void MultibindingItem::writeImpl2(QVariant value)
 {
     setQueuedWPending(false);
 

@@ -1,5 +1,8 @@
 #pragma once
 #include <QQuickItem>
+#include <QVariant>
+#include <QString>
+#include <QTimer>
 
 class AbstractTransformer;
 
@@ -31,9 +34,12 @@ public:
     Q_PROPERTY(bool queuedRW READ queuedRW WRITE setQueuedRW NOTIFY queuedRWChanged)
     Q_PROPERTY(bool queuedWPending READ queuedWPending NOTIFY queuedWPendingChanged)
 
+    Q_PROPERTY(int delayMsR READ delayMsR WRITE setDelayMsR NOTIFY delayMsRChanged)
+    Q_PROPERTY(int delayMsW READ delayMsW WRITE setDelayMsW NOTIFY delayMsWChanged)
+
     static void registerTypes(const char* url);
 
-    MultibindingItem(QQuickItem* parent = nullptr): QQuickItem(parent) { }
+    MultibindingItem(QQuickItem* parent = nullptr);
 
     void initialize();
     QVariant read() const;
@@ -60,6 +66,8 @@ public:
     bool queuedW() const { return m_queuedW; }
     bool queuedRW() const { return m_queuedRW; }
     bool queuedWPending() const { return m_queuedWPending; }
+    int delayMsR() const { return m_delayMsR; }
+    int delayMsW() const { return m_delayMsW; }
 
 public slots:
     void setObject(QObject* value);
@@ -78,6 +86,8 @@ public slots:
     void setQueuedRW(bool value);
     void updateQueuedRW();
     void setQueuedWPending(bool value);
+    void setDelayMsR(int value);
+    void setDelayMsW(int value);
 
 signals:
     void objectChanged(QObject* object);
@@ -93,13 +103,17 @@ signals:
     void queuedWChanged(bool queuedW);
     void queuedRWChanged(bool queuedRW);
     void queuedWPendingChanged(bool queuedWPending);
+    void delayMsRChanged(int delayMsR);
+    void delayMsWChanged(int delayMsW);
 // ----
 
 private slots:
     void changedHandler();
+    void changedHandler2();
 
 private:
-    void writeImpl(QVariant value);
+    void writeImpl(const QVariant& value);
+    void writeImpl2(QVariant value);
     bool isReady() const;
     void detachProperty();
     void attachProperty();
@@ -123,4 +137,9 @@ private:
     AbstractTransformer* m_transformer { nullptr };
     QVariant m_orig;
     bool m_queuedWPending { false };
+    int m_delayMsR { 0 };
+    int m_delayMsW { 0 };
+    QTimer m_delayMsRTimer;
+    QTimer m_delayMsWTimer;
+    QVariant m_delayedWriteValue;
 };
