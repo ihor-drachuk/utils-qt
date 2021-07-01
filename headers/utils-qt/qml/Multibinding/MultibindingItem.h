@@ -16,6 +16,12 @@ public:
     };
     Q_ENUM(ReAttachBehavior);
 
+    enum DelayBehvior {
+        RestartTimerOnChange,     // When long sequence of changes is finished, then after N ms last value is applied
+        DontRestartTimerOnChange, // While long sequence of changes is going, each N ms most recent value is applied
+    };
+    Q_ENUM(DelayBehvior);
+
     Q_PROPERTY(QObject* object READ object WRITE setObject NOTIFY objectChanged)
     Q_PROPERTY(QString propertyName READ propertyName WRITE setPropertyName NOTIFY propertyNameChanged)
     Q_PROPERTY(QVariant value READ read WRITE write NOTIFY changed)
@@ -36,6 +42,8 @@ public:
 
     Q_PROPERTY(int delayMsR READ delayMsR WRITE setDelayMsR NOTIFY delayMsRChanged)
     Q_PROPERTY(int delayMsW READ delayMsW WRITE setDelayMsW NOTIFY delayMsWChanged)
+    Q_PROPERTY(DelayBehvior delayBehR READ delayBehR WRITE setDelayBehR NOTIFY delayBehRChanged)
+    Q_PROPERTY(DelayBehvior delayBehW READ delayBehW WRITE setDelayBehW NOTIFY delayBehWChanged)
 
     static void registerTypes(const char* url);
 
@@ -68,6 +76,8 @@ public:
     bool queuedWPending() const { return m_queuedWPending; }
     int delayMsR() const { return m_delayMsR; }
     int delayMsW() const { return m_delayMsW; }
+    DelayBehvior delayBehR() const { return m_delayBehR; }
+    DelayBehvior delayBehW() const { return m_delayBehW; }
 
 public slots:
     void setObject(QObject* value);
@@ -88,6 +98,8 @@ public slots:
     void setQueuedWPending(bool value);
     void setDelayMsR(int value);
     void setDelayMsW(int value);
+    void setDelayBehR(DelayBehvior value);
+    void setDelayBehW(DelayBehvior value);
 
 signals:
     void objectChanged(QObject* object);
@@ -105,6 +117,8 @@ signals:
     void queuedWPendingChanged(bool queuedWPending);
     void delayMsRChanged(int delayMsR);
     void delayMsWChanged(int delayMsW);
+    void delayBehRChanged(DelayBehvior delayBehR);
+    void delayBehWChanged(DelayBehvior delayBehW);
 // ----
 
 private slots:
@@ -142,4 +156,6 @@ private:
     QTimer m_delayMsRTimer;
     QTimer m_delayMsWTimer;
     QVariant m_delayedWriteValue;
+    DelayBehvior m_delayBehR { RestartTimerOnChange };
+    DelayBehvior m_delayBehW { RestartTimerOnChange };
 };
