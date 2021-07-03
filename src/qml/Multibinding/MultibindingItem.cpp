@@ -34,8 +34,15 @@ void MultibindingItem::registerTypes(const char* url)
 MultibindingItem::MultibindingItem(QQuickItem* parent)
     : QQuickItem(parent)
 {
+    m_delayMsRTimer.setSingleShot(true);
+    m_delayMsWTimer.setSingleShot(true);
+    m_enableRDelayTimer.setSingleShot(true);
+    m_enableWDelayTimer.setSingleShot(true);
+
     QObject::connect(&m_delayMsRTimer, &QTimer::timeout, this, &MultibindingItem::changedHandler2);
     QObject::connect(&m_delayMsWTimer, &QTimer::timeout, this, [this](){ writeImpl(m_delayedWriteValue); });
+    QObject::connect(&m_enableRDelayTimer, &QTimer::timeout, this, [this](){ setEnableRImpl(m_enableRCached); });
+    QObject::connect(&m_enableWDelayTimer, &QTimer::timeout, this, [this](){ setEnableWImpl(m_enableWCached); });
 }
 
 void MultibindingItem::initialize()
@@ -100,13 +107,28 @@ void MultibindingItem::setPropertyName(const QString& value)
 
 void MultibindingItem::setEnableR(bool value)
 {
-    if (m_enableR == value)
-        return;
+    if (m_enableRDelayTimer.isActive()) {
+        if (m_enableRCached == value) return;
+    } else {
+        if (m_enableR == value) return;
+    }
 
+    int delay = value ? m_enableRDelayOn : m_enableRDelayOff;
+
+    m_enableRDelayTimer.stop();
+
+    if (delay) {
+        m_enableRCached = value;
+        m_enableRDelayTimer.start(delay);
+    } else {
+        setEnableRImpl(value);
+    }
+}
+
+void MultibindingItem::setEnableRImpl(bool value)
+{
     m_enableR = value;
     emit enableRChanged(m_enableR);
-
-    updateRW();
 
     if (value && m_resyncR)
         changedHandler();
@@ -114,36 +136,31 @@ void MultibindingItem::setEnableR(bool value)
 
 void MultibindingItem::setEnableW(bool value)
 {
-    if (m_enableW == value)
-        return;
+    if (m_enableWDelayTimer.isActive()) {
+        if (m_enableWCached == value) return;
+    } else {
+        if (m_enableW == value) return;
+    }
 
+    int delay = value ? m_enableWDelayOn : m_enableWDelayOff;
+
+    m_enableWDelayTimer.stop();
+
+    if (delay) {
+        m_enableWCached = value;
+        m_enableWDelayTimer.start(delay);
+    } else {
+        setEnableWImpl(value);
+    }
+}
+
+void MultibindingItem::setEnableWImpl(bool value)
+{
     m_enableW = value;
     emit enableWChanged(m_enableW);
 
-    updateRW();
-
     if (value && m_resyncW)
         emit needSync();
-}
-
-void MultibindingItem::setEnableRW(bool value)
-{
-    m_enableRW = value;
-    setEnableR(value);
-    setEnableW(value);
-    emit enableRWChanged(m_enableRW);
-}
-
-void MultibindingItem::updateRW()
-{
-    auto newValue = m_enableR  &&  m_enableW ? true  :
-                    !m_enableR && !m_enableW ? false :
-                                               m_enableRW;
-
-    if (m_enableRW != newValue) {
-        m_enableRW = newValue;
-        emit enableRWChanged(newValue);
-    }
 }
 
 void MultibindingItem::setResyncR(bool value)
@@ -195,8 +212,6 @@ void MultibindingItem::setQueuedW(bool value)
 
     m_queuedW = value;
     emit queuedWChanged(m_queuedW);
-
-    updateQueuedRW();
 }
 
 void MultibindingItem::setQueuedWPending(bool value)
@@ -248,6 +263,42 @@ void MultibindingItem::setDelayBehW(MultibindingItem::DelayBehvior value)
     emit delayBehWChanged(m_delayBehW);
 }
 
+void MultibindingItem::setEnableRDelayOn(int value)
+{
+    if (m_enableRDelayOn == value)
+        return;
+
+    m_enableRDelayOn = value;
+    emit enableRDelayOnChanged(m_enableRDelayOn);
+}
+
+void MultibindingItem::setEnableRDelayOff(int value)
+{
+    if (m_enableRDelayOff == value)
+        return;
+
+    m_enableRDelayOff = value;
+    emit enableRDelayOffChanged(m_enableRDelayOff);
+}
+
+void MultibindingItem::setEnableWDelayOn(int value)
+{
+    if (m_enableWDelayOn == value)
+        return;
+
+    m_enableWDelayOn = value;
+    emit enableWDelayOnChanged(m_enableWDelayOn);
+}
+
+void MultibindingItem::setEnableWDelayOff(int value)
+{
+    if (m_enableWDelayOff == value)
+        return;
+
+    m_enableWDelayOff = value;
+    emit enableWDelayOffChanged(m_enableWDelayOff);
+}
+
 void MultibindingItem::setReAttachBehvior(MultibindingItem::ReAttachBehavior value)
 {
     m_reAttachBehviorIsSet = true;
@@ -265,26 +316,6 @@ void MultibindingItem::initReAttachBehvior(MultibindingItem::ReAttachBehavior va
         setReAttachBehvior(value);
 }
 
-void MultibindingItem::setQueuedRW(bool value)
-{
-    m_queuedRW = value;
-    setQueuedR(value);
-    setQueuedW(value);
-    emit queuedRWChanged(m_queuedRW);
-}
-
-void MultibindingItem::updateQueuedRW()
-{
-    auto newValue = m_queuedR  &&  m_queuedW ? true  :
-                    !m_queuedR && !m_queuedW ? false :
-                                               m_queuedRW;
-
-    if (m_queuedRW != newValue) {
-        m_queuedRW = newValue;
-        emit enableRWChanged(newValue);
-    }
-}
-
 void MultibindingItem::setQueuedR(bool value)
 {
     if (m_queuedR == value)
@@ -292,8 +323,6 @@ void MultibindingItem::setQueuedR(bool value)
 
     m_queuedR = value;
     emit queuedRChanged(m_queuedR);
-
-    updateQueuedRW();
 }
 
 void MultibindingItem::detachProperty()
