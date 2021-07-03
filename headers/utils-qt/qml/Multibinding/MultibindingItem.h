@@ -3,6 +3,7 @@
 #include <QVariant>
 #include <QString>
 #include <QTimer>
+#include <utils-cpp/lazyinit.h>
 
 class AbstractTransformer;
 
@@ -159,8 +160,8 @@ private:
     bool m_queuedWPending { false };
     int m_delayMsR { 0 };
     int m_delayMsW { 0 };
-    QTimer m_delayMsRTimer;
-    QTimer m_delayMsWTimer;
+    LazyInit<QTimer> m_delayMsRTimer { LazyInitBase::no_init_tag };
+    LazyInit<QTimer> m_delayMsWTimer { LazyInitBase::no_init_tag };
     QVariant m_delayedWriteValue;
     DelayBehvior m_delayBehR { RestartTimerOnChange };
     DelayBehvior m_delayBehW { RestartTimerOnChange };
@@ -168,8 +169,8 @@ private:
     int m_enableRDelayOff { 0 };
     int m_enableWDelayOn { 0 };
     int m_enableWDelayOff { 0 };
-    QTimer m_enableRDelayTimer;
-    QTimer m_enableWDelayTimer;
+    LazyInit<QTimer> m_enableRDelayTimer { LazyInitBase::no_init_tag };
+    LazyInit<QTimer> m_enableWDelayTimer { LazyInitBase::no_init_tag };
     bool m_enableRCached { false };
     bool m_enableWCached { false };
 };

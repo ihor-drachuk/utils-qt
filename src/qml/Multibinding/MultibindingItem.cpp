@@ -34,15 +34,33 @@ void MultibindingItem::registerTypes(const char* url)
 MultibindingItem::MultibindingItem(QQuickItem* parent)
     : QQuickItem(parent)
 {
-    m_delayMsRTimer.setSingleShot(true);
-    m_delayMsWTimer.setSingleShot(true);
-    m_enableRDelayTimer.setSingleShot(true);
-    m_enableWDelayTimer.setSingleShot(true);
+    m_delayMsRTimer.setFactory([this](){
+        auto timer = new QTimer();
+        timer->setSingleShot(true);
+        QObject::connect(timer, &QTimer::timeout, this, &MultibindingItem::changedHandler2);
+        return timer;
+    });
 
-    QObject::connect(&m_delayMsRTimer, &QTimer::timeout, this, &MultibindingItem::changedHandler2);
-    QObject::connect(&m_delayMsWTimer, &QTimer::timeout, this, [this](){ writeImpl(m_delayedWriteValue); });
-    QObject::connect(&m_enableRDelayTimer, &QTimer::timeout, this, [this](){ setEnableRImpl(m_enableRCached); });
-    QObject::connect(&m_enableWDelayTimer, &QTimer::timeout, this, [this](){ setEnableWImpl(m_enableWCached); });
+    m_delayMsWTimer.setFactory([this](){
+        auto timer = new QTimer();
+        timer->setSingleShot(true);
+        QObject::connect(timer, &QTimer::timeout, this, [this](){ writeImpl(m_delayedWriteValue); });
+        return timer;
+    });
+
+    m_enableRDelayTimer.setFactory([this](){
+        auto timer = new QTimer();
+        timer->setSingleShot(true);
+        QObject::connect(timer, &QTimer::timeout, this, [this](){ setEnableRImpl(m_enableRCached);});
+        return timer;
+    });
+
+    m_enableWDelayTimer.setFactory([this](){
+        auto timer = new QTimer();
+        timer->setSingleShot(true);
+        QObject::connect(timer, &QTimer::timeout, this, [this](){ setEnableWImpl(m_enableWCached); });
+        return timer;
+    });
 }
 
 void MultibindingItem::initialize()
@@ -71,8 +89,8 @@ void MultibindingItem::write(const QVariant& value)
     if (m_delayMsW) {
         m_delayedWriteValue = value;
 
-        if (m_delayBehW == RestartTimerOnChange || !m_delayMsWTimer.isActive()) {
-            m_delayMsWTimer.start(m_delayMsW);
+        if (m_delayBehW == RestartTimerOnChange || !m_delayMsWTimer || !m_delayMsWTimer->isActive()) {
+            m_delayMsWTimer->start(m_delayMsW);
         }
     } else {
         writeImpl(value);
@@ -107,7 +125,7 @@ void MultibindingItem::setPropertyName(const QString& value)
 
 void MultibindingItem::setEnableR(bool value)
 {
-    if (m_enableRDelayTimer.isActive()) {
+    if (m_enableRDelayTimer && m_enableRDelayTimer->isActive()) {
         if (m_enableRCached == value) return;
     } else {
         if (m_enableR == value) return;
@@ -115,11 +133,12 @@ void MultibindingItem::setEnableR(bool value)
 
     int delay = value ? m_enableRDelayOn : m_enableRDelayOff;
 
-    m_enableRDelayTimer.stop();
+    if (m_enableRDelayTimer)
+        m_enableRDelayTimer->stop();
 
     if (delay) {
         m_enableRCached = value;
-        m_enableRDelayTimer.start(delay);
+        m_enableRDelayTimer->start(delay);
     } else {
         setEnableRImpl(value);
     }
@@ -136,7 +155,7 @@ void MultibindingItem::setEnableRImpl(bool value)
 
 void MultibindingItem::setEnableW(bool value)
 {
-    if (m_enableWDelayTimer.isActive()) {
+    if (m_enableWDelayTimer && m_enableWDelayTimer->isActive()) {
         if (m_enableWCached == value) return;
     } else {
         if (m_enableW == value) return;
@@ -144,11 +163,12 @@ void MultibindingItem::setEnableW(bool value)
 
     int delay = value ? m_enableWDelayOn : m_enableWDelayOff;
 
-    m_enableWDelayTimer.stop();
+    if (m_enableWDelayTimer)
+        m_enableWDelayTimer->stop();
 
     if (delay) {
         m_enableWCached = value;
-        m_enableWDelayTimer.start(delay);
+        m_enableWDelayTimer->start(delay);
     } else {
         setEnableWImpl(value);
     }
@@ -384,8 +404,8 @@ void MultibindingItem::changedHandler()
 {
     if (m_enableR) {
         if (m_delayMsR) {
-            if (m_delayBehR == RestartTimerOnChange || !m_delayMsRTimer.isActive()) {
-                m_delayMsRTimer.start(m_delayMsR);
+            if (m_delayBehR == RestartTimerOnChange || !m_delayMsRTimer || !m_delayMsRTimer->isActive()) {
+                m_delayMsRTimer->start(m_delayMsR);
             }
         } else {
             changedHandler2();
