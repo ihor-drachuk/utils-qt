@@ -30,14 +30,16 @@ public:
 
     Q_PROPERTY(bool enableR READ enableR WRITE setEnableR NOTIFY enableRChanged)
     Q_PROPERTY(bool enableW READ enableW WRITE setEnableW NOTIFY enableWChanged)
-    Q_PROPERTY(bool enableRW READ enableRW WRITE setEnableRW NOTIFY enableRWChanged)
+    Q_PROPERTY(int enableRDelayOn READ enableRDelayOn WRITE setEnableRDelayOn NOTIFY enableRDelayOnChanged)
+    Q_PROPERTY(int enableRDelayOff READ enableRDelayOff WRITE setEnableRDelayOff NOTIFY enableRDelayOffChanged)
+    Q_PROPERTY(int enableWDelayOn READ enableWDelayOn WRITE setEnableWDelayOn NOTIFY enableWDelayOnChanged)
+    Q_PROPERTY(int enableWDelayOff READ enableWDelayOff WRITE setEnableWDelayOff NOTIFY enableWDelayOffChanged)
 
     Q_PROPERTY(bool resyncR READ resyncR WRITE setResyncR NOTIFY resyncRChanged)
     Q_PROPERTY(bool resyncW READ resyncW WRITE setResyncW NOTIFY resyncWChanged)
 
     Q_PROPERTY(bool queuedR READ queuedR WRITE setQueuedR NOTIFY queuedRChanged)
     Q_PROPERTY(bool queuedW READ queuedW WRITE setQueuedW NOTIFY queuedWChanged)
-    Q_PROPERTY(bool queuedRW READ queuedRW WRITE setQueuedRW NOTIFY queuedRWChanged)
     Q_PROPERTY(bool queuedWPending READ queuedWPending NOTIFY queuedWPendingChanged)
 
     Q_PROPERTY(int delayMsR READ delayMsR WRITE setDelayMsR NOTIFY delayMsRChanged)
@@ -67,17 +69,19 @@ public:
     ReAttachBehavior reAttachBehvior() const { return m_reAttachBehvior; }
     bool enableR() const { return m_enableR; }
     bool enableW() const { return m_enableW; }
-    bool enableRW() const { return m_enableRW; }
     bool resyncR() const { return m_resyncR; }
     bool resyncW() const { return m_resyncW; }
     bool queuedR() const { return m_queuedR; }
     bool queuedW() const { return m_queuedW; }
-    bool queuedRW() const { return m_queuedRW; }
     bool queuedWPending() const { return m_queuedWPending; }
     int delayMsR() const { return m_delayMsR; }
     int delayMsW() const { return m_delayMsW; }
     DelayBehvior delayBehR() const { return m_delayBehR; }
     DelayBehvior delayBehW() const { return m_delayBehW; }
+    int enableRDelayOn() const { return m_enableRDelayOn; }
+    int enableRDelayOff() const { return m_enableRDelayOff; }
+    int enableWDelayOn() const { return m_enableWDelayOn; }
+    int enableWDelayOff() const { return m_enableWDelayOff; }
 
 public slots:
     void setObject(QObject* value);
@@ -86,20 +90,22 @@ public slots:
     void setReAttachBehvior(ReAttachBehavior value);
     void initReAttachBehvior(ReAttachBehavior value);
     void setEnableR(bool value);
+    void setEnableRImpl(bool value);
     void setEnableW(bool value);
-    void setEnableRW(bool value);
-    void updateRW();
+    void setEnableWImpl(bool value);
     void setResyncR(bool value);
     void setResyncW(bool value);
     void setQueuedR(bool value);
     void setQueuedW(bool value);
-    void setQueuedRW(bool value);
-    void updateQueuedRW();
     void setQueuedWPending(bool value);
     void setDelayMsR(int value);
     void setDelayMsW(int value);
     void setDelayBehR(DelayBehvior value);
     void setDelayBehW(DelayBehvior value);
+    void setEnableRDelayOn(int value);
+    void setEnableRDelayOff(int value);
+    void setEnableWDelayOn(int value);
+    void setEnableWDelayOff(int value);
 
 signals:
     void objectChanged(QObject* object);
@@ -108,17 +114,19 @@ signals:
     void reAttachBehviorChanged(ReAttachBehavior reAttachBehvior);
     void enableRChanged(bool enableR);
     void enableWChanged(bool enableW);
-    void enableRWChanged(bool enableRW);
     void resyncRChanged(bool resyncR);
     void resyncWChanged(bool resyncW);
     void queuedRChanged(bool queuedR);
     void queuedWChanged(bool queuedW);
-    void queuedRWChanged(bool queuedRW);
     void queuedWPendingChanged(bool queuedWPending);
     void delayMsRChanged(int delayMsR);
     void delayMsWChanged(int delayMsW);
     void delayBehRChanged(DelayBehvior delayBehR);
     void delayBehWChanged(DelayBehvior delayBehW);
+    void enableRDelayOnChanged(int enableRDelayOn);
+    void enableRDelayOffChanged(int enableRDelayOff);
+    void enableWDelayOnChanged(int enableWDelayOn);
+    void enableWDelayOffChanged(int enableWDelayOff);
 // ----
 
 private slots:
@@ -142,12 +150,10 @@ private:
     bool m_reAttachBehviorIsSet { false };
     bool m_enableR  { true };
     bool m_enableW  { true };
-    bool m_enableRW { true };
     bool m_resyncR { true };
     bool m_resyncW { true };
     bool m_queuedR { false };
     bool m_queuedW { false };
-    bool m_queuedRW { false };
     AbstractTransformer* m_transformer { nullptr };
     QVariant m_orig;
     bool m_queuedWPending { false };
@@ -158,4 +164,12 @@ private:
     QVariant m_delayedWriteValue;
     DelayBehvior m_delayBehR { RestartTimerOnChange };
     DelayBehvior m_delayBehW { RestartTimerOnChange };
+    int m_enableRDelayOn { 0 };
+    int m_enableRDelayOff { 0 };
+    int m_enableWDelayOn { 0 };
+    int m_enableWDelayOff { 0 };
+    QTimer m_enableRDelayTimer;
+    QTimer m_enableWDelayTimer;
+    bool m_enableRCached { false };
+    bool m_enableWCached { false };
 };
