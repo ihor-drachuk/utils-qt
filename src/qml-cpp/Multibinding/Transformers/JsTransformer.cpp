@@ -1,4 +1,4 @@
-#include <utils-qt/qml/Multibinding/Transformers/JsTransformer.h>
+#include <utils-qt/qml-cpp/Multibinding/Transformers/JsTransformer.h>
 #include <QQmlEngine>
 #include <QDebug>
 

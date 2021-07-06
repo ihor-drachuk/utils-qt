@@ -10,11 +10,16 @@ endif()
 
 find_package(Qt5 COMPONENTS Core Quick REQUIRED)
 
-FILE(GLOB_RECURSE SOURCES src/*.cpp src/*.h headers/*.h)
+FILE(GLOB_RECURSE SOURCES src/*.cpp src/*.qrc src/*.h headers/*.h)
+
+list(APPEND QML_IMPORT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/qml/")
+list(REMOVE_DUPLICATES QML_IMPORT_PATH)
+set(QML_IMPORT_PATH "${QML_IMPORT_PATH}" CACHE STRING "Qt Creator extra qml import paths" FORCE)
 
 add_library(utils-qt STATIC ${SOURCES})
 set_property(TARGET utils-qt PROPERTY CXX_STANDARD 17)
 set_property(TARGET utils-qt PROPERTY AUTOMOC ON)
+set_property(TARGET utils-qt PROPERTY AUTORCC ON)
 
 target_compile_definitions(utils-qt PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 target_link_libraries(utils-qt PUBLIC Qt5::Core Qt5::Quick utils-cpp)

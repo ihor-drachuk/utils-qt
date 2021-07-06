@@ -1,4 +1,4 @@
-#include <utils-qt/qml/Multibinding/Transformers/AbstractTransformer.h>
+#include <utils-qt/qml-cpp/Multibinding/Transformers/AbstractTransformer.h>
 #include <QQmlEngine>
 
 void AbstractTransformer::registerTypes(const char* url)
