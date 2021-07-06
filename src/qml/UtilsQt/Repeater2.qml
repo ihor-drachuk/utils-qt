@@ -1,9 +1,15 @@
 import QtQuick 2.15
+import UtilsQt_QmlCpp 1.0
 
 Item {
     id: root
 
-    property int count: 0
+    // Attached properties:
+    //  - index
+    //  - isValid
+    //  - modelData
+
+    property var model: null
     property Component delegate: null
     property Item target: parent
     property bool instantRemoval: false
@@ -12,8 +18,21 @@ Item {
     onTargetChanged: internal.ready && internal.allowCallLater ? Qt.callLater(internal.update) : internal.update()
     onDelegateChanged: internal.ready && internal.allowCallLater ? Qt.callLater(internal.update) : internal.update()
 
+    LoggingCategory {
+        id: category
+        name: "Repeater2"
+    }
+
+    ListModelTools {
+        id: modelTools
+
+        model: (typeof root.model) === "number" ? null : root.model
+    }
+
     QtObject {
         id: internal
+
+        readonly property int modelCount: (typeof root.model) === "number" ? root.model : modelTools.itemsCount
 
         property int createdCount: 0
         property var createdItems: []
@@ -24,11 +43,17 @@ Item {
 
         property Component complexComponent: Component {
             Loader {
+                id: __repeater2_internal_loader
                 readonly property int index: __repeater2_internal_index
                 readonly property bool isValid: __repeater2_internal_isValid
+                readonly property var modelData: __repeater2_internal_.propertyMap
 
                 property int __repeater2_internal_index: -1
                 property bool __repeater2_internal_isValid: true
+                property ListModelItemProxy __repeater2_internal_: ListModelItemProxy {
+                    index: __repeater2_internal_loader.index
+                    model: modelTools.model
+                }
 
                 sourceComponent: root.delegate
                 asynchronous: root.asynchronous
@@ -39,13 +64,13 @@ Item {
             if (!internal.ready) return;
             internal.currentCount = 0;
             if (!root.delegate) return;
-            internal.currentCount = Qt.binding(function(){ return root.count; });
+            internal.currentCount = Qt.binding(function(){ return internal.modelCount; });
         }
 
         onCurrentCountChanged: {
             if (currentCount > internal.createdCount) {
                 for (var i = internal.createdCount; i < currentCount; i++) {
-                    console.debug("Creating delegate #" + i + "...");
+                    console.debug(category, "Creating delegate #" + i + "...");
                     var obj = internal.complexComponent.createObject(root.target, {"__repeater2_internal_index": i, "__repeater2_internal_isValid": true});
                     internal.createdItems.push(obj);
                 }
@@ -56,7 +81,7 @@ Item {
                 var removeCount = internal.createdCount - currentCount;
 
                 for (i = 0; i < removeCount; i++) {
-                    console.debug("Removing delegate #" + (internal.createdItems.length - 1) + "...");
+                    console.debug(category, "Removing delegate #" + (internal.createdItems.length - 1) + "...");
 
                     obj = internal.createdItems.pop();
 
@@ -73,6 +98,7 @@ Item {
 
     Component.onCompleted: {
         internal.ready = true;
-        internal.currentCount = Qt.binding(function(){ return root.count; });
+        if (!root.delegate) return;
+        internal.currentCount = Qt.binding(function(){ return internal.modelCount; });
     }
 }
