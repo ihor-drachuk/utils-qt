@@ -1,6 +1,8 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+
 #include <utils-qt/qml/qml-controls.h>
+#include <utils-qt/qml-cpp/ListModelItemProxy.h>
 
 int main(int argc, char *argv[])
 {
@@ -15,6 +17,7 @@ int main(int argc, char *argv[])
     }, Qt::QueuedConnection);
 
     QmlControls::init(engine);
+    ListModelItemProxy::registerTypes("CppTypes");
 
     engine.load(url);
 
