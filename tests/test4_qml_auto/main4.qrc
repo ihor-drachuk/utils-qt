@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/UtilsQt/QmlTests">
+        <file>tst_list_model_item_proxy.qml</file>
+        <file>tst_list_model_tools.qml</file>
+        <file>tst_multibinding.qml</file>
+        <file>tst_repeater2.qml</file>
+    </qresource>
+</RCC>
