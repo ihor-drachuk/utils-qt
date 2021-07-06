@@ -1,5 +1,5 @@
 #pragma once
-#include <utils-qt/qml/Multibinding/Transformers/AbstractTransformer.h>
+#include <utils-qt/qml-cpp/Multibinding/Transformers/AbstractTransformer.h>
 #include <QJSValue>
 
 class QJSEngine;

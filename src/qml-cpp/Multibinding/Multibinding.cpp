@@ -1,8 +1,8 @@
-#include <utils-qt/qml/Multibinding/Multibinding.h>
+#include <utils-qt/qml-cpp/Multibinding/Multibinding.h>
 
 #include <QQmlEngine>
 #include <cassert>
-#include <utils-qt/qml/Multibinding/MultibindingItem.h>
+#include <utils-qt/qml-cpp/Multibinding/MultibindingItem.h>
 
 
 void Multibinding::registerTypes(const char* url)
