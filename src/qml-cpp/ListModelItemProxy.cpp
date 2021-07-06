@@ -1,5 +1,6 @@
 #include "utils-qt/qml-cpp/ListModelItemProxy.h"
 
+#include <optional>
 #include <cassert>
 #include <QMap>
 #include <QQmlEngine>
@@ -11,6 +12,10 @@ struct ListModelItemProxy::impl_t
     QAbstractListModel* model { nullptr };
     int index { -1 };
     bool ready { false };
+    bool keepIndexTrack { true };
+
+    bool isChanging { false };
+    std::optional<int> expectedIndex;
 
     QMap<QString, int> rolesCache;
 };
@@ -55,6 +60,11 @@ QQmlPropertyMap* ListModelItemProxy::propertyMap() const
     return impl().propertyMap;
 }
 
+bool ListModelItemProxy::keepIndexTrack() const
+{
+    return impl().keepIndexTrack;
+}
+
 void ListModelItemProxy::setModel(QAbstractListModel* value)
 {
     if (!qobject_cast<QAbstractListModel*>(value)) {
@@ -74,7 +84,9 @@ void ListModelItemProxy::setModel(QAbstractListModel* value)
     reload();
 
     if (impl().model) {
+        QObject::connect(impl().model, &QAbstractListModel::rowsAboutToBeInserted, this, &ListModelItemProxy::onRowsInsertedBefore);
         QObject::connect(impl().model, &QAbstractListModel::rowsInserted, this, &ListModelItemProxy::onRowsInserted);
+        QObject::connect(impl().model, &QAbstractListModel::rowsAboutToBeRemoved, this, &ListModelItemProxy::onRowsRemovedBefore);
         QObject::connect(impl().model, &QAbstractListModel::rowsRemoved, this, &ListModelItemProxy::onRowsRemoved);
         QObject::connect(impl().model, &QAbstractListModel::modelReset, this, &ListModelItemProxy::onModelReset);
         QObject::connect(impl().model, &QAbstractListModel::rowsMoved, this, &ListModelItemProxy::onRowsMoved);
@@ -85,6 +97,9 @@ void ListModelItemProxy::setModel(QAbstractListModel* value)
 void ListModelItemProxy::setIndex(int value)
 {
     if (impl().index == value)
+        return;
+
+    if (impl().expectedIndex.has_value() && impl().expectedIndex.value() == value && impl().isChanging)
         return;
 
     impl().index = value;
@@ -192,10 +207,36 @@ void ListModelItemProxy::onRowsInserted(const QModelIndex& /*parent*/, int first
     if (first > impl().index)
         return;
 
-    auto shift = last - first + 1;
-    emit suggestedNewIndex(impl().index, impl().index + shift);
+    impl().isChanging = false;
 
-    reloadRoles();
+    if (impl().keepIndexTrack) {
+        impl().index = impl().expectedIndex.value();
+        impl().expectedIndex.reset();
+        emit indexChanged(impl().index);
+
+    } else {
+        auto shift = last - first + 1;
+        emit suggestedNewIndex(impl().index, impl().index + shift);
+
+        reloadRoles();
+    }
+}
+
+void ListModelItemProxy::onRowsInsertedBefore(const QModelIndex& /*parent*/, int first, int last)
+{
+    if (!isValidIndex())
+        return;
+
+    if (first > impl().index)
+        return;
+
+    impl().isChanging = true;
+
+    if (impl().keepIndexTrack) {
+        auto shift = last - first + 1;
+        auto suggestedIndex = impl().index + shift;
+        impl().expectedIndex = suggestedIndex;
+    }
 }
 
 void ListModelItemProxy::onRowsRemoved(const QModelIndex& /*parent*/, int first, int last)
@@ -206,19 +247,42 @@ void ListModelItemProxy::onRowsRemoved(const QModelIndex& /*parent*/, int first,
     if (first > impl().index)
         return;
 
+    impl().isChanging = false;
+
     auto isRemoved = (impl().index >= first && impl().index <= last);
+    auto shift = last - first + 1;
+    auto suggestedIndex = impl().index - shift;
 
-    if (isRemoved) {
-        emit suggestedNewIndex(impl().index, -1);
+    if (impl().keepIndexTrack && !isRemoved) {
+        impl().index = impl().expectedIndex.value();
+        impl().expectedIndex.reset();
+        emit indexChanged(impl().index);
+
     } else {
-        auto shift = last - first + 1;
-        emit suggestedNewIndex(impl().index, impl().index - shift);
+        emit suggestedNewIndex(impl().index, isRemoved ? -1 : suggestedIndex);
+
+        if (impl().index >= impl().model->rowCount()) {
+            reload();
+        } else {
+            reloadRoles();
+        }
     }
+}
 
-    if (impl().index >= impl().model->rowCount()) {
-        reload();
-    } else {
-        reloadRoles();
+void ListModelItemProxy::onRowsRemovedBefore(const QModelIndex& /*parent*/, int first, int last)
+{
+    if (impl().index == -1)
+        return;
+
+    if (first > impl().index)
+        return;
+
+    impl().isChanging = true;
+
+    if (impl().keepIndexTrack) {
+        auto shift = last - first + 1;
+        auto suggestedIndex = impl().index - shift;
+        impl().expectedIndex = suggestedIndex;
     }
 }
 
@@ -258,4 +322,13 @@ void ListModelItemProxy::setPropertyMap(QQmlPropertyMap* value)
 
     impl().propertyMap = value;
     emit propertyMapChanged(impl().propertyMap);
+}
+
+void ListModelItemProxy::setKeepIndexTrack(bool value)
+{
+    if (impl().keepIndexTrack == value)
+        return;
+
+    impl().keepIndexTrack = value;
+    emit keepIndexTrackChanged(impl().keepIndexTrack);
 }
