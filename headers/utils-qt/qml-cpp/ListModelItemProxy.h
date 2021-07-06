@@ -19,6 +19,7 @@ public:
     ~ListModelItemProxy() override;
 
 signals:
+    void changed();
     void suggestedNewIndex(int oldIndex, int newIndex);
 
 // --- Properties support ---

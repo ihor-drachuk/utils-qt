@@ -3,6 +3,7 @@
 #include <cassert>
 #include <QMap>
 #include <QQmlEngine>
+#include <utils-cpp/scoped_guard.h>
 
 struct ListModelItemProxy::impl_t
 {
@@ -114,6 +115,10 @@ bool ListModelItemProxy::isValidIndex() const
 
 void ListModelItemProxy::reload()
 {
+    auto _sg = CreateScopedGuard([this](){
+        emit changed();
+    });
+
     setReady(false);
 
     setPropertyMap(new QQmlPropertyMap());
@@ -168,6 +173,8 @@ void ListModelItemProxy::reloadRoles(const QVector<int>& affectedRoles)
 
         it++;
     }
+
+    emit changed();
 }
 
 void ListModelItemProxy::onValueChanged(const QString& key, const QVariant& value)

@@ -74,10 +74,19 @@ ApplicationWindow {
 
                     text: index + " " + proxy.ready ? (proxy.propertyMap.stringValue + " " + proxy.propertyMap.intValue) : ""
 
+                    SequentialAnimation on color {
+                        id: anim
+                        ColorAnimation { to: "red"; duration: 100 }
+                        ColorAnimation { to: "black"; duration: 100 }
+                    }
+
                     ListModelItemProxy {
                         id: proxy
                         model: listModel
                         index: idx
+                        keepIndexTrack: true
+
+                        onChanged: anim.start();
                     }
 
                     Item {
