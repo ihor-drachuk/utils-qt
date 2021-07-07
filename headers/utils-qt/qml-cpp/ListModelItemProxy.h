@@ -21,6 +21,7 @@ public:
 
 signals:
     void changed();
+    void removed();
     void suggestedNewIndex(int oldIndex, int newIndex);
 
 // --- Properties support ---
