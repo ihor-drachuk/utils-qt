@@ -1,6 +1,8 @@
 #include <QtQuickTest>
 #include <QQmlEngine>
 #include <QQmlContext>
+#include <QQuickWindow>
+#include <QSGRendererInterface>
 #include <cassert>
 #include <utils-qt/qml.h>
 
@@ -36,9 +38,12 @@ struct RegistratorKickstart
 {
     RegistratorKickstart() {
         Registrator::registerTypes("Registrator");
+#if QTCORE_VERSION >= QT_VERSION_CHECK(5,14,0)
+        QQuickWindow::setSceneGraphBackend(QSGRendererInterface::NullRhi);
+#endif
     }
 } _reg;
 
-QUICK_TEST_MAIN(test_utils_qt_4)
+QUICK_TEST_MAIN(utils_qt_test4)
 
 #include "main4.moc"

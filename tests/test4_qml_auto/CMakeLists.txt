@@ -19,4 +19,6 @@ target_compile_options(test-utils-qt-4 PRIVATE
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Werror>
 )
 
-add_test(NAME test-utils-qt-4-runner COMMAND test-utils-qt-4)
+if (UTILS_QT_ALLOW_QML_TESTS)
+    add_test(NAME test-utils-qt-4-runner COMMAND test-utils-qt-4)
+endif()

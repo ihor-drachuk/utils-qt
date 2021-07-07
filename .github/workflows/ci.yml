@@ -27,6 +27,7 @@ jobs:
       run: |
        echo "GENERATOR=Unix Makefiles" >> $GITHUB_ENV
        echo "CORES=$(nproc --all)" >> $GITHUB_ENV
+       echo "QML_TESTS=-DUTILS_QT_ALLOW_QML_TESTS=OFF" >> $GITHUB_ENV
 
     - name: "Set OS-specific values (Mac)"
       if: ${{ runner.os == 'macOS' }}
@@ -98,6 +99,6 @@ jobs:
       working-directory: ${{github.workspace}}/src
       shell: bash
       run: |
-       cmake -DUTILS_QT_CI_RUN=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" ${{env.MSVC_ARCH}} -G "${{env.GENERATOR}}" -S "${{github.workspace}}/src" -B "${{github.workspace}}/build"
+       cmake ${{env.QML_TESTS}} -DUTILS_QT_CI_RUN=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" ${{env.MSVC_ARCH}} -G "${{env.GENERATOR}}" -S "${{github.workspace}}/src" -B "${{github.workspace}}/build"
        cmake --build "${{github.workspace}}/build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
        ctest --rerun-failed --output-on-failure --timeout 20 -C "${{matrix.build_type}}" --test-dir "${{github.workspace}}/build/tests"
