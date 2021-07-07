@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 PROJECT(utils-qt)
 
 option(UTILS_QT_ENABLE_TESTS     "utils-qt: Enable tests" OFF)
+option(UTILS_QT_ALLOW_QML_TESTS  "utils-qt: Allow QML tests" ON)
 option(UTILS_QT_ENABLE_BENCHMARK "utils-qt: Enable benchmark" OFF)
 
 if (NOT TARGET utils-cpp)
