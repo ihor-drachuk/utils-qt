@@ -163,6 +163,7 @@ void ListModelItemProxy::reload()
     QObject::connect(map, &QQmlPropertyMap::valueChanged, this, &ListModelItemProxy::onValueChanged);
     setPropertyMap(map);
     setReady(true);
+    //emit changed(); -- by scoped guard
 }
 
 void ListModelItemProxy::reloadRoles(const QVector<int>& affectedRoles)
@@ -252,6 +253,9 @@ void ListModelItemProxy::onRowsRemoved(const QModelIndex& /*parent*/, int first,
     auto isRemoved = (impl().index >= first && impl().index <= last);
     auto shift = last - first + 1;
     auto suggestedIndex = impl().index - shift;
+
+    if (isRemoved)
+        emit removed();
 
     if (impl().keepIndexTrack && !isRemoved) {
         impl().index = impl().expectedIndex.value();
