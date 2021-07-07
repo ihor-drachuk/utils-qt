@@ -1,4 +1,5 @@
 #include <QtQuickTest>
+#include <QCoreApplication>
 #include <QQmlEngine>
 #include <QQmlContext>
 #include <QQuickWindow>
@@ -27,22 +28,22 @@ public:
         auto context = QQmlEngine::contextForObject(this);
         assert(context);
 
-        auto engine = QQmlEngine::contextForObject(this)->engine();
+        auto engine = context->engine();
         assert(engine);
 
         UtilsQt::Qml::registerAll(*engine);
     }
 };
 
-struct RegistratorKickstart
+static void Registrator_register()
 {
-    RegistratorKickstart() {
-        Registrator::registerTypes("Registrator");
-#if QTCORE_VERSION >= QT_VERSION_CHECK(5,14,0)
-        QQuickWindow::setSceneGraphBackend(QSGRendererInterface::NullRhi);
+    Registrator::registerTypes("Registrator");
+#if QT_VERSION >= QT_VERSION_CHECK(5,14,0)
+    QQuickWindow::setSceneGraphBackend(QSGRendererInterface::NullRhi);
 #endif
-    }
-} _reg;
+}
+
+Q_COREAPP_STARTUP_FUNCTION(Registrator_register)
 
 QUICK_TEST_MAIN(utils_qt_test4)
 
