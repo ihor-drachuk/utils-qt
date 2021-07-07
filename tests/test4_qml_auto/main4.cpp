@@ -1,19 +1,44 @@
 #include <QtQuickTest>
+#include <QQmlEngine>
+#include <QQmlContext>
+#include <cassert>
 #include <utils-qt/qml.h>
 
-class Setup : public QObject
+
+// 'Registrator' is created for compatibility with Qt 5.9
+
+class Registrator : public QObject
 {
     Q_OBJECT
 public:
-    Setup() {
+    static void registerTypes(const char* url)
+    {
+        qmlRegisterType<Registrator>(url, 1, 0, "Registrator");
     }
 
-public slots:
-    void qmlEngineAvailable(QQmlEngine* engine) {
+    explicit Registrator(QObject* parent = nullptr)
+        : QObject(parent)
+    { }
+
+    Q_INVOKABLE void registerAll()
+    {
+        auto context = QQmlEngine::contextForObject(this);
+        assert(context);
+
+        auto engine = QQmlEngine::contextForObject(this)->engine();
+        assert(engine);
+
         UtilsQt::Qml::registerAll(*engine);
     }
 };
 
-QUICK_TEST_MAIN_WITH_SETUP(test_utils_qt_4, Setup);
+struct RegistratorKickstart
+{
+    RegistratorKickstart() {
+        Registrator::registerTypes("Registrator");
+    }
+} _reg;
+
+QUICK_TEST_MAIN(test_utils_qt_4)
 
 #include "main4.moc"

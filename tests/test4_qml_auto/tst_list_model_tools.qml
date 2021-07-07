@@ -1,5 +1,5 @@
-import QtQuick 2.15
-import QtTest 1.15
+import QtQuick 2.9
+import QtTest 1.0
 import UtilsQt 1.0
 
 Item {
@@ -15,11 +15,6 @@ Item {
     ListModelTools {
         id: listModelTools
         model: listModel
-    }
-
-    SignalSpy {
-        target: listModelTools
-        signalName: "count"
     }
 
     TestCase {
