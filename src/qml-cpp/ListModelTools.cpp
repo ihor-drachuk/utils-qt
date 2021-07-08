@@ -3,6 +3,45 @@
 #include <QQmlEngine>
 #include <QQmlContext>
 #include <QMap>
+#include <QSet>
+
+
+namespace {
+
+#if QT_VERSION < QT_VERSION_CHECK(5,15,0)
+template <typename T>
+QSet<T> toSet(const QList<T>& c) {
+    return c.toSet();
+}
+
+template <typename T>
+QSet<T> toSet(const QVector<T>& c) {
+    return c.toList().toSet();
+}
+
+template <typename T>
+QVector<T> toVector(const QList<T>& c) {
+    return c.toVector();
+}
+
+template <typename T>
+QVector<T> toVector(const QSet<T>& c) {
+    return c.toList().toVector();
+}
+#else
+template <template<typename> typename Container, typename T>
+QSet<T> toSet(const Container<T>& c) {
+    return QSet<T>(c.cbegin(), c.cend());
+}
+
+template <template<typename> typename Container, typename T>
+QVector<T> toVector(const Container<T>& c) {
+    return QVector<T>(c.cbegin(), c.cend());
+}
+#endif
+
+} // namespace
+
 
 struct ListModelTools::impl_t
 {
@@ -294,11 +333,10 @@ void ListModelTools::updBufferingCnt(int delta)
 
     if (impl().bufferingCnt == 0) {
         auto idx = impl().model->index(impl().bufferingIndex);
-        auto roles = QSet<int>(impl().bufferedRoles.cbegin(),
-                               impl().bufferedRoles.cend());
+        auto roles = toSet(impl().bufferedRoles);
         impl().bufferedRoles.clear();
 
-        onDataChanged(idx, idx, QVector<int>(roles.cbegin(), roles.cend()));
+        onDataChanged(idx, idx, toVector(roles));
     }
 }
 
