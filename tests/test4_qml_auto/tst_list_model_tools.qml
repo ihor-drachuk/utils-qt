@@ -17,6 +17,7 @@ Item {
         model: listModel
         allowRoles: true
         allowJsValues: true
+        bufferChanges: true
     }
 
     SignalSpy {
@@ -105,6 +106,33 @@ Item {
             var data = listModelTools.getData(2);
             compare(data["stringValue"], "s222");
             compare(data["intValue"], 222);
+
+            listModelTools.setData(0, "SSS", "stringValue");
+            compare(sChanged.count, 2);
+            data = listModelTools.getData(0);
+            compare(data["stringValue"], "SSS");
+            compare(data["intValue"], 11);
+            data = listModel.get(0);
+            compare(data["stringValue"], "SSS");
+            compare(data["intValue"], 11);
+
+            listModelTools.setDataByRoles(0, {"stringValue": "S", "intValue": 1});
+            compare(sChanged.count, 3);
+            data = listModelTools.getData(0);
+            compare(data["stringValue"], "S");
+            compare(data["intValue"], 1);
+            data = listModel.get(0);
+            compare(data["stringValue"], "S");
+            compare(data["intValue"], 1);
+
+            listModelTools.setDataByRoles(0, {"stringValue": "S2", "intValue": 12});
+            compare(sChanged.count, 4);
+            data = listModelTools.getData(0);
+            compare(data["stringValue"], "S2");
+            compare(data["intValue"], 12);
+            data = listModel.get(0);
+            compare(data["stringValue"], "S2");
+            compare(data["intValue"], 12);
 
             listModelTools.model = null;
             compare(listModelTools.itemsCount, 0);

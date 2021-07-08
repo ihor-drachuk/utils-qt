@@ -12,6 +12,7 @@ public:
     Q_PROPERTY(bool allowJsValues READ allowJsValues WRITE setAllowJsValues NOTIFY allowJsValuesChanged)
     Q_PROPERTY(bool allowRoles READ allowRoles WRITE setAllowRoles NOTIFY allowRolesChanged)
     Q_PROPERTY(int itemsCount READ itemsCount /*WRITE setItemsCount*/ NOTIFY itemsCountChanged)
+    Q_PROPERTY(bool bufferChanges READ bufferChanges WRITE setBufferChanges NOTIFY bufferChangesChanged)
 
     static void registerTypes(const char* url);
 
@@ -19,7 +20,9 @@ public:
     ~ListModelTools() override;
 
     Q_INVOKABLE QVariant getData(int index, const QString& role = {}) const;
-    Q_INVOKABLE QVariantMap getDataByRoles(int index, const QStringList& roles) const;
+    Q_INVOKABLE QVariantMap getDataByRoles(int index, const QStringList& roles = {}) const;
+    Q_INVOKABLE void setData(int index, const QVariant& value, const QString& role = {});
+    Q_INVOKABLE void setDataByRoles(int index, const QVariantMap& values);
 
 signals:
     void beforeModelReset();
@@ -38,6 +41,7 @@ public:
     int itemsCount() const;
     bool allowRoles() const;
     QStringList roles() const;
+    bool bufferChanges() const;
 
 public slots:
     void setModel(QAbstractListModel* value);
@@ -45,6 +49,7 @@ public slots:
     void setItemsCount(int value);
     void setAllowRoles(bool value);
     void setRoles(QStringList value);
+    void setBufferChanges(bool value);
 
 signals:
     void modelChanged(QAbstractListModel* model);
@@ -52,6 +57,7 @@ signals:
     void itemsCountChanged(int itemsCount);
     void allowRolesChanged(bool allowRoles);
     void rolesChanged(const QStringList& roles);
+    void bufferChangesChanged(bool bufferChanges);
 // --- ---
 
 private:
@@ -59,6 +65,7 @@ private:
     void updateItemsCount();
     QStringList listRoles() const;
     void fillRolesMap();
+    void updBufferingCnt(int delta);
 
     // From model
     void onBeforeRowsInserted(const QModelIndex& parent, int first, int last);

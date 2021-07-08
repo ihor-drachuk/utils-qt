@@ -12,6 +12,10 @@ struct ListModelTools::impl_t
     bool allowJsValues { false };
     bool allowRoles { false };
     int itemsCount { 0 };
+    bool bufferChanges { true };
+    int bufferingCnt { 0 };
+    QVector<int> bufferedRoles;
+    int bufferingIndex { -1 };
 };
 
 
@@ -64,11 +68,57 @@ QVariantMap ListModelTools::getDataByRoles(int index, const QStringList& roles) 
     auto it = rolesRef.cbegin();
     const auto itEnd = rolesRef.cend();
     while (it != itEnd) {
+        assert(impl().rolesMap.contains(*it));
         result[*it] = impl().model->data(impl().model->index(index), impl().rolesMap.value(*it, -1));
         it++;
     }
 
     return result;
+}
+
+void ListModelTools::setData(int index, const QVariant& value, const QString& role)
+{
+    if (!impl().model)
+        return;
+
+    assert(index >= 0 && index < impl().model->rowCount());
+    if (!(index >= 0 && index < impl().model->rowCount())) {
+        return;
+    }
+
+    assert(!role.isEmpty());
+    if (!(!role.isEmpty())) {
+        return;
+    }
+
+    assert(impl().rolesMap.contains(role));
+
+    impl().model->setData(impl().model->index(index), value, impl().rolesMap.value(role, -1));
+}
+
+void ListModelTools::setDataByRoles(int index, const QVariantMap& values)
+{
+    if (!impl().model)
+        return;
+
+    assert(index >= 0 && index < impl().model->rowCount());
+    if (!(index >= 0 && index < impl().model->rowCount())) {
+        return;
+    }
+
+    if (values.isEmpty())
+        return;
+
+    auto it = values.cbegin();
+    const auto itEnd = values.cend();
+    impl().bufferingIndex = index;
+    updBufferingCnt(1);
+    while (it != itEnd) {
+        assert(impl().rolesMap.contains(it.key()));
+        impl().model->setData(impl().model->index(index), it.value(), impl().rolesMap.value(it.key(), -1));
+        it++;
+    }
+    updBufferingCnt(-1);
 }
 
 QAbstractListModel* ListModelTools::model() const
@@ -89,6 +139,11 @@ bool ListModelTools::allowRoles() const
 QStringList ListModelTools::roles() const
 {
     return impl().roles;
+}
+
+bool ListModelTools::bufferChanges() const
+{
+    return impl().bufferChanges;
 }
 
 bool ListModelTools::allowJsValues() const
@@ -158,6 +213,15 @@ void ListModelTools::setRoles(QStringList value)
     emit rolesChanged(impl().roles);
 }
 
+void ListModelTools::setBufferChanges(bool value)
+{
+    if (impl().bufferChanges == value)
+        return;
+
+    impl().bufferChanges = value;
+    emit bufferChangesChanged(impl().bufferChanges);
+}
+
 void ListModelTools::setAllowJsValues(bool value)
 {
     if (impl().allowJsValues == value)
@@ -220,6 +284,24 @@ void ListModelTools::fillRolesMap()
     }
 }
 
+void ListModelTools::updBufferingCnt(int delta)
+{
+    if (!impl().bufferChanges)
+        return;
+
+    impl().bufferingCnt += delta;
+    assert(impl().bufferingCnt >= 0);
+
+    if (impl().bufferingCnt == 0) {
+        auto idx = impl().model->index(impl().bufferingIndex);
+        auto roles = QSet<int>(impl().bufferedRoles.cbegin(),
+                               impl().bufferedRoles.cend());
+        impl().bufferedRoles.clear();
+
+        onDataChanged(idx, idx, QVector<int>(roles.cbegin(), roles.cend()));
+    }
+}
+
 void ListModelTools::onBeforeRowsInserted(const QModelIndex& /*parent*/, int first, int last)
 {
     emit beforeInserted(first, last);
@@ -257,6 +339,12 @@ void ListModelTools::onDataChanged(const QModelIndex& topLeft, const QModelIndex
 {
     auto first = topLeft.row();
     auto last = bottomRight.row();
+
+    if (impl().bufferingCnt && first == impl().bufferingIndex && last == impl().bufferingIndex) {
+        impl().bufferedRoles.append(roles);
+        return;
+    }
+
     auto tester = createTester(first, last);
     QStringList roleNames;
 
