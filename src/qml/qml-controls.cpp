@@ -15,8 +15,8 @@ void init(QQmlEngine& qmlEngine) {
     qmlEngine.addImportPath(":/utils-qt");
     qmlEngine.addImportPath("qrc:/utils-qt");
 
-    ListModelItemProxy::registerTypes("UtilsQt_QmlCpp");
-    ListModelTools::registerTypes("UtilsQt_QmlCpp");
+    ListModelItemProxy::registerTypes("UtilsQt");
+    ListModelTools::registerTypes("UtilsQt");
 }
 
 } // namespace QmlModules

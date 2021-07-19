@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import UtilsQt_QmlCpp 1.0
+import UtilsQt 1.0
 
 Item {
     id: root
