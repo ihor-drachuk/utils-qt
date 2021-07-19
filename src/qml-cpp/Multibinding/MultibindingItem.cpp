@@ -23,11 +23,11 @@ bool comapre(const QVariant& a, const QVariant& b) {
 } // namespace
 
 
-void MultibindingItem::registerTypes(const char* url)
+void MultibindingItem::registerTypes()
 {
     qRegisterMetaType<ReAttachBehavior>("ReAttachBehavior");
     qRegisterMetaType<DelayBehvior>("DelayBehvior");
-    qmlRegisterType<MultibindingItem>(url, 1, 0, "MultibindingItem");
+    qmlRegisterType<MultibindingItem>("UtilsQt", 1, 0, "MultibindingItem");
 }
 
 

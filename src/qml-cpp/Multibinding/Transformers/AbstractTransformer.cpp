@@ -1,7 +1,7 @@
 #include <utils-qt/qml-cpp/Multibinding/Transformers/AbstractTransformer.h>
 #include <QQmlEngine>
 
-void AbstractTransformer::registerTypes(const char* url)
+void AbstractTransformer::registerTypes()
 {
-    qmlRegisterUncreatableType<AbstractTransformer>(url, 1, 0, "AbstractTransformer", "Uncreatable type");
+    qmlRegisterUncreatableType<AbstractTransformer>("UtilsQt", 1, 0, "AbstractTransformer", "Uncreatable type");
 }

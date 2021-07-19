@@ -1,4 +1,4 @@
-#include "utils-qt/qml-cpp/QmlUtils.h"
+#include <utils-qt/qml-cpp/QmlUtils.h>
 
 #include <QQmlEngine>
 #include <QImageReader>
@@ -32,9 +32,9 @@ QmlUtils& QmlUtils::instance()
     return object;
 }
 
-void QmlUtils::registerTypes(const char* url)
+void QmlUtils::registerTypes()
 {
-    qmlRegisterSingletonType<QmlUtils>(url, 1, 0, "QmlUtils", [] (QQmlEngine *engine, QJSEngine *) -> QObject* {
+    qmlRegisterSingletonType<QmlUtils>("UtilsQt", 1, 0, "QmlUtils", [] (QQmlEngine *engine, QJSEngine *) -> QObject* {
         auto ret = &QmlUtils::instance();
         engine->setObjectOwnership(ret, QQmlEngine::CppOwnership);
         return ret;

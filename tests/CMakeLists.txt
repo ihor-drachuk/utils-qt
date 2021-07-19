@@ -101,6 +101,7 @@ if (UTILS_QT_ENABLE_TESTS)
     add_subdirectory(test2)
     add_subdirectory(test3_qml_manual)
     add_subdirectory(test4_qml_auto)
+    add_subdirectory(test5_qml)
 endif()
 
 if (UTILS_QT_ENABLE_BENCHMARK)

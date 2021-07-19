@@ -11,7 +11,7 @@ class NumericalValidator : public QValidator {
     Q_PROPERTY(QVariant bottom READ bottom WRITE setBottom NOTIFY bottomChanged)
 
 public:
-    static void registerTypes(const char* url);
+    static void registerTypes();
 
     enum ValueRangeStatus {
         TopValue = 0,

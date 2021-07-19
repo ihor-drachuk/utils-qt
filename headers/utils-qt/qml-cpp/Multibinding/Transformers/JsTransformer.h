@@ -11,7 +11,7 @@ public:
     Q_PROPERTY(QJSValue onReadConverter READ onReadConverter WRITE setOnReadConverter NOTIFY onReadConverterChanged)
     Q_PROPERTY(QJSValue onWriteConverter READ onWriteConverter WRITE setOnWriteConverter NOTIFY onWriteConverterChanged)
 
-    static void registerTypes(const char* url);
+    static void registerTypes();
     static void setJsEngine(QJSEngine* jsEngine) { s_jsEngine = jsEngine; }
 
     JsTransformer(QObject* parent = nullptr);

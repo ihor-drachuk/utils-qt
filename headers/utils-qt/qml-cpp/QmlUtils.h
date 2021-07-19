@@ -7,7 +7,7 @@ class QmlUtils : public QObject
     Q_OBJECT
 public:
     static QmlUtils& instance();
-    static void registerTypes(const char* url);
+    static void registerTypes();
 
 #ifdef WIN32
     Q_PROPERTY(bool displayRequired READ displayRequired WRITE setDisplayRequired NOTIFY displayRequiredChanged)
