@@ -5,9 +5,9 @@
 #include <utils-qt/qml-cpp/Multibinding/MultibindingItem.h>
 
 
-void Multibinding::registerTypes(const char* url)
+void Multibinding::registerTypes()
 {
-    qmlRegisterType<Multibinding>(url, 1, 0, "Multibinding");
+    qmlRegisterType<Multibinding>("UtilsQt", 1, 0, "Multibinding");
 }
 
 

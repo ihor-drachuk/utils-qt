@@ -1,4 +1,4 @@
-#include "utils-qt/qml-cpp/ListModelTools.h"
+#include <utils-qt/qml-cpp/ListModelTools.h>
 
 #include <QQmlEngine>
 #include <QQmlContext>
@@ -58,10 +58,10 @@ struct ListModelTools::impl_t
 };
 
 
-void ListModelTools::registerTypes(const char* url)
+void ListModelTools::registerTypes()
 {
     qRegisterMetaType<QAbstractListModel*>("QAbstractListModel*");
-    qmlRegisterType<ListModelTools>(url, 1, 0, "ListModelTools");
+    qmlRegisterType<ListModelTools>("UtilsQt", 1, 0, "ListModelTools");
 }
 
 

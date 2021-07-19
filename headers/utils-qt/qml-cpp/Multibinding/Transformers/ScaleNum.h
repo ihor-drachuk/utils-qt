@@ -9,7 +9,7 @@ public:
     Q_PROPERTY(bool roundOnRead READ roundOnRead WRITE setRoundOnRead NOTIFY roundOnReadChanged)
     Q_PROPERTY(bool roundOnWrite READ roundOnWrite WRITE setRoundOnWrite NOTIFY roundOnWriteChanged)
 
-    static void registerTypes(const char* url);
+    static void registerTypes();
 
     ScaleNum(QObject* parent = nullptr): AbstractTransformer(parent) { }
     QVariant readConverter(const QVariant& value) const override;

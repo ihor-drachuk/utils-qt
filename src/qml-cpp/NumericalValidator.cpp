@@ -14,9 +14,9 @@ struct NumericalValidator::impl_t
     std::unique_ptr<QValidator> standartValidator;
 };
 
-void NumericalValidator::registerTypes(const char* url)
+void NumericalValidator::registerTypes()
 {
-    qmlRegisterType<NumericalValidator>(url, 1, 0, "NumericalValidator");
+    qmlRegisterType<NumericalValidator>("UtilsQt", 1, 0, "NumericalValidator");
 }
 
 NumericalValidator::NumericalValidator(QObject* parent)

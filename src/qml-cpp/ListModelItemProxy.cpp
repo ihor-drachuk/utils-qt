@@ -1,4 +1,4 @@
-#include "utils-qt/qml-cpp/ListModelItemProxy.h"
+#include <utils-qt/qml-cpp/ListModelItemProxy.h>
 
 #include <optional>
 #include <cassert>
@@ -21,11 +21,11 @@ struct ListModelItemProxy::impl_t
 };
 
 
-void ListModelItemProxy::registerTypes(const char* url)
+void ListModelItemProxy::registerTypes()
 {
     qRegisterMetaType<QAbstractListModel*>("QAbstractListModel*");
     qRegisterMetaType<QQmlPropertyMap*>("QQmlPropertyMap*");
-    qmlRegisterType<ListModelItemProxy>(url, 1, 0, "ListModelItemProxy");
+    qmlRegisterType<ListModelItemProxy>("UtilsQt", 1, 0, "ListModelItemProxy");
 }
 
 

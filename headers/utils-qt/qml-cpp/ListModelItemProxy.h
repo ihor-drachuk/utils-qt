@@ -8,13 +8,14 @@ class ListModelItemProxy : public QObject
 {
     Q_OBJECT
 public:
-    Q_PROPERTY(QQmlPropertyMap* propertyMap READ propertyMap /*WRITE setPropertyMap*/ NOTIFY propertyMapChanged)
     Q_PROPERTY(QAbstractListModel* model READ model WRITE setModel NOTIFY modelChanged)
     Q_PROPERTY(int index READ index WRITE setIndex NOTIFY indexChanged)
-    Q_PROPERTY(bool ready READ ready /*WRITE setReady*/ NOTIFY readyChanged)
     Q_PROPERTY(bool keepIndexTrack READ keepIndexTrack WRITE setKeepIndexTrack NOTIFY keepIndexTrackChanged)
 
-    static void registerTypes(const char* url);
+    Q_PROPERTY(QQmlPropertyMap* propertyMap READ propertyMap /*WRITE setPropertyMap*/ NOTIFY propertyMapChanged)
+    Q_PROPERTY(bool ready READ ready /*WRITE setReady*/ NOTIFY readyChanged)
+
+    static void registerTypes();
 
     explicit ListModelItemProxy(QObject* parent = nullptr);
     ~ListModelItemProxy() override;

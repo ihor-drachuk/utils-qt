@@ -4,10 +4,10 @@
 
 QJSEngine* JsTransformer::s_jsEngine { nullptr };
 
-void JsTransformer::registerTypes(const char* url)
+void JsTransformer::registerTypes()
 {
-    AbstractTransformer::registerTypes(url);
-    qmlRegisterType<JsTransformer>(url, 1, 0, "JsTransformer");
+    AbstractTransformer::registerTypes();
+    qmlRegisterType<JsTransformer>("UtilsQt", 1, 0, "JsTransformer");
 }
 
 JsTransformer::JsTransformer(QObject* parent)

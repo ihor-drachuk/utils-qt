@@ -8,7 +8,7 @@ class Multibinding : public QQuickItem
     Q_OBJECT
     Q_PROPERTY(QVariant value READ value WRITE setValue NOTIFY valueChanged)
 public:
-    static void registerTypes(const char* url);
+    static void registerTypes();
 
     Multibinding(QQuickItem* parent = nullptr): QQuickItem(parent) { }
     void connectChildren();

@@ -2,10 +2,10 @@
 #include <QQmlEngine>
 
 
-void ScaleNum::registerTypes(const char* url)
+void ScaleNum::registerTypes()
 {
-    AbstractTransformer::registerTypes(url);
-    qmlRegisterType<ScaleNum>(url, 1, 0, "ScaleNum");
+    AbstractTransformer::registerTypes();
+    qmlRegisterType<ScaleNum>("UtilsQt", 1, 0, "ScaleNum");
 }
 
 QVariant ScaleNum::readConverter(const QVariant& value) const

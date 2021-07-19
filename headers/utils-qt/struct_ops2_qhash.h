@@ -1,7 +1,7 @@
 #pragma once
-#include "tuple_for_each.h"
 #include <QtCore>
 #include <QHash>
+#include <utils-cpp/tuple_for_each.h>
 
 
 namespace struct_ops_internal {

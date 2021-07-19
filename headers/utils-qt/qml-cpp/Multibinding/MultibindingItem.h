@@ -48,7 +48,7 @@ public:
     Q_PROPERTY(DelayBehvior delayBehR READ delayBehR WRITE setDelayBehR NOTIFY delayBehRChanged)
     Q_PROPERTY(DelayBehvior delayBehW READ delayBehW WRITE setDelayBehW NOTIFY delayBehWChanged)
 
-    static void registerTypes(const char* url);
+    static void registerTypes();
 
     MultibindingItem(QQuickItem* parent = nullptr);
 

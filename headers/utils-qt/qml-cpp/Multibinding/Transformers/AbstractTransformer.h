@@ -6,7 +6,7 @@ class AbstractTransformer : public QObject
 {
     Q_OBJECT
 public:
-    static void registerTypes(const char* url);
+    static void registerTypes();
 
     AbstractTransformer(QObject* parent): QObject(parent) { }
     virtual QVariant readConverter(const QVariant& value) const = 0;

@@ -14,7 +14,7 @@ public:
     Q_PROPERTY(int itemsCount READ itemsCount /*WRITE setItemsCount*/ NOTIFY itemsCountChanged)
     Q_PROPERTY(bool bufferChanges READ bufferChanges WRITE setBufferChanges NOTIFY bufferChangesChanged)
 
-    static void registerTypes(const char* url);
+    static void registerTypes();
 
     explicit ListModelTools(QObject* parent = nullptr);
     ~ListModelTools() override;
