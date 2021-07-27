@@ -10,7 +10,7 @@ Item {
     //  - modelData
 
     property var model: null
-    property Component delegate: null
+    default property Component delegate: null
     property Item target: parent
     property bool instantRemoval: false
     property bool asynchronous: false
