@@ -25,6 +25,7 @@ void registerAll(QQmlEngine& engine)
     MultibindingItem::registerTypes();
     AbstractTransformer::registerTypes();
     JsTransformer::registerTypes();
+    JsTransformer::setJsEngine(&engine);
     ScaleNum::registerTypes();
     NumericalValidator::registerTypes();
     QmlUtils::registerTypes();
