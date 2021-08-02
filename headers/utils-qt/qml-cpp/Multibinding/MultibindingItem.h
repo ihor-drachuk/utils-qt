@@ -57,6 +57,7 @@ public:
     void write(const QVariant& value);
 
     Q_INVOKABLE void sync() { emit needSync(); }
+    Q_INVOKABLE void announce() { emit changed(); }
 
 signals:
     void changed();
