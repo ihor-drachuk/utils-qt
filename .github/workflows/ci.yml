@@ -82,6 +82,7 @@ jobs:
       if: ${{ matrix.use_qt == 'yes' && runner.os == 'Linux' }}
       shell: bash
       run: |
+       sudo apt-get update
        sudo apt-get install qt5-default qtdeclarative5-dev
 
     - name: "Add Qt to PATH"

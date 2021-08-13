@@ -5,5 +5,6 @@
         <file>tst_2_list_model_tools.qml</file>
         <file>tst_3_multibinding.qml</file>
         <file>tst_4_repeater2.qml</file>
+        <file>tst_5_mergedlistmodel.qml</file>
     </qresource>
 </RCC>
