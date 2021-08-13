@@ -108,7 +108,8 @@ QVariantMap ListModelTools::getDataByRoles(int index, const QStringList& roles) 
     const auto itEnd = rolesRef.cend();
     while (it != itEnd) {
         assert(impl().rolesMap.contains(*it));
-        result[*it] = impl().model->data(impl().model->index(index), impl().rolesMap.value(*it, -1));
+        auto newValue = impl().model->data(impl().model->index(index), impl().rolesMap.value(*it, -1));
+        result[*it] = newValue.isValid() ? newValue : QVariant::fromValue(nullptr);
         it++;
     }
 
@@ -158,6 +159,34 @@ void ListModelTools::setDataByRoles(int index, const QVariantMap& values)
         it++;
     }
     updBufferingCnt(-1);
+}
+
+int ListModelTools::roleNameToInt(const QString& role) const
+{
+    if (!impl().model)
+        return -1;
+
+    auto roleBuf = role.toLatin1();
+    auto roles = impl().model->roleNames();
+    auto it = roles.cbegin();
+    const auto itEnd = roles.cend();
+
+    while (it != itEnd) {
+        if (it.value() == roleBuf)
+            return it.key();
+
+        it++;
+    }
+
+    return -1;
+}
+
+QModelIndex ListModelTools::modelIndexByRow(int row)
+{
+    if (!impl().model)
+        return {};
+
+    return impl().model->index(row);
 }
 
 QAbstractListModel* ListModelTools::model() const
@@ -369,6 +398,7 @@ void ListModelTools::onBeforeModelReset()
 
 void ListModelTools::onModelReset()
 {
+    fillRolesMap();
     updateItemsCount();
     emit modelReset();
 }

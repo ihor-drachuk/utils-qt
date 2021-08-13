@@ -10,6 +10,7 @@
 #include <utils-qt/qml-cpp/Multibinding/Transformers/ScaleNum.h>
 #include <utils-qt/qml-cpp/NumericalValidator.h>
 #include <utils-qt/qml-cpp/QmlUtils.h>
+#include <utils-qt/mergedlistmodel.h>
 
 #include <QQmlEngine>
 
@@ -29,6 +30,7 @@ void registerAll(QQmlEngine& engine)
     ScaleNum::registerTypes();
     NumericalValidator::registerTypes();
     QmlUtils::registerTypes();
+    MergedListModel::registerTypes();
 }
 
 } // namespace Qml

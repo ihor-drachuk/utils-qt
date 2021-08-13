@@ -24,6 +24,9 @@ public:
     Q_INVOKABLE void setData(int index, const QVariant& value, const QString& role = {});
     Q_INVOKABLE void setDataByRoles(int index, const QVariantMap& values);
 
+    Q_INVOKABLE int roleNameToInt(const QString& role) const;
+    Q_INVOKABLE QModelIndex modelIndexByRow(int row);
+
 signals:
     void beforeModelReset();
     void modelReset();

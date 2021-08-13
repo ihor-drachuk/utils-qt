@@ -15,7 +15,6 @@ Item {
     QtObject {
         id: internal
         property var values: []
-        property var modelDatas: []
     }
 
     Item {
@@ -30,7 +29,6 @@ Item {
                     d["stringValue"] = modelData.stringValue;
                     d["intValue"] = modelData.intValue;
                     internal.values.push(d);
-                    internal.modelDatas.push(modelData);
                 }
             }
         }
