@@ -27,7 +27,8 @@ void Multibinding::connectChildren()
     if (childItems().isEmpty())
         return;
 
-    for (auto item: childItems()) {
+    auto children = childItems();
+    for (auto item: children) {
         if (auto prop = qobject_cast<MultibindingItem*>(item)) {
             prop->initialize();
             connect(prop, &MultibindingItem::changed, this, [this, prop] { onChanged(prop); });
@@ -35,7 +36,7 @@ void Multibinding::connectChildren()
         }
     }
 
-    if (auto first = qobject_cast<MultibindingItem*>(childItems().first())) {
+    if (auto first = qobject_cast<MultibindingItem*>(children.first())) {
         first->initReAttachBehvior(MultibindingItem::SyncMultibinding);
         onChanged(first);
     }
@@ -45,7 +46,8 @@ void Multibinding::sync()
 {
     m_recursionBlocking = true;
 
-    for (auto item: childItems()) {
+    auto children = childItems();
+    for (auto item: children) {
         if (auto destProp = qobject_cast<MultibindingItem*>(item))
             if (!destProp->queuedWPending())
                 destProp->write(m_value);
