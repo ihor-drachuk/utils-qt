@@ -186,9 +186,11 @@ bool MergedListModel::setData(const QModelIndex& index, const QVariant& value, i
         return false;
 
     } else {
-        auto srcNum = impl().data.at(idx).at(impl().srcRole).toInt();
-        assert(srcNum == 1 || srcNum == 2);
-        auto& ctx = impl().models[srcNum-1];
+        auto foundInModel1 = UtilsCpp::find_in_map(impl().models[0].roleRemapToSrc, role);
+        auto foundInModel2 = UtilsCpp::find_in_map(impl().models[1].roleRemapToSrc, role);
+        assert(foundInModel1.has_value() ^ foundInModel2.has_value());
+        auto modelIdx = foundInModel1 ? 0 : 1;
+        auto& ctx = impl().models[modelIdx];
         ctx.model->setData(ctx.model->index(ctx.indexRemapToSrc.at(idx)), value, ctx.roleRemapToSrc.at(role));
     }
 
