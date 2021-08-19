@@ -170,8 +170,6 @@ Item {
             mergedListModel.setData(listModelTools.modelIndexByRow(1), "ALEX2", listModelTools.roleNameToInt("value2"));
             mergedListModel.setData(listModelTools.modelIndexByRow(3), "Alex2", listModelTools.roleNameToInt("value1"));
 
-            internal.dumpModel();
-
             x = internal.dumpModelVar();
             compare(x, [
                         {"source":1,"uid":1,"value1":"Ihor2","value2":null,"value3":null},
