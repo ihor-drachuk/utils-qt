@@ -7,7 +7,7 @@
 
 namespace UtilsQt {
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0) // Qt 5.10 (^) and upper
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0) // Qt 5.14 (^) and upper
 
 template<typename T = void,
          typename Container,
@@ -36,7 +36,7 @@ QList<R> toList(const Container& container)
     return QList<R>(container.cbegin(), container.cend());
 }
 
-#else // Before Qt 5.10 (v)
+#else // Before Qt 5.14 (v)
 
 template<typename T = void,
          typename Container,

@@ -8,7 +8,20 @@
 
 namespace {
 
-#if QT_VERSION < QT_VERSION_CHECK(5,15,0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0) // Qt 5.14 (^) and upper
+
+template <template<typename> typename Container, typename T>
+QSet<T> toSet(const Container<T>& c) {
+    return QSet<T>(c.cbegin(), c.cend());
+}
+
+template <template<typename> typename Container, typename T>
+QVector<T> toVector(const Container<T>& c) {
+    return QVector<T>(c.cbegin(), c.cend());
+}
+
+#else // Before Qt 5.14 (v)
+
 template <typename T>
 QSet<T> toSet(const QList<T>& c) {
     return c.toSet();
@@ -28,17 +41,7 @@ template <typename T>
 QVector<T> toVector(const QSet<T>& c) {
     return c.toList().toVector();
 }
-#else
-template <template<typename> typename Container, typename T>
-QSet<T> toSet(const Container<T>& c) {
-    return QSet<T>(c.cbegin(), c.cend());
-}
-
-template <template<typename> typename Container, typename T>
-QVector<T> toVector(const Container<T>& c) {
-    return QVector<T>(c.cbegin(), c.cend());
-}
-#endif
+#endif // End QT_VERSION
 
 } // namespace
 
