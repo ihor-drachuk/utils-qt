@@ -14,8 +14,8 @@ Item {
     ListModel {
         id: listModel2
         dynamicRoles: false
-        ListElement { uid: 2; value1: "Alex22"; value2: "Alex23" }
-        ListElement { uid: 4; value1: "Bob22"; value2: "Bob23" }
+        ListElement { uidd: 2; value1: "Alex22"; value2: "Alex23" }
+        ListElement { uidd: 4; value1: "Bob22"; value2: "Bob23" }
     }
 
     MergedListModel {
@@ -23,7 +23,7 @@ Item {
         model1: listModel1
         model2: listModel2
         joinRole1: "uid"
-        joinRole2: "uid"
+        joinRole2: "uidd"
     }
 
     ListModelTools {
