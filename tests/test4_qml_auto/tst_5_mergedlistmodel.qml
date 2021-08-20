@@ -64,7 +64,7 @@ Item {
     }
 
     TestCase {
-        name: "RepeaterTest"
+        name: "MergedListModelTest_1"
         when: !delay.running
 
         function test_0_basic() {
@@ -97,7 +97,7 @@ Item {
             listModel1.set(1, {uid:2, value1:"Alex"})
 
             // Test onDataChanged with changed joinRole
-            listModel2.set(0, {uid:0, value2:"ALEX", value3:"ALEX!"})
+            listModel2.set(0, {uid:0, value2:"ALEX", value3:"ALEX!"}) // TODO: Better to use 0 -> null. But ListModel can't...
 
             x = internal.dumpModelVar();
             compare(x, [

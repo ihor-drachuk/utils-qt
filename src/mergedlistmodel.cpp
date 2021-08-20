@@ -43,15 +43,6 @@ std::optional<QString> getString(const QVariant& value)
 
 bool isNull(const QVariant& value)
 {
-    // TODO: Remove test code
-    if (auto integer = getInt(value)) {
-        if (*integer == 0)
-            return true;
-    }
-
-    if (value.type() == QVariant::Type::Double && qFuzzyIsNull(value.toDouble()))
-        return true;
-    // ---
     return value.isNull() || !value.isValid();
 }
 
@@ -479,10 +470,16 @@ void MergedListModel::init()
         }
     };
 
-    for (int i = 1; i < impl().roles.size(); i++) {
-        for (int k = 0; k < i; k++) { // TODO: TEST!!!
-            while (impl().roles.at(i) == impl().roles.at(k)) {
-                updateName(impl().roles[i]);
+    bool needTest = true;
+    while (needTest) {
+        needTest = false;
+
+        for (int i = 1; i < impl().roles.size(); i++) {
+            for (int k = 0; k < i; k++) {
+                while (impl().roles.at(i) == impl().roles.at(k)) {
+                    needTest = true;
+                    updateName(impl().roles[i]);
+                }
             }
         }
     }
@@ -906,8 +903,6 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
 
             endRemoveRows();
         }
-
-        // TODO: Update indexes inplace, between begin/end model signals
 
         // Remove indexes
         ctx.indexRemapFromSrc.erase(i);
