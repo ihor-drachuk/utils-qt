@@ -584,6 +584,7 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
 
                 // Also update srcRole
                 impl().data[localIdx][impl().srcRole] = (!idx)+1;
+                changedRoles.append(impl().srcRole + Qt::UserRole);
 
                 if (!changedRoles.isEmpty())
                     emit dataChanged(index(localIdx), index(localIdx), changedRoles);
@@ -649,6 +650,7 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
 
                 // Also update srcRole
                 impl().data[newLine][impl().srcRole] = 3;
+                changedRoles.append(impl().srcRole + Qt::UserRole);
 
                 assert(UtilsCpp::find_in_map(impl().joinValueToIndex, newJoinValue).has_value());
                 ctx.indexRemapFromSrc.insert({srcIndex, newLine});
@@ -777,6 +779,14 @@ void MergedListModel::onAfterInserted(int idx, const QModelIndex& /*parent*/, in
 
                 if (r == impl().srcRole) {
                     currentValue = 3;
+                    updatedRoles.append(r + Qt::UserRole);
+
+                } else if (r == impl().joinRole) {
+                    auto srcRole = UtilsCpp::find_in_map(ctx.roleRemapToSrc, r);
+                    assert(srcRole.has_value());
+                    auto newValue = ctx.model->data(ctx.model->index(i), *srcRole);
+                    assert(currentValue == newValue);
+
                 } else {
                     auto srcRole = UtilsCpp::find_in_map(ctx.roleRemapToSrc, r);
                     if (srcRole) {
