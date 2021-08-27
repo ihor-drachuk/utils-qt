@@ -20,7 +20,7 @@ Item {
 
     LoggingCategory {
         id: category
-        name: "Repeater2"
+        name: "Repeater2" + (root.objectName ? " (" + root.objectName + ")" : "")
     }
 
     ListModelTools {
@@ -100,5 +100,10 @@ Item {
         internal.ready = true;
         if (!root.delegate) return;
         internal.currentCount = Qt.binding(function(){ return internal.modelCount; });
+        console.debug(category, "Repeater2 created (%1)".arg(root));
+    }
+
+    Component.onDestruction: {
+        console.debug(category, "Repeater2 destroying (%1)".arg(root));
     }
 }
