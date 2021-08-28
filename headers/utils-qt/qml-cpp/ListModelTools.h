@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <QAbstractListModel>
 #include <QJSValue>
 #include <utils-cpp/pimpl.h>
@@ -26,6 +27,16 @@ public:
 
     Q_INVOKABLE int roleNameToInt(const QString& role) const;
     Q_INVOKABLE QModelIndex modelIndexByRow(int row);
+
+    static std::optional<int> findIndexByValue(
+            const QAbstractListModel& model,
+            const QByteArray& roleName,
+            const QVariant& value);
+
+    static std::optional<QVariant> findValueByValues(
+            const QAbstractListModel& model,
+            const QVariantMap& values,
+            const QString& neededRole = {});
 
 signals:
     void beforeModelReset();
