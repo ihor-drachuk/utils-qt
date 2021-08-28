@@ -4,7 +4,7 @@
 #include <QQmlContext>
 #include <QMap>
 #include <QSet>
-
+#include <QHash>
 
 namespace {
 
@@ -190,6 +190,93 @@ QModelIndex ListModelTools::modelIndexByRow(int row)
         return {};
 
     return impl().model->index(row);
+}
+
+std::optional<int> ListModelTools::findIndexByValue(const QAbstractListModel& model, const QByteArray& roleName, const QVariant& value)
+{
+    assert(&model);
+    auto sz = model.rowCount();
+    auto role = model.roleNames().key(roleName);
+    assert(role > 0);
+
+    for (int i = 0; i < sz; i++) {
+        auto idx = model.index(i);
+        auto val = model.data(idx, role);
+        if (val == value) {
+            return i;
+        }
+    }
+
+    return {};
+}
+
+std::optional<QVariant> ListModelTools::findValueByValues(const QAbstractListModel& model, const QVariantMap& values, const QString& neededRole)
+{
+    assert(&model);
+    assert(!values.isEmpty());
+    auto sz = model.rowCount();
+
+    auto modelRoles = model.roleNames();
+
+    assert(neededRole.isEmpty() || modelRoles.values().contains(neededRole.toLatin1()));
+
+    QHash<QString, int> rolesMap;
+    { // ctx
+        auto it = modelRoles.cbegin();
+        const auto itEnd = modelRoles.cend();
+        while (it != itEnd) {
+            rolesMap.insert(QString::fromLatin1(it.value()), it.key());
+            it++;
+        }
+    }
+
+    QHash<int, QVariant> expectedValues;
+    { // ctx
+        auto it = values.cbegin();
+        const auto itEnd = values.cend();
+        while (it != itEnd) {
+            assert(rolesMap.contains(it.key()));
+            expectedValues.insert(rolesMap.value(it.key()), it.value());
+            it++;
+        }
+    }
+
+    for (int i = 0; i < sz; i++) {
+        auto idx = model.index(i);
+
+        bool allRolesMatched = true;
+        for (auto it = expectedValues.cbegin(),
+             itEnd = expectedValues.cend();
+             it != itEnd;
+             it++)
+        {
+            auto data = model.data(idx, it.key());
+            if (data != it.value()) {
+                allRolesMatched = false;
+                break;
+            }
+        }
+
+        if (!allRolesMatched) continue;
+
+        if (neededRole.isEmpty()) {
+            QVariantMap result;
+            for (auto it = modelRoles.cbegin(),
+                 itEnd = modelRoles.cend();
+                 it != itEnd;
+                 it++)
+            {
+                result.insert(QString::fromLatin1(it.value()), model.data(idx, it.key()));
+            }
+
+            return result;
+
+        } else {
+            return model.data(idx, rolesMap.value(neededRole));
+        }
+    }
+
+    return {};
 }
 
 QAbstractListModel* ListModelTools::model() const
