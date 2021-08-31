@@ -4,6 +4,7 @@
 #include <QDataStream>
 #include <QBuffer>
 #include <QQmlEngine>
+#include <cassert>
 #include <optional>
 #include <unordered_map>
 #include <utils-cpp/scoped_guard.h>
@@ -938,6 +939,18 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
 
         ctx.indexRemapFromSrc = std::move(copyIndexRemapFromSrc);
         ctx.indexRemapToSrc = std::move(copyIndexRemapToSrc);
+
+        if (removedLocal) {
+            decltype(impl().joinValueToIndex) copyJoinValueToIndex;
+
+            for (const auto& x : impl().joinValueToIndex) {
+                const auto newKey = x.first;
+                const auto newValue = x.second > localIdx ? x.second - 1 : x.second;
+                copyJoinValueToIndex.insert({newKey, newValue});
+            }
+
+            impl().joinValueToIndex = std::move(copyJoinValueToIndex);
+        }
 
         localIdx = -1; // Invalidate localIdx after removal
     }
