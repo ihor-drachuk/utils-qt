@@ -13,7 +13,7 @@ bool isFloat(const QVariant& value) {
            value.type() == (QVariant::Type)QMetaType::Type::Float;
 }
 
-bool comapre(const QVariant& a, const QVariant& b) {
+bool compare(const QVariant& a, const QVariant& b) {
     if (isFloat(a) || isFloat(b))
         return qFuzzyCompare(a.toDouble(), b.toDouble());
     else
@@ -443,7 +443,7 @@ void MultibindingItem::writeImpl2(QVariant value)
     assert(!propertyName().isEmpty());
     assert(QQmlProperty(object(), propertyName()).isValid());
 
-    if (m_enableR && comapre(read(), value))
+    if (m_enableR && compare(read(), value))
         return;
 
     if (m_transformer)
