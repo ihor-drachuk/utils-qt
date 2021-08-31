@@ -2,6 +2,7 @@
     <qresource prefix="/utils-qt">
         <file>UtilsQt/qmldir</file>
         <file>UtilsQt/Assert.qml</file>
+        <file>UtilsQt/Rectangle2.qml</file>
         <file>UtilsQt/Repeater2.qml</file>
     </qresource>
 </RCC>
