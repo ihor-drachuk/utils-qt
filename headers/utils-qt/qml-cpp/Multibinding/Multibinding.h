@@ -15,6 +15,10 @@ public:
 
     Q_INVOKABLE void sync();
 
+signals:
+    void triggered(MultibindingItem* source);
+    void triggeredAfter(MultibindingItem* source);
+
 // Properties support
 public:
     QVariant value() const { return m_value; }

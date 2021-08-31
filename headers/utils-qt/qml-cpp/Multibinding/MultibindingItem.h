@@ -62,6 +62,8 @@ public:
 signals:
     void changed();
     void needSync();
+    void triggered();
+    void triggeredAfter();
 
 // Properies support
 public:

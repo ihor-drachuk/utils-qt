@@ -69,7 +69,11 @@ void Multibinding::onChanged(MultibindingItem* srcProp)
     if (m_recursionBlocking)
         return;
 
+    emit triggered(srcProp);
+    emit srcProp->triggered();
     setValue(srcProp->read());
+    emit triggeredAfter(srcProp);
+    emit srcProp->triggeredAfter();
 }
 
 void Multibinding::onSyncNeeded(MultibindingItem* srcProp)
