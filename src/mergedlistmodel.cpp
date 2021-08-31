@@ -575,7 +575,7 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
 
                 for (auto r : ctxRoles) {
                     auto localRole = ctx.roleRemapFromSrc.at(r);
-                    impl().data[localIdx][localRole] = QVariant();
+                    impl().data[localIdx][localRole] = QVariant::fromValue(nullptr);
                     changedRoles.append(localRole + Qt::UserRole);
                 }
 
@@ -888,7 +888,7 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
                     // Nothing.
 
                 } else if (UtilsCpp::find_in_map(ctx.roleRemapToSrc, r)) {
-                    impl().data[localIdx][r] = QVariant();
+                    impl().data[localIdx][r] = QVariant::fromValue(nullptr);
                     updatedRoles.append(r);
                 }
             }
