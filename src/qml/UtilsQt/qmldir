@@ -1,3 +1,4 @@
 module UtilsQt
 
+Assert                 1.0  Assert.qml
 Repeater2              1.0  Repeater2.qml
