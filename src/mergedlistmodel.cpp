@@ -182,10 +182,16 @@ bool MergedListModel::setData(const QModelIndex& index, const QVariant& value, i
         assert(foundInModel1.has_value() ^ foundInModel2.has_value());
         auto modelIdx = foundInModel1 ? 0 : 1;
         auto& ctx = impl().models[modelIdx];
-        ctx.model->setData(ctx.model->index(ctx.indexRemapToSrc.at(idx)), value, ctx.roleRemapToSrc.at(role));
-    }
 
-    return true;
+        auto remappedIdx = UtilsCpp::find_in_map(ctx.indexRemapToSrc, idx);
+        if (remappedIdx) {
+            ctx.model->setData(ctx.model->index(*remappedIdx), value, ctx.roleRemapToSrc.at(role));
+            return true;
+        } else {
+            // Nothing. There is no such role in source model for this row.
+            return false;
+        }
+    }
 }
 
 QHash<int, QByteArray> MergedListModel::roleNames() const
