@@ -4,6 +4,7 @@
 #include <QDataStream>
 #include <QBuffer>
 #include <QQmlEngine>
+#include <QSet>
 #include <cassert>
 #include <optional>
 #include <unordered_map>
@@ -82,6 +83,13 @@ struct hash<QVariant>
     }
 };
 } // namespace std
+
+#ifdef NDEBUG // If Release
+#define NeedSelfCheck
+#else
+//#define NeedSelfCheck auto _selfCheck = CreateScopedGuard([this](){ selfCheck(); });
+#define NeedSelfCheck
+#endif
 
 struct MergedListModel::impl_t
 {
@@ -276,6 +284,188 @@ void MergedListModel::setJoinRole2(const QVariant& value)
     init();
 
     emit joinRole2Changed(impl().joinRole2);
+}
+
+void MergedListModel::selfCheckModel(int idx) const
+{
+    const auto& ctx = impl().models[idx];
+    auto rowsCnt = rowCount({});
+    auto ctxRowsCnt = ctx.model->rowCount({});
+
+    { // ctx
+        QSet<int> indexes, indexes2;
+
+        assert(ctx.indexRemapFromSrc.size() == ctx.indexRemapToSrc.size());
+
+        for (auto it = ctx.indexRemapFromSrc.cbegin(),
+             itEnd = ctx.indexRemapFromSrc.cend();
+             it != itEnd;
+             it++)
+        {
+            assert(it->first >= 0);
+            assert(it->first < ctxRowsCnt);
+
+            assert(it->second >= 0);
+            assert(it->second < rowsCnt);
+
+            assert(!indexes.contains(it->first));
+            indexes.insert(it->first);
+
+            assert(!indexes2.contains(it->second));
+            indexes2.insert(it->second);
+
+            auto remapped = ctx.indexRemapToSrc.at(it->second);
+            assert(remapped == it->first);
+        }
+    }
+
+    { // ctx
+        assert(ctx.roleRemapFromSrc.size() == ctx.roleRemapToSrc.size());
+        auto rolesSz = impl().roles.size();
+
+        for (auto it = ctx.roleRemapFromSrc.cbegin(),
+             itEnd = ctx.roleRemapFromSrc.cend();
+             it != itEnd;
+             it++)
+        {
+            assert(it->second >= 0);
+            assert(it->second < rolesSz);
+        }
+    }
+
+    { // ctx
+        for (auto it = ctx.roleRemapFromSrc.cbegin(),
+             itEnd = ctx.roleRemapFromSrc.cend();
+             it != itEnd;
+             it++)
+        {
+            auto remapped = ctx.roleRemapToSrc.at(it->second);
+            assert(remapped == it->first);
+        }
+    }
+}
+
+void MergedListModel::selfCheck() const
+{
+#ifndef NDEBUG
+    // Check indexes consistency
+    auto rowsCnt = rowCount({});
+    assert(rowsCnt == impl().data.size());
+
+    { // ctx
+        QSet<int> indexes;
+
+        for (auto it = impl().joinValueToIndex.cbegin(),
+             itEnd = impl().joinValueToIndex.cend();
+             it != itEnd;
+             it++)
+        {
+            assert(it->second >= 0);
+            assert(it->second < rowsCnt);
+            assert(!indexes.contains(it->second));
+            indexes.insert(it->second);
+        }
+    }
+
+    // Check models
+    selfCheckModel(0);
+    selfCheckModel(1);
+
+    // Check data
+    for (int i = 0; i < rowsCnt; i++) {
+        const auto& currentLine = impl().data.at(i);
+
+        for (int r = 0; r < impl().roles.size(); r++) {
+            const QVariant value = currentLine.at(r);
+
+            if (r == impl().srcRole) {
+                assert(value.type() == QVariant::Type::Int ||
+                       value.type() == QVariant::Type::UInt ||
+                       value.type() == QVariant::Type::LongLong ||
+                       value.type() == QVariant::Type::ULongLong);
+
+                auto intValue = value.toInt();
+                assert(intValue == 1 || intValue == 2 || intValue == 3);
+
+                auto remappedIndex1 = UtilsCpp::find_in_map(impl().models[0].indexRemapToSrc, i);
+                auto remappedIndex2 = UtilsCpp::find_in_map(impl().models[1].indexRemapToSrc, i);
+
+                switch (intValue) {
+                    case 1: {
+                        assert(remappedIndex1);
+                        assert(!remappedIndex2);
+                        break;
+                    }
+
+                    case 2: {
+                        assert(!remappedIndex1);
+                        assert(remappedIndex2);
+                        break;
+                    }
+
+                    case 3: {
+                        assert(remappedIndex1);
+                        assert(remappedIndex2);
+                        break;
+                    }
+                }
+
+            } else {
+                auto remappedIndex1 = UtilsCpp::find_in_map(impl().models[0].indexRemapToSrc, i);
+                auto remappedIndex2 = UtilsCpp::find_in_map(impl().models[1].indexRemapToSrc, i);
+                auto remappedRole1 = UtilsCpp::find_in_map(impl().models[0].roleRemapToSrc, r);
+                auto remappedRole2 = UtilsCpp::find_in_map(impl().models[1].roleRemapToSrc, r);
+
+                assert(remappedIndex1 || remappedIndex2);
+                assert(remappedRole1 || remappedRole2);
+
+                if (remappedIndex1 && remappedRole1) {
+                    auto srcValue = impl().models[0].model->data(impl().models[0].model->index(remappedIndex1.value()), remappedRole1.value());
+                    assert(value == srcValue);
+                }
+
+                if (remappedIndex2 && remappedRole2) {
+                    auto srcValue = impl().models[1].model->data(impl().models[1].model->index(remappedIndex2.value()), remappedRole2.value());
+                    assert(value == srcValue);
+                }
+
+                if (r == impl().joinRole) {
+                    auto remappedJoinValue = UtilsCpp::find_in_map(impl().joinValueToIndex, value);
+                    assert(remappedJoinValue);
+                    assert(remappedJoinValue.value() == i);
+                }
+            }
+        }
+    }
+
+
+    // Reconstruction test
+#if 0
+    {
+        MergedListModel clone;
+        clone.setModel1(impl().models[0].model);
+        clone.setModel2(impl().models[1].model);
+        clone.setJoinRole1(impl().joinRole1);
+        clone.setJoinRole2(impl().joinRole2);
+        assert(impl().roles == clone._impl->roles);
+        assert(impl().data == clone._impl->data);
+        assert(impl().joinValueToIndex == clone._impl->joinValueToIndex);
+
+        assert(impl().models[0].roleRemapFromSrc == clone._impl->models[0].roleRemapFromSrc);
+        assert(impl().models[0].roleRemapToSrc == clone._impl->models[0].roleRemapToSrc);
+        assert(impl().models[0].indexRemapFromSrc == clone._impl->models[0].indexRemapFromSrc);
+        assert(impl().models[0].indexRemapToSrc == clone._impl->models[0].indexRemapToSrc);
+
+        assert(impl().models[1].roleRemapFromSrc == clone._impl->models[1].roleRemapFromSrc);
+        assert(impl().models[1].roleRemapToSrc == clone._impl->models[1].roleRemapToSrc);
+        assert(impl().models[1].indexRemapFromSrc == clone._impl->models[1].indexRemapFromSrc);
+        assert(impl().models[1].indexRemapToSrc == clone._impl->models[1].indexRemapToSrc);
+    }
+#endif
+
+#else
+    std::abort();
+#endif // !NDEBUG
 }
 
 bool MergedListModel::initable() const
@@ -543,6 +733,8 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
     assert(!impl().models[1].operationInProgress);
     impl().models[idx].operationInProgress = true;
 
+    NeedSelfCheck;
+
     auto& ctx = impl().models[idx];
     auto rolesFull = roles.isEmpty() ? UtilsQt::toVector(ctx.model->roleNames().keys()) : roles;
 
@@ -755,6 +947,8 @@ void MergedListModel::onAfterInserted(int idx, const QModelIndex& /*parent*/, in
     assert(impl().models[!idx].operationInProgress == false);
     auto& ctx = impl().models[idx];
 
+    NeedSelfCheck;
+
     // Shift all indexes
     decltype(ctx.indexRemapFromSrc) copyIndexRemapFromSrc;
     decltype(ctx.indexRemapToSrc)   copyIndexRemapToSrc;
@@ -874,6 +1068,8 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
     assert(impl().models[!idx].operationInProgress == false);
     auto& ctx = impl().models[idx];
 
+    NeedSelfCheck;
+
     // Handle src-removed items
     for (int i = first; i <= last; i++) {
         auto localIdx = ctx.indexRemapFromSrc.at(i);
@@ -974,6 +1170,7 @@ void MergedListModel::onAfterReset(int idx)
     impl().resetting = false;
     assert(impl().models[idx].operationInProgress == true);
     assert(impl().models[!idx].operationInProgress == false);
+    NeedSelfCheck;
     init();
     impl().models[idx].operationInProgress = false;
 }

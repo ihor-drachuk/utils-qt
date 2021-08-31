@@ -41,6 +41,8 @@ signals:
 // --- ---
 
 private:
+    void selfCheckModel(int idx) const;
+    void selfCheck() const;
     bool initable() const;
     void init();
     void deinit();
