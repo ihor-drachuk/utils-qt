@@ -1077,6 +1077,7 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
         assert(srcRoleValue == (idx+1) || srcRoleValue == 3);
         auto foundInBoth = (srcRoleValue == 3);
         bool removedLocal = false;
+        std::optional<scoped_guard<std::function<void()>>> endRemoveRowsLater;
 
         if (foundInBoth) {
             // Update line
@@ -1114,7 +1115,8 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
             // Remove line
             impl().data.removeAt(localIdx);
 
-            endRemoveRows();
+            //endRemoveRows();
+            endRemoveRowsLater = scoped_guard<std::function<void()>>([this](){ endRemoveRows(); });
         }
 
         // Remove indexes
