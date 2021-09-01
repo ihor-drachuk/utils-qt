@@ -169,19 +169,7 @@ int ListModelTools::roleNameToInt(const QString& role) const
     if (!impl().model)
         return -1;
 
-    auto roleBuf = role.toLatin1();
-    auto roles = impl().model->roleNames();
-    auto it = roles.cbegin();
-    const auto itEnd = roles.cend();
-
-    while (it != itEnd) {
-        if (it.value() == roleBuf)
-            return it.key();
-
-        it++;
-    }
-
-    return -1;
+    return impl().model->roleNames().key(role.toLatin1(), -1);
 }
 
 QModelIndex ListModelTools::modelIndexByRow(int row)
@@ -196,8 +184,8 @@ std::optional<int> ListModelTools::findIndexByValue(const QAbstractListModel& mo
 {
     assert(&model);
     auto sz = model.rowCount();
-    auto role = model.roleNames().key(roleName);
-    assert(role > 0);
+    auto role = model.roleNames().key(roleName, -1);
+    assert(role >= 0);
 
     for (int i = 0; i < sz; i++) {
         auto idx = model.index(i);
@@ -277,6 +265,24 @@ std::optional<QVariant> ListModelTools::findValueByValues(const QAbstractListMod
     }
 
     return {};
+}
+
+QVariantList ListModelTools::collectValuesByRole(const QAbstractListModel& model, const QByteArray& roleName)
+{
+    assert(&model);
+    auto sz = model.rowCount();
+    auto role = model.roleNames().key(roleName, -1);
+    assert(role >= 0);
+
+    QVariantList result;
+    result.reserve(sz);
+    for (int i = 0; i < sz; i++) {
+        auto idx = model.index(i);
+        auto value = model.data(idx, role);
+        result.append(value);
+    }
+
+    return result;
 }
 
 QAbstractListModel* ListModelTools::model() const
