@@ -1,6 +1,8 @@
 #pragma once
 #include <optional>
 #include <QAbstractListModel>
+#include <QVector>
+#include <QVariantList>
 #include <QJSValue>
 #include <utils-cpp/pimpl.h>
 
@@ -37,6 +39,22 @@ public:
             const QAbstractListModel& model,
             const QVariantMap& values,
             const QString& neededRole = {});
+
+    static QVariantList collectValuesByRole(const QAbstractListModel& model,
+            const QByteArray& roleName);
+
+    template<typename T>
+    static QVector<T> collectValuesByRoleT(
+            const QAbstractListModel& model,
+            const QByteArray& roleName)
+    {
+        auto values = collectValuesByRole(model, roleName);
+        QVector<T> result;
+        result.reserve(values.size());
+        for (const auto& x : qAsConst(values))
+            result.append(x.value<T>());
+        return result;
+    }
 
 signals:
     void beforeModelReset();
