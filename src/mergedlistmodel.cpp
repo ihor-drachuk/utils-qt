@@ -924,9 +924,50 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
         }
     };
 
-    // Loop: update all lines
-    for (int i = topLeft.row(); i <= bottomRight.row(); i++)
-        updateLine(i);
+
+    if (!roles.isEmpty() && !roles.contains(ctx.joinRole)) {
+        // Optimized solution for cases, when joinRole is not affected
+        int minIndex = -1;
+        int maxIndex = -1;
+        bool rangeInit = false;
+
+        for (int i = topLeft.row(); i <= bottomRight.row(); i++) {
+            auto localIdx = ctx.indexRemapFromSrc.at(i);
+
+            if (rangeInit) {
+                minIndex = std::min(minIndex, localIdx);
+                maxIndex = std::max(maxIndex, localIdx);
+            } else {
+                minIndex = localIdx;
+                maxIndex = localIdx;
+                rangeInit = true;
+            }
+
+            for (auto r : rolesFull) {
+                assert(r != ctx.joinRole);
+                auto localRole = ctx.roleRemapFromSrc.at(r);
+                auto newValue = ctx.model->data(ctx.model->index(i), r);
+                auto oldValue = impl().data.at(localIdx).at(localRole);
+                if (newValue != oldValue) {
+                    impl().data[localIdx][localRole] = newValue;
+                }
+            }
+        }
+
+        assert(rangeInit);
+
+        QVector<int> localRoles;
+        localRoles.reserve(roles.size());
+        for (const auto& x : roles) localRoles.append(ctx.roleRemapFromSrc.at(x) + Qt::UserRole);
+
+        emit dataChanged(index(minIndex), index(maxIndex), localRoles);
+
+    } else {
+        // General solution
+        // Loop: update all lines
+        for (int i = topLeft.row(); i <= bottomRight.row(); i++)
+            updateLine(i);
+    }
 
     impl().models[idx].operationInProgress = false;
 }
