@@ -825,10 +825,25 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
                         copyJoinValueToIndex.insert({newKey, newValue});
                     }
 
+                    //...don't forget to update indexes in 'another' model
+                    auto& ctx2 = impl().models[!idx];
+                    decltype(ctx2.indexRemapFromSrc)   copyIndexRemapFromSrc2;
+                    decltype(ctx2.indexRemapToSrc)     copyIndexRemapToSrc2;
+
+                    for (const auto& x : ctx2.indexRemapFromSrc) {
+                        int newSrcIndex = x.first;
+                        int newLocalIndex = x.second > localIdx ? x.second - 1 : x.second;
+
+                        copyIndexRemapFromSrc2.insert({newSrcIndex, newLocalIndex});
+                        copyIndexRemapToSrc2.insert({newLocalIndex, newSrcIndex});
+                    }
+
                     localIdx = -1; // Invalidate localIdx after removal
 
                     ctx.indexRemapFromSrc = std::move(copyIndexRemapFromSrc);
                     ctx.indexRemapToSrc = std::move(copyIndexRemapToSrc);
+                    ctx2.indexRemapFromSrc = std::move(copyIndexRemapFromSrc2);
+                    ctx2.indexRemapToSrc = std::move(copyIndexRemapToSrc2);
                     impl().joinValueToIndex = std::move(copyJoinValueToIndex);
 
                     endRemoveRows();
@@ -1189,6 +1204,22 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
             }
 
             impl().joinValueToIndex = std::move(copyJoinValueToIndex);
+
+            //...don't forget to update indexes in 'another' model
+            auto& ctx2 = impl().models[!idx];
+            decltype(ctx2.indexRemapFromSrc)   copyIndexRemapFromSrc2;
+            decltype(ctx2.indexRemapToSrc)     copyIndexRemapToSrc2;
+
+            for (const auto& x : ctx2.indexRemapFromSrc) {
+                int newSrcIndex = x.first;
+                int newLocalIndex = x.second > localIdx ? x.second - 1 : x.second;
+
+                copyIndexRemapFromSrc2.insert({newSrcIndex, newLocalIndex});
+                copyIndexRemapToSrc2.insert({newLocalIndex, newSrcIndex});
+            }
+
+            ctx2.indexRemapFromSrc = std::move(copyIndexRemapFromSrc2);
+            ctx2.indexRemapToSrc = std::move(copyIndexRemapToSrc2);
         }
 
         localIdx = -1; // Invalidate localIdx after removal
