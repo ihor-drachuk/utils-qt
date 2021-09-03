@@ -20,6 +20,8 @@ public:
     bool setData(const QModelIndex& index, const QVariant& value, int role) override;
     QHash<int, QByteArray> roleNames() const override;
 
+    Q_INVOKABLE void checkConsistency() const;
+
 // --- Properties support ---
 public:
     QVariant joinRole1() const;

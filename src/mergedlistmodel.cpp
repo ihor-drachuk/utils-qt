@@ -91,6 +91,12 @@ struct hash<QVariant>
 #define NeedSelfCheck
 #endif
 
+#ifdef NDEBUG // If Release
+#define mlm_assert_rel(x) if (!(x)) std::abort()
+#else
+#define mlm_assert_rel(x) assert(x)
+#endif
+
 struct MergedListModel::impl_t
 {
     QVariant joinRole1;
@@ -216,6 +222,11 @@ QHash<int, QByteArray> MergedListModel::roleNames() const
     return result;
 }
 
+void MergedListModel::checkConsistency() const
+{
+    selfCheck();
+}
+
 QAbstractListModel* MergedListModel::model1() const
 {
     return impl().models[0].model;
@@ -295,32 +306,32 @@ void MergedListModel::selfCheckModel(int idx) const
     { // ctx
         QSet<int> indexes, indexes2;
 
-        assert(ctx.indexRemapFromSrc.size() == ctx.indexRemapToSrc.size());
+        mlm_assert_rel(ctx.indexRemapFromSrc.size() == ctx.indexRemapToSrc.size());
 
         for (auto it = ctx.indexRemapFromSrc.cbegin(),
              itEnd = ctx.indexRemapFromSrc.cend();
              it != itEnd;
              it++)
         {
-            assert(it->first >= 0);
-            assert(it->first < ctxRowsCnt);
+            mlm_assert_rel(it->first >= 0);
+            mlm_assert_rel(it->first < ctxRowsCnt);
 
-            assert(it->second >= 0);
-            assert(it->second < rowsCnt);
+            mlm_assert_rel(it->second >= 0);
+            mlm_assert_rel(it->second < rowsCnt);
 
-            assert(!indexes.contains(it->first));
+            mlm_assert_rel(!indexes.contains(it->first));
             indexes.insert(it->first);
 
-            assert(!indexes2.contains(it->second));
+            mlm_assert_rel(!indexes2.contains(it->second));
             indexes2.insert(it->second);
 
             auto remapped = ctx.indexRemapToSrc.at(it->second);
-            assert(remapped == it->first);
+            mlm_assert_rel(remapped == it->first);
         }
     }
 
     { // ctx
-        assert(ctx.roleRemapFromSrc.size() == ctx.roleRemapToSrc.size());
+        mlm_assert_rel(ctx.roleRemapFromSrc.size() == ctx.roleRemapToSrc.size());
         auto rolesSz = impl().roles.size();
 
         for (auto it = ctx.roleRemapFromSrc.cbegin(),
@@ -328,8 +339,8 @@ void MergedListModel::selfCheckModel(int idx) const
              it != itEnd;
              it++)
         {
-            assert(it->second >= 0);
-            assert(it->second < rolesSz);
+            mlm_assert_rel(it->second >= 0);
+            mlm_assert_rel(it->second < rolesSz);
         }
     }
 
@@ -340,17 +351,23 @@ void MergedListModel::selfCheckModel(int idx) const
              it++)
         {
             auto remapped = ctx.roleRemapToSrc.at(it->second);
-            assert(remapped == it->first);
+            mlm_assert_rel(remapped == it->first);
+        }
+    }
+
+    { // ctx
+        for (int i = 0; i < ctxRowsCnt; i++) {
+            auto remapped = UtilsCpp::find_in_map(ctx.indexRemapFromSrc, i);
+            mlm_assert_rel(remapped.has_value());
         }
     }
 }
 
 void MergedListModel::selfCheck() const
 {
-#ifndef NDEBUG
     // Check indexes consistency
     auto rowsCnt = rowCount({});
-    assert(rowsCnt == impl().data.size());
+    mlm_assert_rel(rowsCnt == impl().data.size());
 
     { // ctx
         QSet<int> indexes;
@@ -360,10 +377,18 @@ void MergedListModel::selfCheck() const
              it != itEnd;
              it++)
         {
-            assert(it->second >= 0);
-            assert(it->second < rowsCnt);
-            assert(!indexes.contains(it->second));
+            mlm_assert_rel(it->second >= 0);
+            mlm_assert_rel(it->second < rowsCnt);
+            mlm_assert_rel(!indexes.contains(it->second));
             indexes.insert(it->second);
+        }
+    }
+
+    { // ctx
+        for (int i = 0; i < rowsCnt; i++) {
+            auto hasRemap1 = UtilsCpp::find_in_map(impl().models[0].indexRemapToSrc, i);
+            auto hasRemap2 = UtilsCpp::find_in_map(impl().models[1].indexRemapToSrc, i);
+            mlm_assert_rel(hasRemap1 || hasRemap2);
         }
     }
 
@@ -379,33 +404,33 @@ void MergedListModel::selfCheck() const
             const QVariant value = currentLine.at(r);
 
             if (r == impl().srcRole) {
-                assert(value.type() == QVariant::Type::Int ||
+                mlm_assert_rel(value.type() == QVariant::Type::Int ||
                        value.type() == QVariant::Type::UInt ||
                        value.type() == QVariant::Type::LongLong ||
                        value.type() == QVariant::Type::ULongLong);
 
                 auto intValue = value.toInt();
-                assert(intValue == 1 || intValue == 2 || intValue == 3);
+                mlm_assert_rel(intValue == 1 || intValue == 2 || intValue == 3);
 
                 auto remappedIndex1 = UtilsCpp::find_in_map(impl().models[0].indexRemapToSrc, i);
                 auto remappedIndex2 = UtilsCpp::find_in_map(impl().models[1].indexRemapToSrc, i);
 
                 switch (intValue) {
                     case 1: {
-                        assert(remappedIndex1);
-                        assert(!remappedIndex2);
+                        mlm_assert_rel(remappedIndex1);
+                        mlm_assert_rel(!remappedIndex2);
                         break;
                     }
 
                     case 2: {
-                        assert(!remappedIndex1);
-                        assert(remappedIndex2);
+                        mlm_assert_rel(!remappedIndex1);
+                        mlm_assert_rel(remappedIndex2);
                         break;
                     }
 
                     case 3: {
-                        assert(remappedIndex1);
-                        assert(remappedIndex2);
+                        mlm_assert_rel(remappedIndex1);
+                        mlm_assert_rel(remappedIndex2);
                         break;
                     }
                 }
@@ -416,23 +441,23 @@ void MergedListModel::selfCheck() const
                 auto remappedRole1 = UtilsCpp::find_in_map(impl().models[0].roleRemapToSrc, r);
                 auto remappedRole2 = UtilsCpp::find_in_map(impl().models[1].roleRemapToSrc, r);
 
-                assert(remappedIndex1 || remappedIndex2);
-                assert(remappedRole1 || remappedRole2);
+                mlm_assert_rel(remappedIndex1 || remappedIndex2);
+                mlm_assert_rel(remappedRole1 || remappedRole2);
 
                 if (remappedIndex1 && remappedRole1) {
                     auto srcValue = impl().models[0].model->data(impl().models[0].model->index(remappedIndex1.value()), remappedRole1.value());
-                    assert(value == srcValue);
+                    mlm_assert_rel(value == srcValue);
                 }
 
                 if (remappedIndex2 && remappedRole2) {
                     auto srcValue = impl().models[1].model->data(impl().models[1].model->index(remappedIndex2.value()), remappedRole2.value());
-                    assert(value == srcValue);
+                    mlm_assert_rel(value == srcValue);
                 }
 
                 if (r == impl().joinRole) {
                     auto remappedJoinValue = UtilsCpp::find_in_map(impl().joinValueToIndex, value);
-                    assert(remappedJoinValue);
-                    assert(remappedJoinValue.value() == i);
+                    mlm_assert_rel(remappedJoinValue);
+                    mlm_assert_rel(remappedJoinValue.value() == i);
                 }
             }
         }
@@ -447,25 +472,21 @@ void MergedListModel::selfCheck() const
         clone.setModel2(impl().models[1].model);
         clone.setJoinRole1(impl().joinRole1);
         clone.setJoinRole2(impl().joinRole2);
-        assert(impl().roles == clone._impl->roles);
-        assert(impl().data == clone._impl->data);
-        assert(impl().joinValueToIndex == clone._impl->joinValueToIndex);
+        mlm_assert_rel(impl().roles == clone._impl->roles);
+        mlm_assert_rel(impl().data == clone._impl->data);
+        mlm_assert_rel(impl().joinValueToIndex == clone._impl->joinValueToIndex);
 
-        assert(impl().models[0].roleRemapFromSrc == clone._impl->models[0].roleRemapFromSrc);
-        assert(impl().models[0].roleRemapToSrc == clone._impl->models[0].roleRemapToSrc);
-        assert(impl().models[0].indexRemapFromSrc == clone._impl->models[0].indexRemapFromSrc);
-        assert(impl().models[0].indexRemapToSrc == clone._impl->models[0].indexRemapToSrc);
+        mlm_assert_rel(impl().models[0].roleRemapFromSrc == clone._impl->models[0].roleRemapFromSrc);
+        mlm_assert_rel(impl().models[0].roleRemapToSrc == clone._impl->models[0].roleRemapToSrc);
+        mlm_assert_rel(impl().models[0].indexRemapFromSrc == clone._impl->models[0].indexRemapFromSrc);
+        mlm_assert_rel(impl().models[0].indexRemapToSrc == clone._impl->models[0].indexRemapToSrc);
 
-        assert(impl().models[1].roleRemapFromSrc == clone._impl->models[1].roleRemapFromSrc);
-        assert(impl().models[1].roleRemapToSrc == clone._impl->models[1].roleRemapToSrc);
-        assert(impl().models[1].indexRemapFromSrc == clone._impl->models[1].indexRemapFromSrc);
-        assert(impl().models[1].indexRemapToSrc == clone._impl->models[1].indexRemapToSrc);
+        mlm_assert_rel(impl().models[1].roleRemapFromSrc == clone._impl->models[1].roleRemapFromSrc);
+        mlm_assert_rel(impl().models[1].roleRemapToSrc == clone._impl->models[1].roleRemapToSrc);
+        mlm_assert_rel(impl().models[1].indexRemapFromSrc == clone._impl->models[1].indexRemapFromSrc);
+        mlm_assert_rel(impl().models[1].indexRemapToSrc == clone._impl->models[1].indexRemapToSrc);
     }
 #endif
-
-#else
-    std::abort();
-#endif // !NDEBUG
 }
 
 bool MergedListModel::initable() const

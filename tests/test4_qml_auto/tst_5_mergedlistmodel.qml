@@ -69,6 +69,7 @@ Item {
 
         function test_0_basic() {
             // Test initial state
+            mergedListModel.checkConsistency();
             var x = internal.dumpModelVar();
             compare(x, [
                         {"source":1,"uid":1,"value1":"Ihor","value2":null,"value3":null},
@@ -77,7 +78,8 @@ Item {
                         {"source":2,"uid":4,"value1":null,"value2":"Bob22","value3":"Bob23"}]);
 
             // Test onDataChanged
-            listModel1.set(0, {uid:1, value1:"IHOR"})
+            listModel1.set(0, {uid:1, value1:"IHOR"});
+            mergedListModel.checkConsistency();
             x = internal.dumpModelVar();
             compare(x, [
                         {"source":1,"uid":1,"value1":"IHOR","value2":null,"value3":null},
@@ -85,8 +87,9 @@ Item {
                         {"source":1,"uid":3,"value1":"Oleg","value2":null,"value3":null},
                         {"source":2,"uid":4,"value1":null,"value2":"Bob22","value3":"Bob23"}]);
 
-            listModel1.set(0, {uid:1, value1:"Ihor"})
-            listModel1.set(1, {uid:2, value1:"ALEX"})
+            listModel1.set(0, {uid:1, value1:"Ihor"});
+            listModel1.set(1, {uid:2, value1:"ALEX"});
+            mergedListModel.checkConsistency();
             x = internal.dumpModelVar();
             compare(x, [
                         {"source":1,"uid":1,"value1":"Ihor","value2":null,"value3":null},
@@ -94,10 +97,12 @@ Item {
                         {"source":1,"uid":3,"value1":"Oleg","value2":null,"value3":null},
                         {"source":2,"uid":4,"value1":null,"value2":"Bob22","value3":"Bob23"}]);
 
-            listModel1.set(1, {uid:2, value1:"Alex"})
+            listModel1.set(1, {uid:2, value1:"Alex"});
+            mergedListModel.checkConsistency();
 
             // Test onDataChanged with changed joinRole
-            listModel2.set(0, {uid:0, value2:"ALEX", value3:"ALEX!"}) // TODO: Better to use 0 -> null. But ListModel can't...
+            listModel2.set(0, {uid:0, value2:"ALEX", value3:"ALEX!"}); // TODO: Better to use 0 -> null. But ListModel can't...
+            mergedListModel.checkConsistency();
 
             x = internal.dumpModelVar();
             compare(x, [
@@ -107,7 +112,8 @@ Item {
                         {"source":2,"uid":4,"value1":null,"value2":"Bob22","value3":"Bob23"},
                         {"source":2,"uid":0,"value1":null,"value2":"ALEX","value3":"ALEX!"}]);
 
-            listModel2.set(0, {uid:2, value2:"ALEX", value3:"ALEX!"})
+            listModel2.set(0, {uid:2, value2:"ALEX", value3:"ALEX!"});
+            mergedListModel.checkConsistency();
 
             x = internal.dumpModelVar();
             compare(x, [
@@ -116,7 +122,8 @@ Item {
                         {"source":1,"uid":3,"value1":"Oleg","value2":null,"value3":null},
                         {"source":2,"uid":4,"value1":null,"value2":"Bob22","value3":"Bob23"}]);
 
-            listModel1.set(1, {uid:10, value1:"Alex"})
+            listModel1.set(1, {uid:10, value1:"Alex"});
+            mergedListModel.checkConsistency();
 
             x = internal.dumpModelVar();
             compare(x, [
@@ -126,7 +133,8 @@ Item {
                         {"source":2,"uid":4,"value1":null,"value2":"Bob22","value3":"Bob23"},
                         {"source":1,"uid":10,"value1":"Alex","value2":null,"value3":null}]);
 
-            listModel1.set(1, {uid:4, value1:"Alex"})
+            listModel1.set(1, {uid:4, value1:"Alex"});
+            mergedListModel.checkConsistency();
 
             x = internal.dumpModelVar();
             compare(x, [
@@ -138,6 +146,7 @@ Item {
             // Test insertion
             listModel1.append({"uid":10,"value1":"AAA"});
             listModel1.append({"uid":2,"value1":"BBB"});
+            mergedListModel.checkConsistency();
             x = internal.dumpModelVar();
             compare(x, [
                         {"source":1,"uid":1,"value1":"Ihor","value2":null,"value3":null},
@@ -147,7 +156,8 @@ Item {
                         {"source":1,"uid":10,"value1":"AAA","value2":null,"value3":null}]);
 
             // Test removal
-            listModel1.remove(listModel1.count - 2, 1)
+            listModel1.remove(listModel1.count - 2, 1);
+            mergedListModel.checkConsistency();
 
             x = internal.dumpModelVar();
             compare(x, [
@@ -156,7 +166,8 @@ Item {
                         {"source":1,"uid":3,"value1":"Oleg","value2":null,"value3":null},
                         {"source":3,"uid":4,"value1":"Alex","value2":"Bob22","value3":"Bob23"}]);
 
-            listModel1.remove(listModel1.count - 1, 1)
+            listModel1.remove(listModel1.count - 1, 1);
+            mergedListModel.checkConsistency();
 
             x = internal.dumpModelVar();
             compare(x, [
@@ -169,6 +180,7 @@ Item {
             mergedListModel.setData(listModelTools.modelIndexByRow(0), "Ihor2", listModelTools.roleNameToInt("value1"));
             mergedListModel.setData(listModelTools.modelIndexByRow(1), "ALEX2", listModelTools.roleNameToInt("value2"));
             mergedListModel.setData(listModelTools.modelIndexByRow(3), "Alex2", listModelTools.roleNameToInt("value1"));
+            mergedListModel.checkConsistency();
 
             x = internal.dumpModelVar();
             compare(x, [
