@@ -49,16 +49,16 @@ private:
     void init();
     void deinit();
 
-    void connectModel(int number);
+    void connectModel(int idx);
 
-    void onModelDestroyed(int number);
-    void onDataChanged(int number, const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles);
-    void onBeforeInserted(int number, const QModelIndex& parent, int first, int last);
-    void onAfterInserted(int number, const QModelIndex& parent, int first, int last);
-    void onBeforeRemoved(int number, const QModelIndex& parent, int first, int last);
-    void onAfterRemoved(int number, const QModelIndex& parent, int first, int last);
-    void onBeforeReset(int number);
-    void onAfterReset(int number);
+    void onModelDestroyed(int idx);
+    void onDataChanged(int idx, const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles);
+    void onBeforeInserted(int idx, const QModelIndex& parent, int first, int last);
+    void onAfterInserted(int idx, const QModelIndex& parent, int first, int last);
+    void onBeforeRemoved(int idx, const QModelIndex& parent, int first, int last);
+    void onAfterRemoved(int idx, const QModelIndex& parent, int first, int last);
+    void onBeforeReset(int idx);
+    void onAfterReset(int idx);
 
 private:
     DECLARE_PIMPL
