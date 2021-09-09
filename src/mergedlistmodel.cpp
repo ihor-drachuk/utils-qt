@@ -11,6 +11,7 @@
 #include <utils-cpp/scoped_guard.h>
 #include <utils-cpp/container_utils.h>
 #include <utils-qt/convertcontainer.h>
+#include <utils-qt/qml-cpp/QmlUtils.h>
 
 namespace {
 
@@ -43,10 +44,6 @@ std::optional<QString> getString(const QVariant& value)
     }
 }
 
-bool isNull(const QVariant& value)
-{
-    return value.isNull() || !value.isValid();
-}
 
 struct ModelContext
 {
@@ -593,7 +590,7 @@ void MergedListModel::init()
             line.append(value);
 
             // Add 'join' role to map (fast search: joinValue -> line index)
-            if (r == impl().joinRole && !isNull(value)) {
+            if (r == impl().joinRole && !QmlUtils::instance().isNull(value)) {
                 assert(UtilsCpp::find_in_map(impl().joinValueToIndex, value).has_value() == false);
                 impl().joinValueToIndex.insert({value, impl().data.size()});
             }
@@ -659,7 +656,7 @@ void MergedListModel::init()
                 line.append(value);
 
                 // Add 'join' role to map (fast search: joinValue -> line index)
-                if (r == impl().joinRole && !isNull(value)) {
+                if (r == impl().joinRole && !QmlUtils::instance().isNull(value)) {
                     assert(UtilsCpp::find_in_map(impl().joinValueToIndex, value).has_value() == false);
                     impl().joinValueToIndex.insert({value, impl().data.size()});
                 }
@@ -909,7 +906,7 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
                             if (r == ctx.joinRole) {
                                 impl().joinValueToIndex.erase(currentValue);
 
-                                if (!isNull(newValue))
+                                if (!QmlUtils::instance().isNull(newValue))
                                     impl().joinValueToIndex.insert({newValue, localIdx});
                             }
 
@@ -944,7 +941,7 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
                         line.append(value);
 
                         // Add 'join' role to map
-                        if (r == impl().joinRole && !isNull(value)) {
+                        if (r == impl().joinRole && !QmlUtils::instance().isNull(value)) {
                             assert(UtilsCpp::find_in_map(impl().joinValueToIndex, value).has_value() == false);
                             impl().joinValueToIndex.insert({value, newLocalIndex});
                         }
@@ -1114,7 +1111,7 @@ void MergedListModel::onAfterInserted(int idx, const QModelIndex& /*parent*/, in
             assert(UtilsCpp::find_in_map(impl().joinValueToIndex, joinValue).has_value() == false);
             assert(UtilsCpp::find_in_map(ctx.indexRemapFromSrc, i).has_value() == false);
             assert(UtilsCpp::find_in_map(ctx.indexRemapToSrc,   newIndex).has_value() == false);
-            if (!isNull(joinValue))
+            if (!QmlUtils::instance().isNull(joinValue))
                 impl().joinValueToIndex.insert({joinValue, newIndex});
             ctx.indexRemapFromSrc.insert({i, newIndex});
             ctx.indexRemapToSrc.insert({newIndex, i});
