@@ -88,6 +88,11 @@ QString QmlUtils::extractFileName(const QString& filePath) const
     return QFileInfo(normalizePath(filePath)).fileName();
 }
 
+bool QmlUtils::isNull(const QVariant& value) const
+{
+    return value.isNull() || !value.isValid();
+}
+
 
 #ifdef WIN32
 void QmlUtils::showWindow(void* hWnd, bool maximize)

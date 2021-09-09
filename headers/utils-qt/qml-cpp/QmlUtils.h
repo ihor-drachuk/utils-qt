@@ -21,6 +21,7 @@ public:
     Q_INVOKABLE QString realFileName(const QString& str) const;
     Q_INVOKABLE QString realFileNameUrl(const QString& str) const;
     Q_INVOKABLE QString extractFileName(const QString& filePath) const;
+    Q_INVOKABLE bool isNull(const QVariant& value) const;
 
 #ifdef WIN32
     void showWindow(void* hWnd, bool maximize = false);
