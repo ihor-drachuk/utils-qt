@@ -69,9 +69,9 @@ void MultibindingItem::initialize()
 
 QVariant MultibindingItem::read() const
 {
-    assert(object());
-    assert(!propertyName().isEmpty());
-    assert(QQmlProperty(object(), propertyName()).isValid());
+    assert(object() || !"Object pointer is null!");
+    assert(!propertyName().isEmpty() || !"Property name is empty!");
+    assert(QQmlProperty(object(), propertyName()).isValid() || !"There is no property with specified name in specified object!");
 
     auto value = QQmlProperty::read(object(), propertyName());
 
