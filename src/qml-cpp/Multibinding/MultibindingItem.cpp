@@ -10,7 +10,8 @@ namespace {
 
 bool isFloat(const QVariant& value) {
     return value.type() == QVariant::Type::Double ||
-           value.type() == (QVariant::Type)QMetaType::Type::Float;
+           value.type() == (QVariant::Type)QMetaType::Type::Float ||
+           value.type() == (QVariant::Type)QMetaType::Type::QReal;
 }
 
 bool compare(const QVariant& a, const QVariant& b) {
