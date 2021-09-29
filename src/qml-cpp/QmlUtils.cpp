@@ -93,6 +93,43 @@ bool QmlUtils::isNull(const QVariant& value) const
     return value.isNull() || !value.isValid();
 }
 
+bool QmlUtils::isFloat(const QVariant& value) const
+{
+    return value.type() == QVariant::Type::Double ||
+           value.type() == (QVariant::Type)QMetaType::Type::Float ||
+           value.type() == (QVariant::Type)QMetaType::Type::QReal;
+}
+
+bool QmlUtils::isInteger(const QVariant& value) const
+{
+    return value.type() == QVariant::Type::Int ||
+           value.type() == QVariant::Type::UInt ||
+           value.type() == QVariant::Type::LongLong ||
+           value.type() == QVariant::Type::ULongLong ||
+           value.type() == (QVariant::Type)QMetaType::Type::Long ||
+           value.type() == (QVariant::Type)QMetaType::Type::ULong ||
+           value.type() == (QVariant::Type)QMetaType::Type::Short ||
+           value.type() == (QVariant::Type)QMetaType::Type::UShort;
+}
+
+bool QmlUtils::isNumber(const QVariant& value) const
+{
+    return isFloat(value) || isInteger(value);
+}
+
+bool QmlUtils::compare(const QVariant& value1, const QVariant& value2) const
+{
+    if (isNumber(value1) || isNumber(value2)) {
+        bool ok1, ok2;
+        auto result = qFuzzyCompare(value1.toDouble(&ok1), value2.toDouble(&ok2));
+
+        if (ok1 && ok2)
+            return result;
+    }
+
+    return (value1 == value2);
+}
+
 
 #ifdef WIN32
 void QmlUtils::showWindow(void* hWnd, bool maximize)
