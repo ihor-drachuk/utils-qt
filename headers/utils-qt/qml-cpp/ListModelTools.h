@@ -1,6 +1,6 @@
 #pragma once
 #include <optional>
-#include <QAbstractListModel>
+#include <QAbstractItemModel>
 #include <QVector>
 #include <QVariantList>
 #include <QJSValue>
@@ -10,7 +10,7 @@ class ListModelTools : public QObject
 {
     Q_OBJECT
 public:
-    Q_PROPERTY(QAbstractListModel* model READ model WRITE setModel NOTIFY modelChanged)
+    Q_PROPERTY(QAbstractItemModel* model READ model WRITE setModel NOTIFY modelChanged)
     Q_PROPERTY(QStringList roles READ roles /*WRITE setRoles*/ NOTIFY rolesChanged)
     Q_PROPERTY(bool allowJsValues READ allowJsValues WRITE setAllowJsValues NOTIFY allowJsValuesChanged)
     Q_PROPERTY(bool allowRoles READ allowRoles WRITE setAllowRoles NOTIFY allowRolesChanged)
@@ -31,21 +31,21 @@ public:
     Q_INVOKABLE QModelIndex modelIndexByRow(int row);
 
     static std::optional<int> findIndexByValue(
-            const QAbstractListModel& model,
+            const QAbstractItemModel& model,
             const QByteArray& roleName,
             const QVariant& value);
 
     static std::optional<QVariant> findValueByValues(
-            const QAbstractListModel& model,
+            const QAbstractItemModel& model,
             const QVariantMap& values,
             const QString& neededRole = {});
 
-    static QVariantList collectValuesByRole(const QAbstractListModel& model,
+    static QVariantList collectValuesByRole(const QAbstractItemModel& model,
             const QByteArray& roleName);
 
     template<typename T>
     static QVector<T> collectValuesByRoleT(
-            const QAbstractListModel& model,
+            const QAbstractItemModel& model,
             const QByteArray& roleName)
     {
         auto values = collectValuesByRole(model, roleName);
@@ -68,7 +68,7 @@ signals:
 
 // --- Properties support ---
 public:
-    QAbstractListModel* model() const;
+    QAbstractItemModel* model() const;
     bool allowJsValues() const;
     int itemsCount() const;
     bool allowRoles() const;
@@ -76,7 +76,7 @@ public:
     bool bufferChanges() const;
 
 public slots:
-    void setModel(QAbstractListModel* value);
+    void setModel(QAbstractItemModel* value);
     void setAllowJsValues(bool value);
     void setItemsCount(int value);
     void setAllowRoles(bool value);
@@ -84,7 +84,7 @@ public slots:
     void setBufferChanges(bool value);
 
 signals:
-    void modelChanged(QAbstractListModel* model);
+    void modelChanged(QAbstractItemModel* model);
     void allowJsValuesChanged(bool allowJsValues);
     void itemsCountChanged(int itemsCount);
     void allowRolesChanged(bool allowRoles);

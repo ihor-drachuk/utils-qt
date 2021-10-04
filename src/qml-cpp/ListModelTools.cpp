@@ -48,7 +48,7 @@ QVector<T> toVector(const QSet<T>& c) {
 
 struct ListModelTools::impl_t
 {
-    QAbstractListModel* model { nullptr };
+    QAbstractItemModel* model { nullptr };
     QStringList roles;
     QMap<QString, int> rolesMap;
     bool allowJsValues { false };
@@ -63,7 +63,7 @@ struct ListModelTools::impl_t
 
 void ListModelTools::registerTypes()
 {
-    qRegisterMetaType<QAbstractListModel*>("QAbstractListModel*");
+    qRegisterMetaType<QAbstractItemModel*>("QAbstractItemModel*");
     qmlRegisterType<ListModelTools>("UtilsQt", 1, 0, "ListModelTools");
 }
 
@@ -111,7 +111,7 @@ QVariantMap ListModelTools::getDataByRoles(int index, const QStringList& roles) 
     const auto itEnd = rolesRef.cend();
     while (it != itEnd) {
         assert(impl().rolesMap.contains(*it));
-        auto newValue = impl().model->data(impl().model->index(index), impl().rolesMap.value(*it, -1));
+        auto newValue = impl().model->data(impl().model->index(index, 0), impl().rolesMap.value(*it, -1));
         result[*it] = newValue.isValid() ? newValue : QVariant::fromValue(nullptr);
         it++;
     }
@@ -136,7 +136,7 @@ void ListModelTools::setData(int index, const QVariant& value, const QString& ro
 
     assert(impl().rolesMap.contains(role));
 
-    impl().model->setData(impl().model->index(index), value, impl().rolesMap.value(role, -1));
+    impl().model->setData(impl().model->index(index, 0), value, impl().rolesMap.value(role, -1));
 }
 
 void ListModelTools::setDataByRoles(int index, const QVariantMap& values)
@@ -158,7 +158,7 @@ void ListModelTools::setDataByRoles(int index, const QVariantMap& values)
     updBufferingCnt(1);
     while (it != itEnd) {
         assert(impl().rolesMap.contains(it.key()));
-        impl().model->setData(impl().model->index(index), it.value(), impl().rolesMap.value(it.key(), -1));
+        impl().model->setData(impl().model->index(index, 0), it.value(), impl().rolesMap.value(it.key(), -1));
         it++;
     }
     updBufferingCnt(-1);
@@ -177,18 +177,19 @@ QModelIndex ListModelTools::modelIndexByRow(int row)
     if (!impl().model)
         return {};
 
-    return impl().model->index(row);
+    return impl().model->index(row, 0);
 }
 
-std::optional<int> ListModelTools::findIndexByValue(const QAbstractListModel& model, const QByteArray& roleName, const QVariant& value)
+std::optional<int> ListModelTools::findIndexByValue(const QAbstractItemModel& model, const QByteArray& roleName, const QVariant& value)
 {
     assert(&model);
+    assert(model.columnCount() == 1);
     auto sz = model.rowCount();
     auto role = model.roleNames().key(roleName, -1);
     assert(role >= 0);
 
     for (int i = 0; i < sz; i++) {
-        auto idx = model.index(i);
+        auto idx = model.index(i, 0);
         auto val = model.data(idx, role);
         if (val == value) {
             return i;
@@ -198,10 +199,11 @@ std::optional<int> ListModelTools::findIndexByValue(const QAbstractListModel& mo
     return {};
 }
 
-std::optional<QVariant> ListModelTools::findValueByValues(const QAbstractListModel& model, const QVariantMap& values, const QString& neededRole)
+std::optional<QVariant> ListModelTools::findValueByValues(const QAbstractItemModel& model, const QVariantMap& values, const QString& neededRole)
 {
     assert(&model);
     assert(!values.isEmpty());
+    assert(model.columnCount() == 1);
     auto sz = model.rowCount();
 
     auto modelRoles = model.roleNames();
@@ -230,7 +232,7 @@ std::optional<QVariant> ListModelTools::findValueByValues(const QAbstractListMod
     }
 
     for (int i = 0; i < sz; i++) {
-        auto idx = model.index(i);
+        auto idx = model.index(i, 0);
 
         bool allRolesMatched = true;
         for (auto it = expectedValues.cbegin(),
@@ -267,9 +269,10 @@ std::optional<QVariant> ListModelTools::findValueByValues(const QAbstractListMod
     return {};
 }
 
-QVariantList ListModelTools::collectValuesByRole(const QAbstractListModel& model, const QByteArray& roleName)
+QVariantList ListModelTools::collectValuesByRole(const QAbstractItemModel& model, const QByteArray& roleName)
 {
     assert(&model);
+    assert(model.columnCount() == 1);
     auto sz = model.rowCount();
     auto role = model.roleNames().key(roleName, -1);
     assert(role >= 0);
@@ -277,7 +280,7 @@ QVariantList ListModelTools::collectValuesByRole(const QAbstractListModel& model
     QVariantList result;
     result.reserve(sz);
     for (int i = 0; i < sz; i++) {
-        auto idx = model.index(i);
+        auto idx = model.index(i, 0);
         auto value = model.data(idx, role);
         result.append(value);
     }
@@ -285,7 +288,7 @@ QVariantList ListModelTools::collectValuesByRole(const QAbstractListModel& model
     return result;
 }
 
-QAbstractListModel* ListModelTools::model() const
+QAbstractItemModel* ListModelTools::model() const
 {
     return impl().model;
 }
@@ -315,9 +318,11 @@ bool ListModelTools::allowJsValues() const
     return impl().allowJsValues;
 }
 
-void ListModelTools::setModel(QAbstractListModel* value)
+void ListModelTools::setModel(QAbstractItemModel* value)
 {
-    if (!qobject_cast<QAbstractListModel*>(value)) {
+    assert(!value || value->columnCount() == 1);
+
+    if (!qobject_cast<QAbstractItemModel*>(value)) {
         value = nullptr;
     }
 
@@ -333,16 +338,16 @@ void ListModelTools::setModel(QAbstractListModel* value)
     fillRolesMap();
 
     if (impl().model) {
-        QObject::connect(impl().model, &QAbstractListModel::modelAboutToBeReset, this, &ListModelTools::onBeforeModelReset);
-        QObject::connect(impl().model, &QAbstractListModel::modelReset, this, &ListModelTools::onModelReset);
+        QObject::connect(impl().model, &QAbstractItemModel::modelAboutToBeReset, this, &ListModelTools::onBeforeModelReset);
+        QObject::connect(impl().model, &QAbstractItemModel::modelReset, this, &ListModelTools::onModelReset);
 
-        QObject::connect(impl().model, &QAbstractListModel::rowsAboutToBeInserted, this, &ListModelTools::onBeforeRowsInserted);
-        QObject::connect(impl().model, &QAbstractListModel::rowsInserted, this, &ListModelTools::onRowsInserted);
+        QObject::connect(impl().model, &QAbstractItemModel::rowsAboutToBeInserted, this, &ListModelTools::onBeforeRowsInserted);
+        QObject::connect(impl().model, &QAbstractItemModel::rowsInserted, this, &ListModelTools::onRowsInserted);
 
-        QObject::connect(impl().model, &QAbstractListModel::rowsAboutToBeRemoved, this, &ListModelTools::onBeforeRowsRemoved);
-        QObject::connect(impl().model, &QAbstractListModel::rowsRemoved, this, &ListModelTools::onRowsRemoved);
+        QObject::connect(impl().model, &QAbstractItemModel::rowsAboutToBeRemoved, this, &ListModelTools::onBeforeRowsRemoved);
+        QObject::connect(impl().model, &QAbstractItemModel::rowsRemoved, this, &ListModelTools::onRowsRemoved);
 
-        QObject::connect(impl().model, &QAbstractListModel::dataChanged, this, &ListModelTools::onDataChanged);
+        QObject::connect(impl().model, &QAbstractItemModel::dataChanged, this, &ListModelTools::onDataChanged);
     }
 
     emit modelChanged(impl().model);
@@ -457,7 +462,7 @@ void ListModelTools::updBufferingCnt(int delta)
     assert(impl().bufferingCnt >= 0);
 
     if (impl().bufferingCnt == 0) {
-        auto idx = impl().model->index(impl().bufferingIndex);
+        auto idx = impl().model->index(impl().bufferingIndex, 0);
         auto roles = toSet(impl().bufferedRoles);
         impl().bufferedRoles.clear();
 
