@@ -5,21 +5,38 @@
 #include <utils-qt/qml-cpp/Multibinding/MultibindingItem.h>
 
 
+struct Multibinding::impl_t
+{
+    QVariant value;
+    bool recursionBlocking { false };
+};
+
+
 void Multibinding::registerTypes()
 {
     qmlRegisterType<Multibinding>("UtilsQt", 1, 0, "Multibinding");
 }
 
+Multibinding::Multibinding(QQuickItem* parent)
+    : QQuickItem(parent)
+{
+    _impl = new impl_t();
+}
+
+Multibinding::~Multibinding()
+{
+    delete _impl;
+}
 
 void Multibinding::setValue(const QVariant& value)
 {
-    if (m_value == value)
+    if (impl().value == value)
         return;
 
-    m_value = value;
+    impl().value = value;
     sync();
 
-    emit valueChanged(m_value);
+    emit valueChanged(impl().value);
 }
 
 void Multibinding::connectChildren()
@@ -44,16 +61,21 @@ void Multibinding::connectChildren()
 
 void Multibinding::sync()
 {
-    m_recursionBlocking = true;
+    impl().recursionBlocking = true;
 
     auto children = childItems();
     for (auto item: children) {
         if (auto destProp = qobject_cast<MultibindingItem*>(item))
             if (!destProp->queuedWPending())
-                destProp->write(m_value);
+                destProp->write(impl().value);
     }
 
-    m_recursionBlocking = false;
+    impl().recursionBlocking = false;
+}
+
+QVariant Multibinding::value() const
+{
+    return impl().value;
 }
 
 void Multibinding::componentComplete()
@@ -66,7 +88,7 @@ void Multibinding::onChanged(MultibindingItem* srcProp)
 {
     assert(srcProp);
 
-    if (m_recursionBlocking)
+    if (impl().recursionBlocking)
         return;
 
     emit triggered(srcProp);
@@ -79,5 +101,5 @@ void Multibinding::onChanged(MultibindingItem* srcProp)
 void Multibinding::onSyncNeeded(MultibindingItem* srcProp)
 {
     assert(srcProp);
-    srcProp->write(m_value);
+    srcProp->write(impl().value);
 }

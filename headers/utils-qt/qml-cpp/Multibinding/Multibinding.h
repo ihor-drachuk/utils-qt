@@ -10,8 +10,8 @@ class Multibinding : public QQuickItem
 public:
     static void registerTypes();
 
-    Multibinding(QQuickItem* parent = nullptr): QQuickItem(parent) { }
-    void connectChildren();
+    Multibinding(QQuickItem* parent = nullptr);
+    ~Multibinding() override;
 
     Q_INVOKABLE void sync();
 
@@ -21,7 +21,7 @@ signals:
 
 // Properties support
 public:
-    QVariant value() const { return m_value; }
+    QVariant value() const;
 public slots:
     void setValue(const QVariant& value);
 signals:
@@ -32,10 +32,13 @@ protected:
     void componentComplete() override;
 
 private:
+    void connectChildren();
     void onChanged(MultibindingItem* srcProp);
     void onSyncNeeded(MultibindingItem* srcProp);
 
 private:
-    QVariant m_value;
-    bool m_recursionBlocking { false };
+    struct impl_t;
+    impl_t* _impl { nullptr };
+    impl_t& impl() { return *_impl; }
+    const impl_t& impl() const { return *_impl; }
 };
