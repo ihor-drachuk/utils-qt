@@ -2,12 +2,28 @@
 #include <utils-qt/futureutils.h>
 #include <utils-qt/invoke_method.h>
 
-// Reminder.
-// connectFutureSeq(QFuture<T>)
-//     .then([](optional<T>) -> QFuture<G> {})
-//     .then([](optional<G>) -> QFuture<L> {})
-//     .then([](optional<L>) {})
-//     .onError([](std::exception_ptr) {});
+/*
+  Reminder
+
+  connectFutureSeq(QFuture<T>)
+      .then([](optional<T>) -> QFuture<G> {})
+      .then([](optional<G>) -> QFuture<L> {})
+      .then([](optional<L>) {})
+      .onError([](std::exception_ptr) {});
+
+
+  QFuture<L> finalResultFuture;
+
+  connectFutureSeq(QFuture<T>)
+      .then([](optional<T>) -> QFuture<G> {})
+      .then([](optional<G>) -> QFuture<L> {})
+      .getFuture(finalResultFuture)
+      .onError([](std::exception_ptr) {});
+
+
+  Notice!
+  If intermediate handler returned canceled future, then next handlers must return canceled future as well!
+*/
 
 namespace FutureUtilsInternals {
 
