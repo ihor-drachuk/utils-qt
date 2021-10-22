@@ -111,7 +111,7 @@ void future2property(const QObject* context,
                      unsigned int retryInterval = 100
                      )
 {
-    auto ctx = new Internal::Future2propertyCtx<Getter, Setter, TimeoutHandler, ErrorHandler>(dataGetter, propSetter, timeoutHandler, errorHandler);
+    auto ctx = new ::Internal::Future2propertyCtx<Getter, Setter, TimeoutHandler, ErrorHandler>(dataGetter, propSetter, timeoutHandler, errorHandler);
     QObject::connect(context, &QObject::destroyed, &ctx->tracker, [ctx](){ delete ctx; });
 
     ctx->retryCnt = retryCount;
