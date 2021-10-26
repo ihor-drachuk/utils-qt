@@ -1,23 +1,38 @@
 #pragma once
 #include <cassert>
 #include <QObject>
+#include <QTimer>
 #include <utils-qt/invoke_method.h>
 
 namespace UtilsQt {
+
+enum class Comparison {
+    Equal,
+    NotEqual
+};
+
+enum class CancelReason {
+    Unknown,
+    Object,
+    Context,
+    Timeout
+};
+
 namespace Internal {
 
 class PropertyWatcherBase : public QObject
 {
     Q_OBJECT
 public:
-    void addDependency(QObject* obj) {
-        QObject::connect(obj, &QObject::destroyed, this, &QObject::deleteLater);
+    void addDependency(QObject* obj, CancelReason reason = CancelReason::Unknown) {
+        QObject::connect(obj, &QObject::destroyed, this, [this, reason](){ cancelled(reason); deleteLater(); });
     }
 
     virtual void changed() = 0;
+    virtual void cancelled(CancelReason cancelReason) = 0;
 
-    void setOnce(bool value) { m_once = value; }
-    bool getOnce() const { return m_once; }
+    inline void setOnce(bool value) { m_once = value; }
+    inline bool getOnce() const { return m_once; }
 
 signals:
     void triggered();
@@ -39,44 +54,72 @@ private:
     bool m_stop { false };
 };
 
-template<typename Getter, typename T>
+template<typename T, typename Getter, typename CancelHandler>
 class PropertyWatcher : public PropertyWatcherBase
 {
 public:
-    PropertyWatcher(const Getter& getter, const T& expectedValue)
+    PropertyWatcher(const Getter& getter, const T& expectedValue, Comparison comparison, const CancelHandler& cancelHandler)
         : m_getter(getter),
-          m_expectedValue(expectedValue)
+          m_expectedValue(expectedValue),
+          m_comparison(comparison),
+          m_cancelHandler(cancelHandler)
     { }
 
     void changed() override {
-        if (m_getter() == m_expectedValue)
+        if (m_cancelled)
+            return;
+
+        assert((getOnce() && !m_triggered) || !getOnce());
+
+        const bool eq = (m_getter() == m_expectedValue);
+
+        if (eq ^ (m_comparison == Comparison::NotEqual)) {
+            m_triggered = true;
             trigger();
+        }
+    }
+
+    void cancelled(CancelReason cancelReason) override {
+        if (m_triggered || m_cancelled)
+            return;
+
+        m_cancelled = true;
+        m_cancelHandler(cancelReason);
     }
 
 private:
+    bool m_triggered { false };
+    bool m_cancelled { false };
     Getter m_getter;
     T m_expectedValue;
+    Comparison m_comparison;
+    CancelHandler m_cancelHandler;
 };
 
+inline void cancelStubHandler(UtilsQt::CancelReason) {}
 
-template<typename Getter, typename T>
-PropertyWatcher<Getter, T>* createWatcher(const Getter& getter, const T& expectedValue)
+
+template<typename T, typename Getter, typename CancelHandler>
+PropertyWatcher<T, Getter, CancelHandler>* createWatcher(const Getter& getter, const T& expectedValue, UtilsQt::Comparison comparison, const CancelHandler& cancelHandler)
 {
-    return new PropertyWatcher<Getter, T>(getter, expectedValue);
+    return new PropertyWatcher<T, Getter, CancelHandler>(getter, expectedValue, comparison, cancelHandler);
 }
 
 } // namespace Internal
 } // namespace UtilsQt
 
-template<typename T, typename T2, typename Object, typename Handler,
+template<typename T, typename T2, typename Object, typename Handler, typename Handler2 = void (*)(UtilsQt::CancelReason),
          typename std::enable_if<std::is_base_of<QObject, Object>::value>::type* = nullptr>
 void onProperty(Object* object,
                 T (Object::* getter)() const,
                 void (Object::* notifier)(T2),
                 const T& expectedValue,
+                UtilsQt::Comparison comparison,
                 bool once,
                 QObject* context,
                 const Handler& handler,
+                int timeout = -1,
+                const Handler2& cancelHandler = UtilsQt::Internal::cancelStubHandler,
                 Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
     assert(object);
@@ -86,10 +129,19 @@ void onProperty(Object* object,
 
     auto watcher = UtilsQt::Internal::createWatcher(
                 [object, getter]() -> T { return (object->*getter)(); },
-                expectedValue);
+                expectedValue,
+                comparison,
+                cancelHandler);
 
-    watcher->addDependency(object);
-    watcher->addDependency(context);
+    if (timeout > 0) {
+        auto timer = new QTimer();
+        QObject::connect(timer, &QTimer::timeout, timer, &QTimer::deleteLater);
+        watcher->addDependency(timer, UtilsQt::CancelReason::Timeout);
+        timer->start(timeout);
+    }
+
+    watcher->addDependency(object,  UtilsQt::CancelReason::Object);
+    watcher->addDependency(context, UtilsQt::CancelReason::Context);
 
     watcher->setOnce(once);
 

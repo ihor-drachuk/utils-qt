@@ -28,6 +28,7 @@ public:
 
 public:
     int counter() const { return m_counter; }
+    void stop() { m_timer.stop(); }
 
 public slots:
     void setCounter(int counter)
@@ -48,10 +49,58 @@ private:
 };
 
 
+TEST(UtilsQt, onProperty_initial)
+{
+    {
+        int triggeredCount = 0;
+        int cancelledCount = 0;
+        QObject context;
+        TestObject testObject;
+
+        onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 0, UtilsQt::Comparison::Equal, true, &context, [&]()
+        {
+            triggeredCount++;
+        },
+        100,
+        [&](auto){ cancelledCount++; });
+
+        ASSERT_EQ(triggeredCount, 1);
+        ASSERT_EQ(cancelledCount, 0);
+    }
+
+    {
+        int triggeredCount = 0;
+        QObject context;
+        TestObject testObject;
+
+        onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 1, UtilsQt::Comparison::NotEqual, true, &context, [&]()
+        {
+            triggeredCount++;
+        });
+
+        ASSERT_EQ(triggeredCount, 1);
+    }
+
+    {
+        int triggeredCount = 0;
+        QObject context;
+        TestObject testObject;
+
+        onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 0, UtilsQt::Comparison::NotEqual, true, &context, [&]()
+        {
+            triggeredCount++;
+        });
+
+        ASSERT_EQ(triggeredCount, 0);
+    }
+}
+
+
 TEST(UtilsQt, onProperty_once)
 {
     {
         int triggeredCount = 0;
+        int cancelledCount = 0;
         QObject context;
         QElapsedTimer elapsedTimer;
 
@@ -60,20 +109,24 @@ TEST(UtilsQt, onProperty_once)
 
         QEventLoop loop;
 
-        onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 4, true, &context, [&]()
+        onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 4, UtilsQt::Comparison::Equal, true, &context, [&]()
         {
             triggeredCount++;
             loop.quit();
-        });
+        },
+        700,
+        [&](auto){ cancelledCount++; });
         loop.exec();
 
         ASSERT_EQ(triggeredCount, 1);
+        ASSERT_EQ(cancelledCount, 0);
         ASSERT_EQ(testObject.counter(), 4);
         ASSERT_GE(elapsedTimer.elapsed(), 350 / timeFactor);
         ASSERT_LE(elapsedTimer.elapsed(), 450 * timeFactor);
 
         waitForFuture<QEventLoop>(createTimedFuture(400));
         ASSERT_EQ(triggeredCount, 1);
+        ASSERT_EQ(cancelledCount, 0);
     }
 
     {
@@ -86,7 +139,7 @@ TEST(UtilsQt, onProperty_once)
 
         QEventLoop loop;
 
-        onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 4, false, &context, [&]()
+        onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 4, UtilsQt::Comparison::Equal, false, &context, [&]()
         {
             triggeredCount++;
             loop.quit();
@@ -109,7 +162,7 @@ TEST(UtilsQt, onProperty_multiple)
     QObject* context = new QObject;
     TestObject testObject(true);
 
-    onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 1, false, context, [&]()
+    onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 1, UtilsQt::Comparison::Equal, false, context, [&]()
     {
         triggeredCount++;
     });
@@ -124,18 +177,39 @@ TEST(UtilsQt, onProperty_multiple)
     ASSERT_EQ(savedCount, triggeredCount);
 }
 
-TEST(UtilsQt, onProperty_initial)
+TEST(UtilsQt, onProperty_cancelled)
 {
-    int triggeredCount = 0;
-    QObject context;
-    TestObject testObject;
-
-    onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 0, true, &context, [&]()
     {
-        triggeredCount++;
-    });
+        int triggeredCount = 0;
+        UtilsQt::CancelReason reason = UtilsQt::CancelReason::Unknown;
 
-    ASSERT_EQ(triggeredCount, 1);
+        QObject context;
+        QElapsedTimer elapsedTimer;
+
+        TestObject testObject;
+        testObject.stop();
+        elapsedTimer.start();
+        auto elapsed = elapsedTimer.elapsed();
+
+        onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 1, UtilsQt::Comparison::Equal, true, &context, [&]()
+        {
+            triggeredCount++;
+            elapsed = elapsedTimer.elapsed();
+        },
+        150,
+        [&](UtilsQt::CancelReason value){
+            reason = value;
+            elapsed = elapsedTimer.elapsed();
+        }
+        );
+
+        waitForFuture<QEventLoop>(createTimedFuture(500));
+        ASSERT_EQ(triggeredCount, 0);
+        ASSERT_EQ(reason, UtilsQt::CancelReason::Timeout);
+        ASSERT_GE(elapsed, 100 / timeFactor);
+        ASSERT_LE(elapsed, 200 * timeFactor);
+    }
 }
+
 
 #include "test4_onProperty.moc"
