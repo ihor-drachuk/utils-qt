@@ -2,6 +2,8 @@
 #include <utils-qt/futureutils.h>
 #include <utils-qt/invoke_method.h>
 
+// TODO:  Add support of QFuture<void> sequences.
+
 /*
   Reminder
 
