@@ -179,6 +179,7 @@ TEST(UtilsQt, onProperty_multiple)
 
 TEST(UtilsQt, onProperty_cancelled)
 {
+    auto tester = [](bool stopTimer)
     {
         int triggeredCount = 0;
         UtilsQt::CancelReason reason = UtilsQt::CancelReason::Unknown;
@@ -187,7 +188,7 @@ TEST(UtilsQt, onProperty_cancelled)
         QElapsedTimer elapsedTimer;
 
         TestObject testObject;
-        testObject.stop();
+        if (stopTimer) testObject.stop();
         elapsedTimer.start();
         auto elapsed = elapsedTimer.elapsed();
 
@@ -204,12 +205,61 @@ TEST(UtilsQt, onProperty_cancelled)
         );
 
         waitForFuture<QEventLoop>(createTimedFuture(500));
-        ASSERT_EQ(triggeredCount, 0);
-        ASSERT_EQ(reason, UtilsQt::CancelReason::Timeout);
-        ASSERT_GE(elapsed, 100 / timeFactor);
-        ASSERT_LE(elapsed, 200 * timeFactor);
-    }
+
+        if (stopTimer) {
+            ASSERT_EQ(triggeredCount, 0);
+            ASSERT_EQ(reason, UtilsQt::CancelReason::Timeout);
+
+            ASSERT_GE(elapsed, 100 / timeFactor);
+            ASSERT_LE(elapsed, 200 * timeFactor);
+        } else {
+            ASSERT_EQ(triggeredCount, 1);
+            ASSERT_EQ(reason, UtilsQt::CancelReason::Unknown);
+        }
+    };
+
+    tester(true);
+    tester(false);
 }
 
+
+TEST(UtilsQt, onProperty_future)
+{
+    {
+        QObject context;
+        TestObject testObject;
+
+        auto f = onPropertyFuture(&testObject, &TestObject::counter, &TestObject::counterChanged, 3, UtilsQt::Comparison::Equal, &context);
+
+        ASSERT_FALSE(f.isFinished());
+        QEventLoop loop;
+        loop.processEvents();
+        loop.processEvents();
+        ASSERT_FALSE(f.isFinished());
+
+        waitForFuture<QEventLoop>(f);
+
+        ASSERT_TRUE(f.isFinished());
+        ASSERT_FALSE(f.isCanceled());
+    }
+
+    {
+        QObject context;
+        TestObject testObject;
+
+        auto f = onPropertyFuture(&testObject, &TestObject::counter, &TestObject::counterChanged, 3, UtilsQt::Comparison::Equal, &context, 20);
+
+        ASSERT_FALSE(f.isFinished());
+        QEventLoop loop;
+        loop.processEvents();
+        loop.processEvents();
+        ASSERT_FALSE(f.isFinished());
+
+        waitForFuture<QEventLoop>(f);
+
+        ASSERT_TRUE(f.isFinished());
+        ASSERT_TRUE(f.isCanceled());
+    }
+}
 
 #include "test4_onProperty.moc"
