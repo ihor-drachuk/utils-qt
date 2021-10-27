@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QTimer>
 #include <utils-qt/invoke_method.h>
+#include <utils-qt/futureutils.h>
 
 namespace UtilsQt {
 
@@ -148,4 +149,30 @@ void onProperty(Object* object,
     QObject::connect(object, notifier, watcher, &UtilsQt::Internal::PropertyWatcherBase::changed, connectionType);
     QObject::connect(watcher, &UtilsQt::Internal::PropertyWatcherBase::triggered, context, [handler](){ handler(); }, connectionType);
     UtilsQt::invokeMethod(watcher, [watcher](){ watcher->changed(); }, connectionType);
+}
+
+template<typename T, typename T2, typename Object,
+         typename std::enable_if<std::is_base_of<QObject, Object>::value>::type* = nullptr>
+QFuture<void> onPropertyFuture(Object* object,
+                               T (Object::* getter)() const,
+                               void (Object::* notifier)(T2),
+                               const T& expectedValue,
+                               UtilsQt::Comparison comparison,
+                               QObject* context,
+                               int timeout = -1,
+                               Qt::ConnectionType connectionType = Qt::AutoConnection)
+{
+    auto promise = createPromise<void>();
+
+    onProperty(object, getter, notifier, expectedValue, comparison, true, context,
+               [promise](){
+                   promise->finish();
+               },
+               timeout,
+               [promise](UtilsQt::CancelReason){
+                   promise->cancel();
+               },
+               connectionType);
+
+    return promise->future();
 }
