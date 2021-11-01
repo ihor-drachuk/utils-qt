@@ -121,7 +121,7 @@ void NumericalValidator::fixup(QString& input) const
     if (impl().step.type() == QVariant::Type::Int) {
         impl().standartValidator->fixup(input);
     } else {
-        validateFixup(input, '.'); // inputMetod->locale().decimalPoint()
+        validateFixup(input, '.');
     }
 }
 
