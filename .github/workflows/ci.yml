@@ -9,7 +9,7 @@ on:
     types: [opened, edited, synchronize]
 
 jobs:
-  build:
+  Build:
     strategy:
       matrix:
         os: [ubuntu-18.04, ubuntu-20.04, macos-10.15, windows-2016, windows-2019]
@@ -103,3 +103,14 @@ jobs:
        cmake ${{env.QML_TESTS}} -DUTILS_QT_CI_RUN=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" ${{env.MSVC_ARCH}} -G "${{env.GENERATOR}}" -S "${{github.workspace}}/src" -B "${{github.workspace}}/build"
        cmake --build "${{github.workspace}}/build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
        ctest --rerun-failed --output-on-failure --timeout 20 -C "${{matrix.build_type}}" --test-dir "${{github.workspace}}/build/tests"
+
+  Done:
+    needs: Build
+    runs-on: [ubuntu-20.04]
+    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master'
+
+    steps:
+    - name: "Done"
+      shell: bash
+      run: |
+       echo "Done"
