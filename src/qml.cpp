@@ -13,11 +13,12 @@
 #include <utils-qt/mergedlistmodel.h>
 
 #include <QQmlEngine>
+#include <QGuiApplication>
 
 namespace UtilsQt {
 namespace Qml {
 
-void registerAll(QQmlEngine& engine)
+void registerAll(QQmlEngine& engine, QGuiApplication& app)
 {
     QmlControls::init(engine);
     ListModelItemProxy::registerTypes();
@@ -28,7 +29,7 @@ void registerAll(QQmlEngine& engine)
     JsTransformer::registerTypes();
     JsTransformer::setJsEngine(&engine);
     ScaleNum::registerTypes();
-    NumericalValidator::registerTypes();
+    NumericalValidator::registerTypes(app.inputMethod());
     QmlUtils::registerTypes();
     MergedListModel::registerTypes();
 }

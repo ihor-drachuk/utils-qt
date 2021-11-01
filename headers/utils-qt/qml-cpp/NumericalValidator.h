@@ -1,6 +1,7 @@
 #pragma once
 #include <QValidator>
 #include <QVariant>
+#include <QInputMethod>
 #include <utils-cpp/pimpl.h>
 
 class NumericalValidator : public QValidator {
@@ -11,7 +12,7 @@ class NumericalValidator : public QValidator {
     Q_PROPERTY(QVariant bottom READ bottom WRITE setBottom NOTIFY bottomChanged)
 
 public:
-    static void registerTypes();
+    static void registerTypes(QInputMethod* input);
 
     enum ValueRangeStatus {
         TopValue = 0,
@@ -46,7 +47,10 @@ signals:
 private:
     int calculateDecimalPointPosition();
     void createStandartValidator();
-    bool validateFixup(QString& input) const;
+    bool validateFixup(QString& input, const QChar decimalPoint) const;
+
+private:
+    static QInputMethod* inputMetod;
 
 private:
     DECLARE_PIMPL
