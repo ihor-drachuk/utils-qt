@@ -65,6 +65,9 @@ QValidator::State NumericalValidator::validate(QString& input, int& pos) const
     if (impl().decimals == 0) {
         input.remove(".");
         input.remove(",");
+        if (input.toInt() > impl().rangeTop.toInt())
+            return QValidator::State::Invalid;
+
     } else {
 
         if (!inputMetod)
