@@ -26,7 +26,10 @@ Item {
             var ctx = getContext("2d");
             ctx.reset();
 
-            if (root.dash) {
+            // Workaround for https://bugreports.qt.io/browse/QTBUG-75553
+            if (!root.dash || (typeof root.dash === "object" && root.dash.length === 0)) {
+                ctx.setLineDash([1000, 0]);
+            } else {
                 ctx.setLineDash(root.dash);
             }
 
