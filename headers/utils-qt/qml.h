@@ -6,7 +6,7 @@ class QGuiApplication;
 namespace UtilsQt {
 namespace Qml {
 
-void registerAll(QQmlEngine& engine, QGuiApplication& app);
+void registerAll(QQmlEngine& engine);
 
 } // namespace Qml
 } // namespace UtilsQt

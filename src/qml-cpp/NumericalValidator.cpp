@@ -1,10 +1,9 @@
 #include <utils-qt/qml-cpp/NumericalValidator.h>
 
 #include <QQmlEngine>
+#include "QGuiApplication"
 #include <memory>
 #include <cmath>
-
-QInputMethod* NumericalValidator::inputMetod = nullptr;
 
 struct NumericalValidator::impl_t
 {
@@ -16,9 +15,8 @@ struct NumericalValidator::impl_t
     std::unique_ptr<QValidator> standartValidator;
 };
 
-void NumericalValidator::registerTypes(QInputMethod* input)
+void NumericalValidator::registerTypes()
 {
-    inputMetod = input;
     qmlRegisterType<NumericalValidator>("UtilsQt", 1, 0, "NumericalValidator");
 }
 
@@ -69,11 +67,7 @@ QValidator::State NumericalValidator::validate(QString& input, int& pos) const
             return QValidator::State::Invalid;
 
     } else {
-
-        if (!inputMetod)
-            return QValidator::State::Invalid;
-
-        auto decimalPoint = inputMetod->locale().decimalPoint();
+        auto decimalPoint = qGuiApp->inputMethod()->locale().decimalPoint();
 
         if (input.contains(',') && decimalPoint == '.') {
             return QValidator::State::Invalid;

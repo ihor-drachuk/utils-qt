@@ -18,7 +18,7 @@
 namespace UtilsQt {
 namespace Qml {
 
-void registerAll(QQmlEngine& engine, QGuiApplication& app)
+void registerAll(QQmlEngine& engine)
 {
     QmlControls::init(engine);
     ListModelItemProxy::registerTypes();
@@ -29,7 +29,7 @@ void registerAll(QQmlEngine& engine, QGuiApplication& app)
     JsTransformer::registerTypes();
     JsTransformer::setJsEngine(&engine);
     ScaleNum::registerTypes();
-    NumericalValidator::registerTypes(app.inputMethod());
+    NumericalValidator::registerTypes();
     QmlUtils::registerTypes();
     MergedListModel::registerTypes();
 }
