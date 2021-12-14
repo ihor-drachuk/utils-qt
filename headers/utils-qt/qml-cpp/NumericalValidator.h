@@ -3,13 +3,13 @@
 #include <QVariant>
 #include <utils-cpp/pimpl.h>
 
-class NumericalValidator : public QValidator {
+class NumericalValidator : public QValidator
+{
     Q_OBJECT
 
     Q_PROPERTY(QVariant step READ step WRITE setStep NOTIFY stepChanged)
     Q_PROPERTY(QVariant top READ top WRITE setTop NOTIFY topChanged)
     Q_PROPERTY(QVariant bottom READ bottom WRITE setBottom NOTIFY bottomChanged)
-
 public:
     static void registerTypes();
 
@@ -29,6 +29,7 @@ public:
     State validate(QString& input, int& pos) const override;
     void fixup(QString& input) const override;
 
+// --- Properties support ---
     QVariant step() const;
     QVariant bottom() const;
     QVariant top() const;
@@ -42,11 +43,12 @@ signals:
     void stepChanged(const QVariant& step);
     void bottomChanged(const QVariant& bottom);
     void topChanged(const QVariant& top);
+// -------
 
 private:
     int calculateDecimalPointPosition();
     void createStandartValidator();
-    bool validateFixup(QString& input) const;
+    bool validateFixup(QString& input, const QChar decimalPoint) const;
 
 private:
     DECLARE_PIMPL

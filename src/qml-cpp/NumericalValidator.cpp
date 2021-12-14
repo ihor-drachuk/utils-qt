@@ -1,6 +1,7 @@
 #include <utils-qt/qml-cpp/NumericalValidator.h>
 
 #include <QQmlEngine>
+#include <QGuiApplication>
 #include <memory>
 #include <cmath>
 
@@ -36,8 +37,8 @@ NumericalValidator::ValueRangeStatus NumericalValidator::isValue(const QString& 
     if (impl().step.type() == QVariant::Type::Double) {
         QString top = QString::number(impl().rangeTop.toDouble());
         QString bottom = QString::number(impl().rangeBottom.toDouble());
-        validateFixup(top);
-        validateFixup(bottom);
+        validateFixup(top, impl().standartValidator->locale().decimalPoint());
+        validateFixup(bottom, impl().standartValidator->locale().decimalPoint());
         if (input == top)
             return TopValue;
         else if (input == bottom)
@@ -58,15 +59,28 @@ QValidator::State NumericalValidator::validate(QString& input, int& pos) const
 {
     if (input.isEmpty())
         input += '0';
-    if (impl().step.type() == QVariant::Type::Double) {
 
-        if (input.contains(','))
+    if (impl().decimals == 0) {
+        input.remove(".");
+        input.remove(",");
+        if (input.toInt() > impl().rangeTop.toInt())
             return QValidator::State::Invalid;
+
+    } else {
+        auto decimalPoint = qGuiApp->inputMethod()->locale().decimalPoint();
+
+        if (input.contains(',') && decimalPoint == '.') {
+            return QValidator::State::Invalid;
+        }
+
+        int pointIndex = input.indexOf(",");
+        if (pointIndex != -1)
+            input[pointIndex] = '.';
 
         if (input.startsWith('0')) {
             int sizePrev = input.size();
 
-            if (validateFixup(input)) {
+            if (validateFixup(input, '.')) {
                 int sizeNow = input.size();
                 int diff = sizePrev - sizeNow;
                 pos -= diff;
@@ -76,7 +90,7 @@ QValidator::State NumericalValidator::validate(QString& input, int& pos) const
 
         if (impl().step.toDouble() < 1.0) {
             int sizePrev = input.size();
-            if (validateFixup(input)) {
+            if (validateFixup(input, '.')) {
                 int sizeNow = input.size();
                 int diff = sizePrev - sizeNow;
                 pos -= diff;
@@ -89,9 +103,10 @@ QValidator::State NumericalValidator::validate(QString& input, int& pos) const
         }
     }
 
-    if (impl().standartValidator)
-        return impl().standartValidator->validate(input, pos);
-    else
+    if (impl().standartValidator) {
+        auto result = impl().standartValidator->validate(input, pos);
+        return result;
+    } else
         return State::Invalid;
 }
 
@@ -100,10 +115,11 @@ void NumericalValidator::fixup(QString& input) const
     if (!impl().standartValidator)
         return;
 
-    if (impl().step.type() == QVariant::Type::Int)
+    if (impl().step.type() == QVariant::Type::Int) {
         impl().standartValidator->fixup(input);
-    else
-        validateFixup(input);
+    } else {
+        validateFixup(input, '.');
+    }
 }
 
 QVariant NumericalValidator::step() const
@@ -191,11 +207,11 @@ void NumericalValidator::createStandartValidator()
     }
 }
 
-bool NumericalValidator::validateFixup(QString& input) const
+bool NumericalValidator::validateFixup(QString& input, const QChar decimalPoint) const
 {
     bool result = false;
 
-    if (*input.rbegin() != '.') {
+    if (*input.rbegin() != decimalPoint) {
         if (input.toDouble() < impl().rangeBottom.toDouble())
             input = QString::number(impl().rangeBottom.toDouble());
 
@@ -203,13 +219,13 @@ bool NumericalValidator::validateFixup(QString& input) const
             input = QString::number(impl().rangeTop.toDouble());
     }
 
-    if (input.isEmpty() || input == QStringLiteral(".")) {
+    if (input.isEmpty() || input == QString(decimalPoint)) {
         input = QString::number(impl().rangeBottom.toDouble());
     } else {
         int commaDelta = 0;
         auto it = input.begin();
         for ( ; it != input.end(); it++) {
-            if (*it == '.') {
+            if (*it == decimalPoint) {
                 commaDelta = 1;
                 break;
             }
@@ -227,9 +243,9 @@ bool NumericalValidator::validateFixup(QString& input) const
         }
 
         if (impl().step.toDouble() < 1.0) {
-            auto index = input.indexOf('.');
+            auto index = input.indexOf(decimalPoint);
             if (index != -1) {
-                auto comlectFractionNumber = input.split('.');
+                auto comlectFractionNumber = input.split(decimalPoint);
                 if (comlectFractionNumber.at(1).size() > impl().decimals) {
                     auto fractionNumberStr = comlectFractionNumber.at(1);
                     int digitAfterDecimals = fractionNumberStr[impl().decimals].digitValue() ;
@@ -251,7 +267,7 @@ bool NumericalValidator::validateFixup(QString& input) const
                     }
 
                     if (fractionNumber != 0) {
-                        input += '.';
+                        input += decimalPoint;
                         for (;;) {
                             if (QString::number(fractionNumber).size() <= impl().decimals)
                                 break;
