@@ -1,7 +1,7 @@
 #include <utils-qt/qml-cpp/NumericalValidator.h>
 
 #include <QQmlEngine>
-#include "QGuiApplication"
+#include <QGuiApplication>
 #include <memory>
 #include <cmath>
 
