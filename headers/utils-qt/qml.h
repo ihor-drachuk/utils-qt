@@ -1,6 +1,7 @@
 #pragma once
 
 class QQmlEngine;
+class QGuiApplication;
 
 namespace UtilsQt {
 namespace Qml {

@@ -13,6 +13,7 @@
 #include <utils-qt/mergedlistmodel.h>
 
 #include <QQmlEngine>
+#include <QGuiApplication>
 
 namespace UtilsQt {
 namespace Qml {
