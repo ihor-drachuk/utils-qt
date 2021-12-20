@@ -79,9 +79,8 @@ void ListModelItemProxy::setModel(QAbstractListModel* value)
     }
 
     impl().model = value;
-    emit modelChanged(impl().model);
-
     reload();
+    emit modelChanged(impl().model);
 
     if (impl().model) {
         QObject::connect(impl().model, &QAbstractListModel::rowsAboutToBeInserted, this, &ListModelItemProxy::onRowsInsertedBefore);
@@ -91,6 +90,10 @@ void ListModelItemProxy::setModel(QAbstractListModel* value)
         QObject::connect(impl().model, &QAbstractListModel::modelReset, this, &ListModelItemProxy::onModelReset);
         QObject::connect(impl().model, &QAbstractListModel::rowsMoved, this, &ListModelItemProxy::onRowsMoved);
         QObject::connect(impl().model, &QAbstractListModel::dataChanged, this, &ListModelItemProxy::onDataChanged);
+
+        QObject::connect(impl().model, &QAbstractListModel::rowsInserted, this, std::bind(&ListModelItemProxy::countChanged, this, std::bind(&ListModelItemProxy::count, this)));
+        QObject::connect(impl().model, &QAbstractListModel::rowsRemoved, this, std::bind(&ListModelItemProxy::countChanged, this, std::bind(&ListModelItemProxy::count, this)));
+        QObject::connect(impl().model, &QAbstractListModel::modelReset, this, std::bind(&ListModelItemProxy::countChanged, this, std::bind(&ListModelItemProxy::count, this)));
     }
 }
 
@@ -103,9 +106,8 @@ void ListModelItemProxy::setIndex(int value)
         return;
 
     impl().index = value;
-    emit indexChanged(impl().index);
-
     reload();
+    emit indexChanged(impl().index);
 }
 
 void ListModelItemProxy::setReady(bool value)
@@ -335,4 +337,9 @@ void ListModelItemProxy::setKeepIndexTrack(bool value)
 
     impl().keepIndexTrack = value;
     emit keepIndexTrackChanged(impl().keepIndexTrack);
+}
+
+int ListModelItemProxy::count() const
+{
+    return impl().model ? impl().model->rowCount() : 0;
 }
