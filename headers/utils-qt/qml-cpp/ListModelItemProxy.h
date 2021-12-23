@@ -46,7 +46,7 @@ private slots:
 
 signals:
     void modelChanged(QAbstractListModel* model);
-    void countChanged(int);
+    void countChanged(int count);
     void indexChanged(int index);
     void readyChanged(bool ready);
     void propertyMapChanged(QQmlPropertyMap* propertyMap);
