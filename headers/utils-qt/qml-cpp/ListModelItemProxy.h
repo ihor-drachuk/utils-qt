@@ -1,14 +1,14 @@
 #pragma once
 #include <QObject>
 #include <QQmlPropertyMap>
-#include <QAbstractListModel>
+#include <QAbstractItemModel>
 #include <utils-cpp/pimpl.h>
 
 class ListModelItemProxy : public QObject
 {
     Q_OBJECT
 public:
-    Q_PROPERTY(QAbstractListModel* model READ model WRITE setModel NOTIFY modelChanged)
+    Q_PROPERTY(QAbstractItemModel* model READ model WRITE setModel NOTIFY modelChanged)
     Q_PROPERTY(int count READ count /*WRITE setCount*/ NOTIFY countChanged)
     Q_PROPERTY(int index READ index WRITE setIndex NOTIFY indexChanged)
     Q_PROPERTY(bool keepIndexTrack READ keepIndexTrack WRITE setKeepIndexTrack NOTIFY keepIndexTrackChanged)
@@ -28,7 +28,7 @@ signals:
 
 // --- Properties support ---
 public:
-    QAbstractListModel* model() const;
+    QAbstractItemModel* model() const;
     int count() const;
     int index() const;
     bool ready() const;
@@ -36,7 +36,7 @@ public:
     bool keepIndexTrack() const;
 
 public slots:
-    void setModel(QAbstractListModel* value);
+    void setModel(QAbstractItemModel* value);
     void setIndex(int value);
     void setPropertyMap(QQmlPropertyMap* value);
     void setKeepIndexTrack(bool value);
@@ -45,7 +45,7 @@ private slots:
     void setReady(bool value);
 
 signals:
-    void modelChanged(QAbstractListModel* model);
+    void modelChanged(QAbstractItemModel* model);
     void countChanged(int count);
     void indexChanged(int index);
     void readyChanged(bool ready);
@@ -59,7 +59,7 @@ private:
     void reloadRoles(const QVector<int>& affectedRoles = {});
 
     // From QML
-    void onValueChanged(const QString &key, const QVariant &value);
+    void onValueChanged(const QString& key, const QVariant& value);
 
     // From model
     void onRowsInserted(const QModelIndex& parent, int first, int last);
@@ -69,6 +69,13 @@ private:
     void onModelReset();
     void onRowsMoved(const QModelIndex& parent, int start, int end, const QModelIndex& destination, int row);
     void onDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int> &roles);
+
+    void onLayoutAboutToBeChanged(const QList<QPersistentModelIndex>& parents = QList<QPersistentModelIndex>(), QAbstractItemModel::LayoutChangeHint hint = QAbstractItemModel::NoLayoutChangeHint);
+    void onLayoutChanged(const QList<QPersistentModelIndex>& parents = QList<QPersistentModelIndex>(), QAbstractItemModel::LayoutChangeHint hint = QAbstractItemModel::NoLayoutChangeHint);
+
+    void onColumnsAboutToBeInserted(const QModelIndex& parent, int first, int last);
+    void onColumnsAboutToBeRemoved(const QModelIndex& parent, int first, int last);
+    void onColumnsAboutToBeMoved(const QModelIndex& sourceParent, int sourceStart, int sourceEnd, const QModelIndex& destinationParent, int destinationColumn);
 
 private:
     DECLARE_PIMPL
