@@ -2,6 +2,8 @@
 #include <QObject>
 #include <utils-cpp/pimpl.h>
 
+class QQuickWindow;
+
 class QmlUtils : public QObject
 {
     Q_OBJECT
@@ -28,9 +30,12 @@ public:
     Q_INVOKABLE bool compare(const QVariant& value1, const QVariant& value2) const;
 
 #ifdef WIN32
-    void showWindow(void* hWnd, bool maximize = false);
-    Q_INVOKABLE void showWindow(QObject* win);
+    void showWindowWin(void* hWnd);
+    Q_INVOKABLE void showWindowWin(QObject* win);
 #endif
+
+    Q_INVOKABLE void showWindowPrepare(QObject* win);
+    Q_INVOKABLE void showWindow(QObject* win);
 
 // --- Properties support ---
 public:
@@ -57,6 +62,7 @@ private:
     ~QmlUtils();
 
     void updateExecutionState();
+    void onWindowVisibilityChanged(QQuickWindow* window);
 
 private:
     DECLARE_PIMPL
