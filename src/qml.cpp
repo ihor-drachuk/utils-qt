@@ -11,6 +11,7 @@
 #include <utils-qt/qml-cpp/NumericalValidator.h>
 #include <utils-qt/qml-cpp/QmlUtils.h>
 #include <utils-qt/mergedlistmodel.h>
+#include <utils-qt/extendedmodel.h>
 
 #include <QQmlEngine>
 #include <QGuiApplication>
@@ -32,6 +33,7 @@ void registerAll(QQmlEngine& engine)
     NumericalValidator::registerTypes();
     QmlUtils::registerTypes();
     MergedListModel::registerTypes();
+    ExtendedModel::registerTypes();
 }
 
 } // namespace Qml
