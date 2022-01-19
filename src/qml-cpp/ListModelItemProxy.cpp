@@ -9,7 +9,7 @@
 struct ListModelItemProxy::impl_t
 {
     QQmlPropertyMap* propertyMap { nullptr };
-    QAbstractListModel* model { nullptr };
+    QAbstractItemModel* model { nullptr };
     int index { -1 };
     bool ready { false };
     bool keepIndexTrack { true };
@@ -23,7 +23,7 @@ struct ListModelItemProxy::impl_t
 
 void ListModelItemProxy::registerTypes()
 {
-    qRegisterMetaType<QAbstractListModel*>("QAbstractListModel*");
+    qRegisterMetaType<QAbstractItemModel*>("QAbstractItemModel*");
     qRegisterMetaType<QQmlPropertyMap*>("QQmlPropertyMap*");
     qmlRegisterType<ListModelItemProxy>("UtilsQt", 1, 0, "ListModelItemProxy");
 }
@@ -40,7 +40,7 @@ ListModelItemProxy::~ListModelItemProxy()
     delete impl().propertyMap;
 }
 
-QAbstractListModel* ListModelItemProxy::model() const
+QAbstractItemModel* ListModelItemProxy::model() const
 {
     return impl().model;
 }
@@ -65,9 +65,9 @@ bool ListModelItemProxy::keepIndexTrack() const
     return impl().keepIndexTrack;
 }
 
-void ListModelItemProxy::setModel(QAbstractListModel* value)
+void ListModelItemProxy::setModel(QAbstractItemModel* value)
 {
-    if (!qobject_cast<QAbstractListModel*>(value)) {
+    if (!qobject_cast<QAbstractItemModel*>(value)) {
         value = nullptr;
     }
 
@@ -78,22 +78,31 @@ void ListModelItemProxy::setModel(QAbstractListModel* value)
         QObject::disconnect(impl().model, nullptr, this, nullptr);
     }
 
+    assert(!value || value->columnCount() == 1);
+
     impl().model = value;
     reload();
     emit modelChanged(impl().model);
 
     if (impl().model) {
-        QObject::connect(impl().model, &QAbstractListModel::rowsAboutToBeInserted, this, &ListModelItemProxy::onRowsInsertedBefore);
-        QObject::connect(impl().model, &QAbstractListModel::rowsInserted, this, &ListModelItemProxy::onRowsInserted);
-        QObject::connect(impl().model, &QAbstractListModel::rowsAboutToBeRemoved, this, &ListModelItemProxy::onRowsRemovedBefore);
-        QObject::connect(impl().model, &QAbstractListModel::rowsRemoved, this, &ListModelItemProxy::onRowsRemoved);
-        QObject::connect(impl().model, &QAbstractListModel::modelReset, this, &ListModelItemProxy::onModelReset);
-        QObject::connect(impl().model, &QAbstractListModel::rowsMoved, this, &ListModelItemProxy::onRowsMoved);
-        QObject::connect(impl().model, &QAbstractListModel::dataChanged, this, &ListModelItemProxy::onDataChanged);
+        QObject::connect(impl().model, &QAbstractItemModel::rowsAboutToBeInserted, this, &ListModelItemProxy::onRowsInsertedBefore);
+        QObject::connect(impl().model, &QAbstractItemModel::rowsInserted, this, &ListModelItemProxy::onRowsInserted);
+        QObject::connect(impl().model, &QAbstractItemModel::rowsAboutToBeRemoved, this, &ListModelItemProxy::onRowsRemovedBefore);
+        QObject::connect(impl().model, &QAbstractItemModel::rowsRemoved, this, &ListModelItemProxy::onRowsRemoved);
+        QObject::connect(impl().model, &QAbstractItemModel::modelReset, this, &ListModelItemProxy::onModelReset);
+        QObject::connect(impl().model, &QAbstractItemModel::rowsMoved, this, &ListModelItemProxy::onRowsMoved);
+        QObject::connect(impl().model, &QAbstractItemModel::dataChanged, this, &ListModelItemProxy::onDataChanged);
 
-        QObject::connect(impl().model, &QAbstractListModel::rowsInserted, this, std::bind(&ListModelItemProxy::countChanged, this, std::bind(&ListModelItemProxy::count, this)));
-        QObject::connect(impl().model, &QAbstractListModel::rowsRemoved, this, std::bind(&ListModelItemProxy::countChanged, this, std::bind(&ListModelItemProxy::count, this)));
-        QObject::connect(impl().model, &QAbstractListModel::modelReset, this, std::bind(&ListModelItemProxy::countChanged, this, std::bind(&ListModelItemProxy::count, this)));
+        QObject::connect(impl().model, &QAbstractItemModel::rowsInserted, this, std::bind(&ListModelItemProxy::countChanged, this, std::bind(&ListModelItemProxy::count, this)));
+        QObject::connect(impl().model, &QAbstractItemModel::rowsRemoved, this, std::bind(&ListModelItemProxy::countChanged, this, std::bind(&ListModelItemProxy::count, this)));
+        QObject::connect(impl().model, &QAbstractItemModel::modelReset, this, std::bind(&ListModelItemProxy::countChanged, this, std::bind(&ListModelItemProxy::count, this)));
+
+        QObject::connect(impl().model, &QAbstractItemModel::layoutAboutToBeChanged, this, &ListModelItemProxy::onLayoutAboutToBeChanged);
+        QObject::connect(impl().model, &QAbstractItemModel::layoutChanged, this, &ListModelItemProxy::onLayoutChanged);
+
+        QObject::connect(impl().model, &QAbstractItemModel::columnsAboutToBeInserted, this, &ListModelItemProxy::onColumnsAboutToBeInserted);
+        QObject::connect(impl().model, &QAbstractItemModel::columnsAboutToBeRemoved, this, &ListModelItemProxy::onColumnsAboutToBeRemoved);
+        QObject::connect(impl().model, &QAbstractItemModel::columnsAboutToBeMoved, this, &ListModelItemProxy::onColumnsAboutToBeMoved);
     }
 }
 
@@ -157,7 +166,7 @@ void ListModelItemProxy::reload()
         auto role = it.key();
         auto key = QString::fromLatin1(it.value());
         impl().rolesCache.insert(key, role);
-        auto value = impl().model->data(impl().model->index(impl().index), role);
+        auto value = impl().model->data(impl().model->index(impl().index, 0), role);
         map->insert(key, value);
         it++;
     }
@@ -183,7 +192,7 @@ void ListModelItemProxy::reloadRoles(const QVector<int>& affectedRoles)
         }
 
         auto key = QString::fromLatin1(it.value());
-        auto value = impl().model->data(impl().model->index(impl().index), role);
+        auto value = impl().model->data(impl().model->index(impl().index, 0), role);
 
         if (impl().propertyMap->value(key) != value) {
             impl().propertyMap->insert(key, value);
@@ -199,7 +208,7 @@ void ListModelItemProxy::onValueChanged(const QString& key, const QVariant& valu
 {
     assert(impl().ready);
     assert(isValidIndex());
-    impl().model->setData(impl().model->index(impl().index), value, impl().rolesCache.value(key));
+    impl().model->setData(impl().model->index(impl().index, 0), value, impl().rolesCache.value(key));
 }
 
 void ListModelItemProxy::onRowsInserted(const QModelIndex& /*parent*/, int first, int last)
@@ -294,6 +303,7 @@ void ListModelItemProxy::onRowsRemovedBefore(const QModelIndex& /*parent*/, int 
 
 void ListModelItemProxy::onModelReset()
 {
+    assert(!impl().model || impl().model->columnCount() == 1);
     reload();
 }
 
@@ -316,6 +326,32 @@ void ListModelItemProxy::onDataChanged(const QModelIndex& topLeft, const QModelI
         return;
 
     reloadRoles(roles);
+}
+
+void ListModelItemProxy::onLayoutAboutToBeChanged(const QList<QPersistentModelIndex>& /*parents*/, QAbstractItemModel::LayoutChangeHint /*hint*/)
+{
+    // Nothing.
+}
+
+void ListModelItemProxy::onLayoutChanged(const QList<QPersistentModelIndex>& /*parents*/, QAbstractItemModel::LayoutChangeHint /*hint*/)
+{
+    assert(!impl().model || impl().model->columnCount() == 1);
+    reload();
+}
+
+void ListModelItemProxy::onColumnsAboutToBeInserted(const QModelIndex& /*parent*/, int /*first*/, int /*last*/)
+{
+    assert(!"Unsupported");
+}
+
+void ListModelItemProxy::onColumnsAboutToBeRemoved(const QModelIndex& /*parent*/, int /*first*/, int /*last*/)
+{
+    assert(!"Unsupported");
+}
+
+void ListModelItemProxy::onColumnsAboutToBeMoved(const QModelIndex& /*sourceParent*/, int /*sourceStart*/, int /*sourceEnd*/, const QModelIndex& /*destinationParent*/, int /*destinationColumn*/)
+{
+    assert(!"Unsupported");
 }
 
 void ListModelItemProxy::setPropertyMap(QQmlPropertyMap* value)
