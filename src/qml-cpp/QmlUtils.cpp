@@ -1,9 +1,12 @@
 #include <utils-qt/qml-cpp/QmlUtils.h>
 
+#include <optional>
+
 #include <QQmlEngine>
 #include <QImageReader>
 #include <QFileInfo>
 #include <QQuickWindow>
+#include <QMap>
 #ifdef WIN32
 #include <Windows.h>
 #endif
@@ -23,6 +26,8 @@ struct QmlUtils::impl_t
     bool displayRequired { false };
     bool systemRequired { false };
 #endif
+
+    QMap<QQuickWindow*, std::optional<QWindow::Visibility>> visibilities;
 };
 
 
@@ -132,11 +137,23 @@ bool QmlUtils::compare(const QVariant& value1, const QVariant& value2) const
 
 
 #ifdef WIN32
-void QmlUtils::showWindow(void* hWnd, bool maximize)
+void QmlUtils::showWindowWin(void* hWnd)
 {
     assert(hWnd);
-    auto winId = (HWND)hWnd;
 
+    static bool isFirstTime = true;
+
+    if (isFirstTime) {
+        auto status = AllowSetForegroundWindow(GetCurrentProcessId());
+        assert(status);
+        isFirstTime = false;
+    }
+
+    auto winId = (HWND)hWnd;
+    ShowWindow(winId, SW_RESTORE);
+    SetForegroundWindow(winId);
+
+#if 0 // Old solution
     ShowWindow(winId, SW_RESTORE);
     DWORD windowThreadProcessId = GetWindowThreadProcessId(GetForegroundWindow(), LPDWORD(0));
     DWORD currentThreadId = GetCurrentThreadId();
@@ -144,19 +161,48 @@ void QmlUtils::showWindow(void* hWnd, bool maximize)
     BringWindowToTop(winId);
     ShowWindow(winId, maximize ? SW_MAXIMIZE : SW_SHOW);
     AttachThreadInput(windowThreadProcessId, currentThreadId, false);
+#endif // 0, Old solution
+}
+#endif // WIN32
+
+
+#ifdef WIN32
+void QmlUtils::showWindowWin(QObject* win)
+{
+    auto window = qobject_cast<QQuickWindow*>(win);
+    assert(window);
+    showWindowWin((void*)window->winId());
 }
 #endif
 
 
-#ifdef WIN32
+void QmlUtils::showWindowPrepare(QObject* win)
+{
+    auto window = qobject_cast<QQuickWindow*>(win);
+    assert(window);
+
+    if (!impl().visibilities.contains(window)) {
+        QObject::connect(window, &QQuickWindow::visibilityChanged, this, std::bind(&QmlUtils::onWindowVisibilityChanged, this, window));
+        onWindowVisibilityChanged(window);
+    }
+}
+
 void QmlUtils::showWindow(QObject* win)
 {
     auto window = qobject_cast<QQuickWindow*>(win);
     assert(window);
-    showWindow((void*)window->winId());
-}
-#endif
+    auto state = impl().visibilities.value(window).value_or(QWindow::Visibility::Windowed);
 
+    switch (state) {
+        case QWindow::Visibility::Windowed:   window->showNormal();     break;
+        case QWindow::Visibility::Maximized:  window->showMaximized();  break;
+        case QWindow::Visibility::FullScreen: window->showFullScreen(); break;
+        default:
+            assert(false);
+    }
+
+    window->requestActivate();
+}
 
 #ifdef WIN32
 bool QmlUtils::displayRequired() const
@@ -217,4 +263,20 @@ void QmlUtils::updateExecutionState()
                             (impl().systemRequired ? ES_SYSTEM_REQUIRED : 0) |
                             (impl().displayRequired ? ES_DISPLAY_REQUIRED : 0));
 #endif
+}
+
+void QmlUtils::onWindowVisibilityChanged(QQuickWindow* window)
+{
+    auto newValue = window->visibility();
+
+    switch (newValue) {
+        case QWindow::Visibility::Hidden:
+        case QWindow::Visibility::Minimized:
+        case QWindow::Visibility::AutomaticVisibility: return;
+        case QWindow::Visibility::Windowed:
+        case QWindow::Visibility::Maximized:
+        case QWindow::Visibility::FullScreen: break;
+    }
+
+    impl().visibilities[window] = newValue;
 }
