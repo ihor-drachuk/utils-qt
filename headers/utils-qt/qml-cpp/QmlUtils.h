@@ -2,8 +2,6 @@
 #include <QObject>
 #include <utils-cpp/pimpl.h>
 
-class QQuickWindow;
-
 class QmlUtils : public QObject
 {
     Q_OBJECT
