@@ -132,46 +132,6 @@ bool QmlUtils::compare(const QVariant& value1, const QVariant& value2) const
     return (value1 == value2);
 }
 
-
-#ifdef WIN32
-void QmlUtils::showWindowWin(void* hWnd)
-{
-    assert(hWnd);
-
-    static bool isFirstTime = true;
-
-    if (isFirstTime) {
-        auto status = AllowSetForegroundWindow(GetCurrentProcessId());
-        assert(status);
-        isFirstTime = false;
-    }
-
-    auto winId = (HWND)hWnd;
-    ShowWindow(winId, SW_RESTORE);
-    SetForegroundWindow(winId);
-
-#if 0 // Old solution
-    ShowWindow(winId, SW_RESTORE);
-    DWORD windowThreadProcessId = GetWindowThreadProcessId(GetForegroundWindow(), LPDWORD(0));
-    DWORD currentThreadId = GetCurrentThreadId();
-    AttachThreadInput(windowThreadProcessId, currentThreadId, true);
-    BringWindowToTop(winId);
-    ShowWindow(winId, maximize ? SW_MAXIMIZE : SW_SHOW);
-    AttachThreadInput(windowThreadProcessId, currentThreadId, false);
-#endif // 0, Old solution
-}
-#endif // WIN32
-
-
-#ifdef WIN32
-void QmlUtils::showWindowWin(QObject* win)
-{
-    auto window = qobject_cast<QQuickWindow*>(win);
-    assert(window);
-    showWindowWin((void*)window->winId());
-}
-#endif
-
 void QmlUtils::showWindow(QObject* win)
 {
     auto window = qobject_cast<QQuickWindow*>(win);
@@ -181,7 +141,19 @@ void QmlUtils::showWindow(QObject* win)
     flags &= ~Qt::WindowState::WindowMinimized;
     window->setWindowStates(flags);
 
+#ifdef WIN32
+    //auto status = AllowSetForegroundWindow(GetCurrentProcessId()); assert(status);
+    auto hWnd = (void*)window->winId();
+    auto winId = (HWND)hWnd;
+    ShowWindow(winId, SW_RESTORE);
+    DWORD windowThreadProcessId = GetWindowThreadProcessId(GetForegroundWindow(), LPDWORD(0));
+    DWORD currentThreadId = GetCurrentThreadId();
+    AttachThreadInput(windowThreadProcessId, currentThreadId, true);
+    BringWindowToTop(winId);
+    AttachThreadInput(windowThreadProcessId, currentThreadId, false);
+#else
     window->requestActivate();
+#endif // WIN32
 }
 
 void QmlUtils::minimizeWindow(QObject* win)
