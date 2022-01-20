@@ -29,11 +29,6 @@ public:
     Q_INVOKABLE bool isNumber(const QVariant& value) const;
     Q_INVOKABLE bool compare(const QVariant& value1, const QVariant& value2) const;
 
-#ifdef WIN32
-    void showWindowWin(void* hWnd);
-    Q_INVOKABLE void showWindowWin(QObject* win);
-#endif
-
     Q_INVOKABLE void showWindow(QObject* win);
     Q_INVOKABLE void minimizeWindow(QObject* win);
 
