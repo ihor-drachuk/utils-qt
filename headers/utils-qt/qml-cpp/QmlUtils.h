@@ -34,8 +34,8 @@ public:
     Q_INVOKABLE void showWindowWin(QObject* win);
 #endif
 
-    Q_INVOKABLE void showWindowPrepare(QObject* win);
     Q_INVOKABLE void showWindow(QObject* win);
+    Q_INVOKABLE void minimizeWindow(QObject* win);
 
 // --- Properties support ---
 public:
@@ -62,7 +62,6 @@ private:
     ~QmlUtils();
 
     void updateExecutionState();
-    void onWindowVisibilityChanged(QQuickWindow* window);
 
 private:
     DECLARE_PIMPL

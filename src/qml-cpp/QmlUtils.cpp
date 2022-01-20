@@ -6,7 +6,6 @@
 #include <QImageReader>
 #include <QFileInfo>
 #include <QQuickWindow>
-#include <QMap>
 #ifdef WIN32
 #include <Windows.h>
 #endif
@@ -26,8 +25,6 @@ struct QmlUtils::impl_t
     bool displayRequired { false };
     bool systemRequired { false };
 #endif
-
-    QMap<QQuickWindow*, std::optional<QWindow::Visibility>> visibilities;
 };
 
 
@@ -175,33 +172,26 @@ void QmlUtils::showWindowWin(QObject* win)
 }
 #endif
 
-
-void QmlUtils::showWindowPrepare(QObject* win)
-{
-    auto window = qobject_cast<QQuickWindow*>(win);
-    assert(window);
-
-    if (!impl().visibilities.contains(window)) {
-        QObject::connect(window, &QQuickWindow::visibilityChanged, this, std::bind(&QmlUtils::onWindowVisibilityChanged, this, window));
-        onWindowVisibilityChanged(window);
-    }
-}
-
 void QmlUtils::showWindow(QObject* win)
 {
     auto window = qobject_cast<QQuickWindow*>(win);
     assert(window);
-    auto state = impl().visibilities.value(window).value_or(QWindow::Visibility::Windowed);
 
-    switch (state) {
-        case QWindow::Visibility::Windowed:   window->showNormal();     break;
-        case QWindow::Visibility::Maximized:  window->showMaximized();  break;
-        case QWindow::Visibility::FullScreen: window->showFullScreen(); break;
-        default:
-            assert(false);
-    }
+    auto flags = window->windowStates();
+    flags &= ~Qt::WindowState::WindowMinimized;
+    window->setWindowStates(flags);
 
     window->requestActivate();
+}
+
+void QmlUtils::minimizeWindow(QObject* win)
+{
+    auto window = qobject_cast<QQuickWindow*>(win);
+    assert(window);
+
+    auto flags = window->windowStates();
+    flags |= Qt::WindowState::WindowMinimized;
+    window->setWindowStates(flags);
 }
 
 #ifdef WIN32
@@ -263,20 +253,4 @@ void QmlUtils::updateExecutionState()
                             (impl().systemRequired ? ES_SYSTEM_REQUIRED : 0) |
                             (impl().displayRequired ? ES_DISPLAY_REQUIRED : 0));
 #endif
-}
-
-void QmlUtils::onWindowVisibilityChanged(QQuickWindow* window)
-{
-    auto newValue = window->visibility();
-
-    switch (newValue) {
-        case QWindow::Visibility::Hidden:
-        case QWindow::Visibility::Minimized:
-        case QWindow::Visibility::AutomaticVisibility: return;
-        case QWindow::Visibility::Windowed:
-        case QWindow::Visibility::Maximized:
-        case QWindow::Visibility::FullScreen: break;
-    }
-
-    impl().visibilities[window] = newValue;
 }
