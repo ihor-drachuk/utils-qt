@@ -13,6 +13,10 @@ template<class... Ts>
 class FuturesUnifier
 {
 public:
+    FuturesUnifier(const std::tuple<QFuture<Ts>...>& futures)
+        : m_futures(futures)
+    { }
+
     FuturesUnifier(const QFuture<Ts>&... futures)
     {
         m_futures = std::make_tuple(futures...);
@@ -135,3 +139,15 @@ private:
     std::tuple<QFuture<Ts>...> m_futures;
     std::tuple<QFutureWatcher<Ts>...> m_watcher;
 };
+
+template<typename... Ts>
+FuturesUnifier<Ts...>* createFuturesUnifier(const std::tuple<QFuture<Ts>...>& futures)
+{
+    return new FuturesUnifier<Ts...>(futures);
+}
+
+template<typename... Ts>
+FuturesUnifier<Ts...>* createFuturesUnifier(const QFuture<Ts>&... futures)
+{
+    return new FuturesUnifier<Ts...>(futures...);
+}
