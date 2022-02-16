@@ -25,6 +25,7 @@ public:
     ~NumericalValidator() override;
 
     Q_INVOKABLE ValueRangeStatus isValue(const QString& input);
+    Q_INVOKABLE QString forceFixup(const QString& input) const;
 
     State validate(QString& input, int& pos) const override;
     void fixup(QString& input) const override;
