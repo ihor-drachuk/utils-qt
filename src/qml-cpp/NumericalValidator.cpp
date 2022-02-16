@@ -55,6 +55,16 @@ NumericalValidator::ValueRangeStatus NumericalValidator::isValue(const QString& 
     }
 }
 
+QString NumericalValidator::forceFixup(const QString& input) const
+{
+    QString text(input);
+    if (text.isEmpty())
+        text = QStringLiteral("0");
+
+    fixup(text);
+    return text;
+}
+
 QValidator::State NumericalValidator::validate(QString& input, int& pos) const
 {
     if (input.isEmpty())
