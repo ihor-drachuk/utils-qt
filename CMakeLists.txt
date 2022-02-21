@@ -20,7 +20,7 @@ list(REMOVE_DUPLICATES QML_IMPORT_PATH)
 set(QML_IMPORT_PATH "${QML_IMPORT_PATH}" CACHE STRING "Qt Creator extra qml import paths" FORCE)
 
 add_library(utils-qt STATIC ${SOURCES})
-set_property(TARGET utils-qt PROPERTY CXX_STANDARD 17)
+target_compile_features(utils-qt PUBLIC cxx_std_17)
 set_property(TARGET utils-qt PROPERTY AUTOMOC ON)
 set_property(TARGET utils-qt PROPERTY AUTORCC ON)
 
