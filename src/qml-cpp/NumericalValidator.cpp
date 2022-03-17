@@ -24,6 +24,7 @@ NumericalValidator::NumericalValidator(QObject* parent)
     : QValidator(parent)
 {
     createImpl();
+    qGuiApp->inputMethod()->locale().setDefault(QLocale::c());
 }
 
 NumericalValidator::~NumericalValidator()
