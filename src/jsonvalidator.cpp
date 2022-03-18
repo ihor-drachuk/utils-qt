@@ -2,6 +2,7 @@
 
 #include <QJsonDocument>
 #include <QMap>
+#include <QDebug>
 #include <cassert>
 
 namespace UtilsQt {
