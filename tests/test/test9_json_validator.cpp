@@ -10,11 +10,13 @@ TEST(UtilsQt, JsonValidator_basic)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
+          Root(
             Object(
-                Field("field1", Optional),
-                Field("field2", Optional, String()),
-                Field("field3", String())
-                );
+              Field("field1", Optional),
+              Field("field2", Optional, String()),
+              Field("field3", String())
+            )
+          );
 
     QJsonObject test;
     //test["field1"] = 0;
@@ -51,14 +53,16 @@ TEST(UtilsQt, JsonValidator_array)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-            Object(
+            Root (
+              Object(
                 Field("field1", String()),
                 Field("values",
-                      Array(
-                          String()
-                          )
-                      )
-                );
+                  Array(
+                    String()
+                  )
+                )
+              )
+            );
 
     QJsonObject test;
     test["field1"] = "str";
@@ -90,20 +94,22 @@ TEST(UtilsQt, JsonValidator_or)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-            Object(
+            Root(
+              Object(
                 Field("field1",
-                      Or(
-                          String(),
-                          Object()
-                          )
-                      ),
+                  Or(
+                    String(),
+                    Object()
+                  )
+                ),
                 Field("field2",
-                      Or(
-                          Object(),
-                          Array()
-                          )
-                      )
-                );
+                  Or(
+                    Object(),
+                    Array()
+                  )
+                )
+              )
+            );
 
     QJsonObject test;
     test["field1"] = "str";
@@ -125,9 +131,11 @@ TEST(UtilsQt, JsonValidator_include)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-            Array(
+            Root(
+              Array(
                 Include(1,3,5,"",true)
-                );
+              )
+            );
 
     QJsonArray test;
     test.append(1);
@@ -152,9 +160,11 @@ TEST(UtilsQt, JsonValidator_exclude)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-            Array(
+            Root(
+              Array(
                 Exclude(1,3,5,"",true)
-                );
+              )
+            );
 
     QJsonArray test;
     test.append(2);
@@ -179,12 +189,14 @@ TEST(UtilsQt, JsonValidator_severalRules)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-            Array(
+            Root(
+              Array(
                 Or(
-                    String(),
-                    Include(1)
+                  String(),
+                  Include(1)
                 ),
                 Exclude("hello")
+              )
             );
 
     QJsonArray test;
@@ -201,6 +213,91 @@ TEST(UtilsQt, JsonValidator_severalRules)
 
     test.append("hello");
     rsl = validator->check(lg, "", test);
+    ASSERT_FALSE(rsl);
+    ASSERT_TRUE(lg.hasNotifiedError());
+}
+
+
+TEST(UtilsQt, JsonValidator_CtxCheckArrayLength)
+{
+    using namespace UtilsQt::JsonValidator;
+
+    auto validator =
+            Root(
+              Object(
+                Field("array1", CtxWriteArrayLength("array1-size")),
+                Field("array2", CtxCheckArrayLength("array1-size"))
+              ),
+              CtxClearRecord("array1-size")
+            );
+
+    QJsonObject obj;
+    obj["array1"] = QJsonArray{ 1,  2,  3,  4};
+    obj["array2"] = QJsonArray{"a","b","c","d"};
+
+    NullLogger lg;
+    auto rsl = validator->check(lg, "", obj);
+    ASSERT_TRUE(rsl);
+    ASSERT_FALSE(lg.hasNotifiedError());
+
+    obj["array2"] = QJsonArray{1,2,3};
+    rsl = validator->check(lg, "", obj);
+    ASSERT_FALSE(rsl);
+    ASSERT_TRUE(lg.hasNotifiedError());
+}
+
+TEST(UtilsQt, JsonValidator_CtxCheckValue)
+{
+    using namespace UtilsQt::JsonValidator;
+
+    auto validator =
+            Root(
+              Object(
+                Field("array1", Array(CtxAppendToList("array1-values"))),
+                Field("some-data",
+                  Array(
+                    Object(
+                      Field("field1", Number()),
+                      Field("reference", CtxCheckInList("array1-values"))
+                    )
+                  )
+                )
+              ),
+              CtxClearRecord("array1-values")
+            );
+
+    QJsonObject obj;
+    obj["array1"] = QJsonArray{ 1,  2,  3,  4, "Hello"};
+    obj["some-data"] = QJsonArray{
+        QJsonObject{
+            {"field1", 1},
+            {"reference", 3}
+        },
+        QJsonObject{
+            {"field1", 2},
+            {"reference", "Hello"}
+        },
+    };
+
+    QJsonObject obj2;
+    obj2["array1"] = QJsonArray{ 1,  2,  3,  4, "Hello"};
+    obj2["some-data"] = QJsonArray{
+        QJsonObject{
+            {"field1", 1},
+            {"reference", 3}
+        },
+        QJsonObject{
+            {"field1", 2},
+            {"reference", "str"}
+        },
+    };
+
+    NullLogger lg;
+    auto rsl = validator->check(lg, "", obj);
+    ASSERT_TRUE(rsl);
+    ASSERT_FALSE(lg.hasNotifiedError());
+
+    rsl = validator->check(lg, "", obj2);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg.hasNotifiedError());
 }
