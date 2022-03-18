@@ -6,6 +6,7 @@
 #include <QJsonArray>
 
 #include <vector>
+#include <memory>
 
 #include <utils-cpp/variadic_tools.h>
 
