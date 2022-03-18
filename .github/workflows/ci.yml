@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - dev
+      - testing
   pull_request:
     types: [opened, edited, synchronize]
 
