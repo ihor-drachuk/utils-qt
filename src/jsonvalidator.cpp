@@ -192,13 +192,13 @@ bool And::check(ContextData& ctx, Logger& logger, const QString& path, const QJs
     return checkNested(ctx, logger, path, value);
 }
 
-bool Root::check(Logger& logger, const QString& path, const QJsonValue& value)
+bool RootValidator::check(Logger& logger, const QJsonValue& value)
 {
     ContextData ctx;
-    return check(ctx, logger, path, value);
+    return check(ctx, logger, "", value);
 }
 
-bool Root::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value)
+bool RootValidator::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value)
 {
     return checkNested(ctx, logger, path, value);
 }

@@ -10,7 +10,7 @@ TEST(UtilsQt, JsonValidator_basic)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-          Root(
+          RootValidator(
             Object(
               Field("field1", Optional),
               Field("field2", Optional, String()),
@@ -24,26 +24,26 @@ TEST(UtilsQt, JsonValidator_basic)
     test["field3"] = "str";
 
     NullLogger lg1;
-    auto rsl = validator->check(lg1, "", test);
+    auto rsl = validator->check(lg1, test);
     ASSERT_TRUE(rsl);
     ASSERT_FALSE(lg1.hasNotifiedError());
 
     test["field1"] = 0;
     test.remove("field2");
-    rsl = validator->check(lg1, "", test);
+    rsl = validator->check(lg1, test);
     ASSERT_TRUE(rsl);
     ASSERT_FALSE(lg1.hasNotifiedError());
 
     NullLogger lg2;
     test["field2"] = 25;
-    rsl = validator->check(lg2, "", test);
+    rsl = validator->check(lg2, test);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg2.hasNotifiedError());
 
     NullLogger lg3;
     test["field2"] = "str";
     test.remove("field3");
-    rsl = validator->check(lg3, "", test);
+    rsl = validator->check(lg3, test);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg3.hasNotifiedError());
 }
@@ -53,7 +53,7 @@ TEST(UtilsQt, JsonValidator_array)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-            Root (
+            RootValidator(
               Object(
                 Field("field1", String()),
                 Field("values",
@@ -80,11 +80,11 @@ TEST(UtilsQt, JsonValidator_array)
     test["values"] = array;
 
     NullLogger lg;
-    auto rsl = validator->check(lg, "", test);
+    auto rsl = validator->check(lg, test);
     ASSERT_TRUE(rsl);
 
     test["values"] = array2;
-    rsl = validator->check(lg, "", test);
+    rsl = validator->check(lg, test);
     ASSERT_FALSE(rsl);
 }
 
@@ -94,7 +94,7 @@ TEST(UtilsQt, JsonValidator_or)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-            Root(
+            RootValidator(
               Object(
                 Field("field1",
                   Or(
@@ -116,12 +116,12 @@ TEST(UtilsQt, JsonValidator_or)
     test["field2"] = QJsonArray();
 
     NullLogger lg;
-    auto rsl = validator->check(lg, "", test);
+    auto rsl = validator->check(lg, test);
     ASSERT_TRUE(rsl);
     ASSERT_FALSE(lg.hasNotifiedError());
 
     test["field2"] = 12;
-    rsl = validator->check(lg, "", test);
+    rsl = validator->check(lg, test);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg.hasNotifiedError());
 }
@@ -131,7 +131,7 @@ TEST(UtilsQt, JsonValidator_include)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-            Root(
+            RootValidator(
               Array(
                 Include(1,3,5,"",true)
               )
@@ -145,12 +145,12 @@ TEST(UtilsQt, JsonValidator_include)
     test.append(true);
 
     NullLogger lg;
-    auto rsl = validator->check(lg, "", test);
+    auto rsl = validator->check(lg, test);
     ASSERT_TRUE(rsl);
     ASSERT_FALSE(lg.hasNotifiedError());
 
     test.append(2);
-    rsl = validator->check(lg, "", test);
+    rsl = validator->check(lg, test);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg.hasNotifiedError());
 }
@@ -160,7 +160,7 @@ TEST(UtilsQt, JsonValidator_exclude)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-            Root(
+            RootValidator(
               Array(
                 Exclude(1,3,5,"",true)
               )
@@ -173,12 +173,12 @@ TEST(UtilsQt, JsonValidator_exclude)
     test.append(false);
 
     NullLogger lg;
-    auto rsl = validator->check(lg, "", test);
+    auto rsl = validator->check(lg, test);
     ASSERT_TRUE(rsl);
     ASSERT_FALSE(lg.hasNotifiedError());
 
     test.append(1);
-    rsl = validator->check(lg, "", test);
+    rsl = validator->check(lg, test);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg.hasNotifiedError());
 }
@@ -189,7 +189,7 @@ TEST(UtilsQt, JsonValidator_severalRules)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-            Root(
+            RootValidator(
               Array(
                 Or(
                   String(),
@@ -207,12 +207,12 @@ TEST(UtilsQt, JsonValidator_severalRules)
     test.append(1);
 
     NullLogger lg;
-    auto rsl = validator->check(lg, "", test);
+    auto rsl = validator->check(lg, test);
     ASSERT_TRUE(rsl);
     ASSERT_FALSE(lg.hasNotifiedError());
 
     test.append("hello");
-    rsl = validator->check(lg, "", test);
+    rsl = validator->check(lg, test);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg.hasNotifiedError());
 }
@@ -223,7 +223,7 @@ TEST(UtilsQt, JsonValidator_CtxCheckArrayLength)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-            Root(
+            RootValidator(
               Object(
                 Field("array1", CtxWriteArrayLength("array1-size")),
                 Field("array2", CtxCheckArrayLength("array1-size"))
@@ -236,12 +236,12 @@ TEST(UtilsQt, JsonValidator_CtxCheckArrayLength)
     obj["array2"] = QJsonArray{"a","b","c","d"};
 
     NullLogger lg;
-    auto rsl = validator->check(lg, "", obj);
+    auto rsl = validator->check(lg, obj);
     ASSERT_TRUE(rsl);
     ASSERT_FALSE(lg.hasNotifiedError());
 
     obj["array2"] = QJsonArray{1,2,3};
-    rsl = validator->check(lg, "", obj);
+    rsl = validator->check(lg, obj);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg.hasNotifiedError());
 }
@@ -251,7 +251,7 @@ TEST(UtilsQt, JsonValidator_CtxCheckValue)
     using namespace UtilsQt::JsonValidator;
 
     auto validator =
-            Root(
+            RootValidator(
               Object(
                 Field("array1", Array(CtxAppendToList("array1-values"))),
                 Field("some-data",
@@ -293,11 +293,11 @@ TEST(UtilsQt, JsonValidator_CtxCheckValue)
     };
 
     NullLogger lg;
-    auto rsl = validator->check(lg, "", obj);
+    auto rsl = validator->check(lg, obj);
     ASSERT_TRUE(rsl);
     ASSERT_FALSE(lg.hasNotifiedError());
 
-    rsl = validator->check(lg, "", obj2);
+    rsl = validator->check(lg, obj2);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg.hasNotifiedError());
 }

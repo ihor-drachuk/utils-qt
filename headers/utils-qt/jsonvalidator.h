@@ -71,18 +71,18 @@ std::vector<ValidatorPtr> convertValidators(const Ts&... validators)
     return variadic_to_container<std::vector, ValidatorPtr>(validators...);
 }
 
-class Root : public Validator
+class RootValidator : public Validator
 {
 public:
-    Root(const std::vector<ValidatorPtr>& validators)
+    RootValidator(const std::vector<ValidatorPtr>& validators)
         : Validator(validators)
     { }
 
-    bool check(Logger& logger, const QString& path, const QJsonValue& value);
+    bool check(Logger& logger, const QJsonValue& value);
     bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
 };
 
-using RootPtr = std::shared_ptr<Root>;
+using RootValidatorPtr = std::shared_ptr<RootValidator>;
 
 class Object : public Validator
 {
@@ -282,11 +282,12 @@ private:
 
 constexpr auto Optional = Internal::_Optional::Optional;
 constexpr auto NonEmpty = Internal::_NonEmpty::NonEmpty;
+using RootValidatorPtr = Internal::RootValidatorPtr;
 
 template<typename... Ts>
-Internal::RootPtr Root(const Ts&... validators)
+RootValidatorPtr RootValidator(const Ts&... validators)
 {
-    return std::make_shared<Internal::Root>(Internal::convertValidators(validators...));
+    return std::make_shared<Internal::RootValidator>(Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
@@ -317,6 +318,12 @@ template<typename... Ts>
 ValidatorPtr Or(const Ts&... validators)
 {
     return std::make_shared<Internal::Or>(Internal::convertValidators(validators...));
+}
+
+template<typename... Ts>
+ValidatorPtr And(const Ts&... validators)
+{
+    return std::make_shared<Internal::And>(Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
