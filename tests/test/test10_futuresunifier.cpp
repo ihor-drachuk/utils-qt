@@ -59,16 +59,18 @@ TEST(UtilsQt, FuturesUnifier_basic)
     }
 
     { // All, but 2nd canceled
-        auto f1 = createTimedFuture(50, true);
+        auto f1 = createReadyFuture(true);
         auto f2 = createTimedCanceledFuture<std::string>(100);
         auto f3 = createTimedFuture(150, 17);
+        auto f4 = createCanceledFuture<bool>();
 
-        auto unifier = createFuturesUnifier(f1, f2, f3);
+        auto unifier = createFuturesUnifier(f1, f2, f3, f4);
         auto f = unifier->mergeFuturesAll();
 
-        ASSERT_FALSE(f1.isFinished());
+        ASSERT_TRUE(f1.isFinished());
         ASSERT_FALSE(f2.isFinished());
         ASSERT_FALSE(f3.isFinished());
+        ASSERT_TRUE(f4.isFinished());
         ASSERT_FALSE(f.isFinished());
 
         waitForFuture<QEventLoop>(f);
@@ -76,15 +78,17 @@ TEST(UtilsQt, FuturesUnifier_basic)
         ASSERT_TRUE(f1.isFinished());
         ASSERT_TRUE(f2.isFinished());
         ASSERT_TRUE(f3.isFinished());
+        ASSERT_TRUE(f4.isFinished());
         ASSERT_TRUE(f.isFinished());
         ASSERT_FALSE(f.isCanceled());
 
         auto result = f.result();
 
-        ASSERT_EQ(std::tuple_size_v<decltype(result)>, 3);
+        ASSERT_EQ(std::tuple_size_v<decltype(result)>, 4);
         ASSERT_EQ(std::get<0>(result), true);
         ASSERT_EQ(std::get<1>(result), std::nullopt);
         ASSERT_EQ(std::get<2>(result), 17);
+        ASSERT_EQ(std::get<3>(result), std::nullopt);
     }
 
     { // Any, but 1st canceled

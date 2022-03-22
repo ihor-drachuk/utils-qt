@@ -57,15 +57,12 @@ private:
         auto inFuture = std::get<I>(m_futures);
         if (inFuture.isFinished()) {
             m_future.setProgressValue(m_future.progressValue() + 1);
-            std::get<I>(m_tuple) = inFuture.result();
 
-            if (m_future.progressValue() == m_future.progressMaximum()) {
-                m_future.reportResult(m_tuple);
-                m_future.reportFinished();
+            if (inFuture.isCanceled()) {
+                std::get<I>(m_tuple) = {};
+            } else {
+                std::get<I>(m_tuple) = inFuture.result();
             }
-        } else if (inFuture.isCanceled()) {
-            m_future.setProgressValue(m_future.progressValue() + 1);
-            std::get<I>(m_tuple) = {};
 
             if (m_future.progressValue() == m_future.progressMaximum()) {
                 m_future.reportResult(m_tuple);
@@ -75,17 +72,12 @@ private:
             using futuresType = std::tuple_element<I, std::tuple<Ts...>>;
             QObject::connect(&std::get<I>(m_watcher), &QFutureWatcher<futuresType>::finished, &ctx, [this]() {
                 m_future.setProgressValue(m_future.progressValue() + 1);
-                std::get<I>(m_tuple) = std::get<I>(m_watcher).result();
 
-                if (m_future.progressValue() == m_future.progressMaximum()) {
-                    m_future.reportResult(m_tuple);
-                    m_future.reportFinished();
+                if (std::get<I>(m_watcher).isCanceled()) {
+                    std::get<I>(m_tuple) = {};
+                } else {
+                    std::get<I>(m_tuple) = std::get<I>(m_watcher).result();
                 }
-            });
-
-            QObject::connect(&std::get<I>(m_watcher), &QFutureWatcher<futuresType>::canceled, &ctx, [this]() {
-                m_future.setProgressValue(m_future.progressValue() + 1);
-                std::get<I>(m_tuple) = {};
 
                 if (m_future.progressValue() == m_future.progressMaximum()) {
                     m_future.reportResult(m_tuple);
