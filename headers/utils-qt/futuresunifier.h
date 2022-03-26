@@ -23,6 +23,14 @@ public:
         m_futures = std::make_tuple(futures...);
     }
 
+    ~FuturesUnifier()
+    {
+        if (!m_unused && !m_future.isFinished()) {
+            m_future.reportCanceled();
+            m_future.reportFinished();
+        }
+    }
+
     QFuture<std::tuple<std::optional<Ts>...>> mergeFuturesAll()
     {
         Q_ASSERT(m_unused);
