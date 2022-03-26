@@ -199,3 +199,135 @@ TEST(UtilsQt, FutureBridgeTest_Destruction)
         ASSERT_FALSE(ok);
     }
 }
+
+
+
+TEST(UtilsQt, FutureBridgeTest_StepByStep)
+{
+    {
+        auto f = createTimedFuture(50, 1234);
+
+        auto conv = convertFuture<int, std::string>(f, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
+
+        ASSERT_TRUE(conv.future.isStarted());
+        ASSERT_FALSE(conv.future.isCanceled());
+        ASSERT_FALSE(conv.future.isFinished());
+
+        waitForFuture<QEventLoop>(conv.future);
+
+        ASSERT_FALSE(conv.future.isCanceled());
+        ASSERT_TRUE(conv.future.isFinished());
+        ASSERT_EQ(conv.future.result(), "1234");
+    }
+
+    {
+        QFutureInterface<int> fi;
+
+        auto f = fi.future();
+        auto conv = convertFuture<int, std::string>(f, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
+
+        ASSERT_FALSE(conv.future.isStarted());
+        ASSERT_FALSE(conv.future.isCanceled());
+        ASSERT_FALSE(conv.future.isFinished());
+    }
+
+    {
+        QFutureInterface<int> fi;
+
+        auto f = fi.future();
+        auto conv = convertFuture<int, std::string>(f, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
+
+        ASSERT_FALSE(conv.future.isStarted());
+        ASSERT_FALSE(conv.future.isCanceled());
+        ASSERT_FALSE(conv.future.isFinished());
+
+        fi.reportStarted();
+        ASSERT_TRUE(f.isStarted());
+
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+
+        ASSERT_TRUE(conv.future.isStarted());
+        ASSERT_FALSE(conv.future.isCanceled());
+        ASSERT_FALSE(conv.future.isFinished());
+
+        fi.reportCanceled();
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+
+        ASSERT_TRUE(conv.future.isStarted());
+        ASSERT_TRUE(conv.future.isCanceled());
+        ASSERT_FALSE(conv.future.isFinished());
+
+        fi.reportFinished();
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+
+        ASSERT_TRUE(conv.future.isStarted());
+        ASSERT_TRUE(conv.future.isCanceled());
+        ASSERT_TRUE(conv.future.isFinished());
+    }
+
+
+    {
+        QFutureInterface<int> fi;
+
+        auto f = fi.future();
+        auto conv = convertFuture<int, std::string>(f, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
+
+        ASSERT_FALSE(conv.future.isStarted());
+        ASSERT_FALSE(conv.future.isCanceled());
+        ASSERT_FALSE(conv.future.isFinished());
+
+        fi.reportStarted();
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+
+        ASSERT_TRUE(conv.future.isStarted());
+        ASSERT_FALSE(conv.future.isCanceled());
+        ASSERT_FALSE(conv.future.isFinished());
+
+        fi.reportResult(1234);
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+
+        ASSERT_TRUE(conv.future.isStarted());
+        ASSERT_FALSE(conv.future.isCanceled());
+        ASSERT_FALSE(conv.future.isFinished());
+
+        fi.reportFinished();
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+
+        ASSERT_TRUE(conv.future.isStarted());
+        ASSERT_FALSE(conv.future.isCanceled());
+        ASSERT_TRUE(conv.future.isFinished());
+
+        ASSERT_EQ(conv.future.resultCount(), 1);
+        ASSERT_EQ(conv.future.result(), "1234");
+    }
+}
+
+
+TEST(UtilsQt, FutureBridgeTest_CancelTarget)
+{
+    {
+        QFutureInterface<int> fi;
+
+        auto f = fi.future();
+        auto conv = convertFuture<int, std::string>(f, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
+
+        ASSERT_FALSE(fi.isStarted());
+        ASSERT_FALSE(fi.isCanceled());
+        ASSERT_FALSE(fi.isFinished());
+
+        ASSERT_FALSE(conv.future.isStarted());
+        ASSERT_FALSE(conv.future.isCanceled());
+        ASSERT_FALSE(conv.future.isFinished());
+
+        conv.future.cancel();
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+
+        ASSERT_FALSE(fi.isStarted());
+        ASSERT_TRUE(fi.isCanceled());
+        ASSERT_FALSE(fi.isFinished());
+
+        ASSERT_FALSE(conv.future.isStarted());
+        ASSERT_TRUE(conv.future.isCanceled());
+        ASSERT_FALSE(conv.future.isFinished());
+    }
+}

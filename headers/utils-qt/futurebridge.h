@@ -116,18 +116,28 @@ class FutureBridge : public AnonymousFutureBridge
 public:
     using SourceFuture = QFuture<Source>;
     using SourceWatcher = QFutureWatcher<Source>;
+    using TargetWatcher = QFutureWatcher<Target>;
     using Converter = typename FutureBridgeInternals::FutureBridgeConverterType<Source, Target>::Converter;
 
     FutureBridge(const SourceFuture& future, const Converter& converter)
         : m_converter(converter)
     {
-        m_targetFutureInterface.reportStarted();
+        if (future.isStarted())
+            m_targetFutureInterface.reportStarted();
+
+        if (future.isCanceled())
+            m_targetFutureInterface.reportCanceled();
+
+        QObject::connect(&m_targetWatcher, &TargetWatcher::canceled, [this](){ m_sourceWatcher.future().cancel(); });
+        m_targetWatcher.setFuture(m_targetFutureInterface.future());
 
         if (future.isFinished()) {
             handleFinished(future);
         } else {
-            QObject::connect(&m_watcher, &SourceWatcher::finished, [this](){ onFinished(); });
-            m_watcher.setFuture(future);
+            QObject::connect(&m_sourceWatcher, &SourceWatcher::started, [this](){ m_targetFutureInterface.reportStarted(); });
+            QObject::connect(&m_sourceWatcher, &SourceWatcher::canceled, [this](){ m_targetFutureInterface.reportCanceled(); });
+            QObject::connect(&m_sourceWatcher, &SourceWatcher::finished, [this](){ onFinished(); });
+            m_sourceWatcher.setFuture(future);
         }
     }
 
@@ -147,7 +157,7 @@ public:
 
 private:
     void onFinished() {
-        handleFinished(m_watcher.future());
+        handleFinished(m_sourceWatcher.future());
     }
 
     void handleFinished(const SourceFuture& future) {
@@ -164,14 +174,17 @@ private:
     }
 
     void doCancel() {
-        m_targetFutureInterface.reportCanceled();
+        if (!m_targetFutureInterface.isCanceled())
+            m_targetFutureInterface.reportCanceled();
+
         m_targetFutureInterface.reportFinished();
     }
 
 private:
     Converter m_converter;
     QFutureInterface<Target> m_targetFutureInterface;
-    SourceWatcher m_watcher;
+    SourceWatcher m_sourceWatcher;
+    TargetWatcher m_targetWatcher;
 };
 
 
@@ -228,7 +241,7 @@ class FutureBridgesList : public QObject
     Q_OBJECT
 public:
     FutureBridgesList();
-    ~FutureBridgesList();
+    ~FutureBridgesList() override;
     void append(const AnonymousFutureBridgePtr& bridge);
 
     template<typename T>
