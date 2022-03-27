@@ -174,6 +174,9 @@ private:
     }
 
     void doCancel() {
+        if (!m_sourceWatcher.future().isCanceled())
+            m_sourceWatcher.future().cancel();
+
         if (!m_targetFutureInterface.isCanceled())
             m_targetFutureInterface.reportCanceled();
 
