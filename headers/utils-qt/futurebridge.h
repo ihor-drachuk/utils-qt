@@ -27,7 +27,7 @@
   auto bundle = convertFuture<int, std::string>(f, [](int value) -> std::optional<std::string>
   {
       return std::to_string(value);
-  }
+  });
 
   futuresList.append(bundle.bridge);
 
