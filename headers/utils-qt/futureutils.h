@@ -271,18 +271,28 @@ void onCanceled(const QFuture<Type>& future,
 
 
 template<typename EventLoopType, typename T>
-void waitForFuture(const QFuture<T>& future)
+void waitForFuture(const QFuture<T>& future, const std::optional<unsigned>& timeout = {})
 {
     if (future.isFinished())
         return;
 
+    std::unique_ptr<QTimer> timer;
     EventLoopType eventLoop;
     QFutureWatcher<T> futureWatcher;
     QObject::connect(&futureWatcher, &QFutureWatcherBase::finished, &eventLoop, &EventLoopType::quit);
+
+    if (timeout) {
+        timer = std::make_unique<QTimer>();
+        QObject::connect(&*timer, &QTimer::timeout, &eventLoop, &EventLoopType::quit);
+        timer->setSingleShot(true);
+        timer->start(*timeout);
+    }
+
     futureWatcher.setFuture(future);
     eventLoop.exec();
 
-    Q_ASSERT(future.isFinished());
+    if (!timeout)
+        Q_ASSERT(future.isFinished());
 }
 
 
