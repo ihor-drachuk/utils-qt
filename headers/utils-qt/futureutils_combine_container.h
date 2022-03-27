@@ -109,6 +109,8 @@ template<template<typename...> class Container,
         typename T>
 QFuture<T> combineFutures(const Container<QFuture<T>>& container, QObject* lifetimeCtx = nullptr)
 {
+    assert(cend(container) - cbegin(container) > 0);
+
     auto ctx = new Context<T>();
 
     if (lifetimeCtx)
