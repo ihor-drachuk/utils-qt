@@ -331,3 +331,20 @@ TEST(UtilsQt, FutureBridgeTest_CancelTarget)
         ASSERT_FALSE(conv.future.isFinished());
     }
 }
+
+TEST(UtilsQt, FutureBridgeTest_CancelSource)
+{
+    {
+        QFutureInterface<int> fi;
+
+        QEventLoop().processEvents();
+        ASSERT_FALSE(fi.isCanceled());
+
+        {
+            auto conv = convertFuture<int, std::string>(fi.future(), [&](int value) -> std::optional<std::string> { return std::to_string(value); });
+        }
+
+        QEventLoop().processEvents();
+        ASSERT_TRUE(fi.isCanceled());
+    }
+}
