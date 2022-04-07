@@ -10,22 +10,33 @@
 #include <type_traits>
 #include <memory>
 
+namespace Internal {
+
+class FuturesUnifierBase : public QObject
+{
+    Q_OBJECT
+};
+
 template<class... Ts>
-class FuturesUnifier
+class FuturesUnifier : public FuturesUnifierBase
 {
 public:
-    FuturesUnifier(const std::tuple<QFuture<Ts>...>& futures)
+    FuturesUnifier(const std::tuple<QFuture<Ts>...>& futures, bool autodelete = false)
         : m_futures(futures)
-    { }
-
-    FuturesUnifier(const QFuture<Ts>&... futures)
     {
-        m_futures = std::make_tuple(futures...);
+        if (autodelete) {
+            using ResultType = decltype(m_future.future().result());
+            auto selfWatcher = new QFutureWatcher<ResultType>(this);
+            QObject::connect(selfWatcher, &QFutureWatcherBase::finished, this, &QObject::deleteLater);
+            selfWatcher->setFuture(m_future.future());
+        }
     }
 
     ~FuturesUnifier()
     {
-        if (!m_unused && !m_future.isFinished()) {
+        if (!m_used) return;
+
+        if (!m_future.isFinished()) {
             m_future.reportCanceled();
             m_future.reportFinished();
         }
@@ -33,8 +44,8 @@ public:
 
     QFuture<std::tuple<std::optional<Ts>...>> mergeFuturesAll()
     {
-        Q_ASSERT(m_unused);
-        m_unused = false;
+        Q_ASSERT(!m_used);
+        m_used = true;
 
         m_future.setProgressRange(0, sizeof... (Ts));
 
@@ -45,8 +56,8 @@ public:
 
     QFuture<void> mergeFuturesAny()
     {
-        Q_ASSERT(m_unused);
-        m_unused = false;
+        Q_ASSERT(!m_used);
+        m_used = true;
 
         waitForAnyFuture();
 
@@ -77,8 +88,8 @@ private:
                 m_future.reportFinished();
             }
         } else {
-            using futuresType = std::tuple_element<I, std::tuple<Ts...>>;
-            QObject::connect(&std::get<I>(m_watcher), &QFutureWatcher<futuresType>::finished, &ctx, [this]() {
+            using FuturesTypeI = std::tuple_element<I, std::tuple<Ts...>>;
+            QObject::connect(&std::get<I>(m_watcher), &QFutureWatcher<FuturesTypeI>::finished, this, [this]() {
                 m_future.setProgressValue(m_future.progressValue() + 1);
 
                 if (std::get<I>(m_watcher).isCanceled()) {
@@ -115,12 +126,12 @@ private:
             m_future.reportCanceled();
             return;
         } else {
-            using futuresType = std::tuple_element<I, std::tuple<Ts...>>;
-            QObject::connect(&std::get<I>(m_watcher), &QFutureWatcher<futuresType>::finished, &ctx, [this]() {
+            using FuturesTypeI = std::tuple_element<I, std::tuple<Ts...>>;
+            QObject::connect(&std::get<I>(m_watcher), &QFutureWatcher<FuturesTypeI>::finished, this, [this]() {
                 m_future.reportFinished();
             });
 
-            QObject::connect(&std::get<I>(m_watcher), &QFutureWatcher<futuresType>::canceled, &ctx, [this]() {
+            QObject::connect(&std::get<I>(m_watcher), &QFutureWatcher<FuturesTypeI>::canceled, this, [this]() {
                 m_future.reportCanceled();
             });
 
@@ -131,22 +142,57 @@ private:
     }
 
 private:
-    bool m_unused {true};
-    QObject ctx;
+    bool m_used {false};
     QFutureInterface<std::tuple<std::optional<Ts>...>> m_future;
     std::tuple<std::optional<Ts>...> m_tuple;
     std::tuple<QFuture<Ts>...> m_futures;
     std::tuple<QFutureWatcher<Ts>...> m_watcher;
 };
 
+} // namespace Internal
+
 template<typename... Ts>
-std::shared_ptr<FuturesUnifier<Ts...>> createFuturesUnifier(const std::tuple<QFuture<Ts>...>& futures)
+std::shared_ptr<Internal::FuturesUnifier<Ts...>> createFuturesUnifier(const std::tuple<QFuture<Ts>...>& futures)
 {
-    return std::make_shared<FuturesUnifier<Ts...>>(futures);
+    return std::make_shared<Internal::FuturesUnifier<Ts...>>(futures);
 }
 
 template<typename... Ts>
-std::shared_ptr<FuturesUnifier<Ts...>> createFuturesUnifier(const QFuture<Ts>&... futures)
+std::shared_ptr<Internal::FuturesUnifier<Ts...>> createFuturesUnifier(const QFuture<Ts>&... futures)
 {
-    return std::make_shared<FuturesUnifier<Ts...>>(futures...);
+    return createFuturesUnifier(std::make_tuple(futures...));
+}
+
+template<typename... Ts>
+QFuture<std::tuple<std::optional<Ts>...>> mergeFuturesAll(QObject* ctx, const std::tuple<QFuture<Ts>...>& futures)
+{
+    auto unifier = new Internal::FuturesUnifier<Ts...>(futures, true);
+
+    if (ctx)
+        QObject::connect(ctx, &QObject::destroyed, unifier, &QObject::deleteLater);
+
+    return unifier->mergeFuturesAll();
+}
+
+template<typename... Ts>
+QFuture<std::tuple<std::optional<Ts>...>> mergeFuturesAll(QObject* ctx, const QFuture<Ts>&... futures)
+{
+    return mergeFuturesAll(ctx, std::make_tuple(futures...));
+}
+
+template<typename... Ts>
+QFuture<void> mergeFuturesAny(QObject* ctx, const std::tuple<QFuture<Ts>...>& futures)
+{
+    auto unifier = new Internal::FuturesUnifier<Ts...>(futures, true);
+
+    if (ctx)
+        QObject::connect(ctx, &QObject::destroyed, unifier, &QObject::deleteLater);
+
+    return unifier->mergeFuturesAny();
+}
+
+template<typename... Ts>
+QFuture<void> mergeFuturesAny(QObject* ctx, const QFuture<Ts>&... futures)
+{
+    return mergeFuturesAny(ctx, std::make_tuple(futures...));
 }
