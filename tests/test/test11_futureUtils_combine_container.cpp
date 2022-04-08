@@ -3,6 +3,8 @@
 #include <utils-qt/futureutils_combine_container.h>
 #include <QEventLoop>
 
+using namespace UtilsQt;
+
 TEST(UtilsQt, FutureUtilsCombineContainer_Basic)
 {
     {
@@ -204,4 +206,29 @@ TEST(UtilsQt, FutureUtilsCombineContainer_CancelTarget)
     ASSERT_TRUE(f.isFinished());
     ASSERT_EQ(f.resultCount(), 0);
     ASSERT_EQ(f.results().size(), 0);
+}
+
+
+TEST(UtilsQt, FutureUtilsCombineContainer_Void)
+{
+    {
+        auto f1 = createTimedFuture(50);
+        auto f2 = createTimedFuture(100);
+        auto f3 = createTimedFuture(150);
+        auto f = combineFutures({f1,f2,f3});
+
+        QEventLoop().processEvents();
+
+        ASSERT_TRUE(f.isStarted());
+        ASSERT_FALSE(f.isCanceled());
+        ASSERT_FALSE(f.isFinished());
+
+        waitForFuture<QEventLoop>(f);
+
+        ASSERT_TRUE(f.isStarted());
+        ASSERT_FALSE(f.isCanceled());
+        ASSERT_TRUE(f.isFinished());
+
+        ASSERT_EQ(f.results().size(), 3);
+    }
 }
