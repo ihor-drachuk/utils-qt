@@ -5,6 +5,13 @@
 #include <QFutureWatcher>
 #include <QVector>
 #include <initializer_list>
+#include <variant>
+
+namespace UtilsQt {
+namespace Internals {
+
+template<typename T> struct ResultType       { using Type = T; };
+template<>           struct ResultType<void> { using Type = std::monostate; };
 
 class ContextBase : public QObject
 {
@@ -17,6 +24,7 @@ signals:
 template<typename T>
 class Context : public ContextBase
 {
+    using RetType = typename ResultType<T>::Type;
 public:
     ~Context() override {
         m_destroying = true;
@@ -54,9 +62,18 @@ public:
         m_targetFutureWatcher.setFuture(m_targetFuture.future());
     }
 
-    QFuture<T> future() { return m_targetFuture.future(); }
+    QFuture<RetType> future() { return m_targetFuture.future(); }
 
 private:
+    template<typename K>
+    static void reportResult(const QFuture<K>& future, QFutureInterface<K>& promise, int index) {
+        promise.reportResult(future.result(), index);
+    }
+
+    static void reportResult(const QFuture<void>& /*future*/, QFutureInterface<std::monostate>& promise, int index) {
+        promise.reportResult(std::monostate(), index);
+    }
+
     void onStarted() {
         if (m_destroying) return;
 
@@ -78,7 +95,7 @@ private:
         QFuture<T> f = m_sourceFutureWatchers[index]->future();
 
         if (!f.isCanceled())
-            m_targetFuture.reportResult(f.result(), index);
+            reportResult(f, m_targetFuture, index);
 
         auto newProgress = m_targetFuture.progressValue() + 1;
         m_targetFuture.setProgressValue(newProgress);
@@ -100,23 +117,25 @@ private:
     int m_maxResults {};
     int m_gotResults {};
     bool m_destroying { false };
-    QFutureInterface<T> m_targetFuture;
+    QFutureInterface<RetType> m_targetFuture;
     QFutureWatcher<T> m_targetFutureWatcher;
     QVector<std::shared_ptr<QFutureWatcher<T>>> m_sourceFutureWatchers;
 };
 
+} // namespace Internals
+
 template<template<typename...> class Container,
         typename T>
-QFuture<T> combineFutures(const Container<QFuture<T>>& container, QObject* lifetimeCtx = nullptr)
+QFuture<typename Internals::ResultType<T>::Type> combineFutures(const Container<QFuture<T>>& container, QObject* lifetimeCtx = nullptr)
 {
-    assert(cend(container) - cbegin(container) > 0);
+    assert(std::cend(container) - std::cbegin(container) > 0);
 
-    auto ctx = new Context<T>();
+    auto ctx = new Internals::Context<T>();
 
     if (lifetimeCtx)
         QObject::connect(lifetimeCtx, &QObject::destroyed, ctx, &QObject::deleteLater);
 
-    QObject::connect(ctx, &ContextBase::finished, ctx, &QObject::deleteLater);
+    QObject::connect(ctx, &Internals::ContextBase::finished, ctx, &QObject::deleteLater);
 
     ctx->setFutures(container);
 
@@ -124,7 +143,9 @@ QFuture<T> combineFutures(const Container<QFuture<T>>& container, QObject* lifet
 }
 
 template<typename T>
-QFuture<T> combineFutures(const std::initializer_list<QFuture<T>>& container, QObject* lifetimeCtx = nullptr)
+auto combineFutures(const std::initializer_list<QFuture<T>>& container, QObject* lifetimeCtx = nullptr)
 {
     return combineFutures<std::initializer_list, T>(container, lifetimeCtx);
 }
+
+} // namespace UtilsQt
