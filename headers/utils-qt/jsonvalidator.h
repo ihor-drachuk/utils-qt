@@ -64,6 +64,7 @@ namespace Internal {
 
 enum class _Optional { Optional };
 enum class _NonEmpty { NonEmpty };
+enum class _Hex { Hex };
 
 template<typename... Ts>
 std::vector<ValidatorPtr> convertValidators(const Ts&... validators)
@@ -157,10 +158,17 @@ public:
           m_nonEmpty(true)
     { }
 
+    String(_Hex, const std::vector<ValidatorPtr>& validators)
+        : Validator(validators),
+          m_nonEmpty(true),
+          m_hex(true)
+    { }
+
     bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
 
 private:
     bool m_nonEmpty { false };
+    bool m_hex { false };
 };
 
 class Bool : public Validator
@@ -265,6 +273,19 @@ private:
     QString m_ctxField;
 };
 
+class CtxCheckNotInList : public Validator
+{
+public:
+    CtxCheckNotInList(const QString& ctxField)
+        : m_ctxField(ctxField)
+    { }
+
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+
+private:
+    QString m_ctxField;
+};
+
 class CtxClearRecord : public Validator
 {
 public:
@@ -282,6 +303,7 @@ private:
 
 constexpr auto Optional = Internal::_Optional::Optional;
 constexpr auto NonEmpty = Internal::_NonEmpty::NonEmpty;
+constexpr auto Hex = Internal::_Hex::Hex;
 using RootValidatorPtr = Internal::RootValidatorPtr;
 
 template<typename... Ts>
@@ -339,6 +361,12 @@ ValidatorPtr String(Internal::_NonEmpty ne, const Ts&... validators)
 }
 
 template<typename... Ts>
+ValidatorPtr String(Internal::_Hex hex, const Ts&... validators)
+{
+    return std::make_shared<Internal::String>(hex, Internal::convertValidators(validators...));
+}
+
+template<typename... Ts>
 ValidatorPtr Bool(const Ts&... validators)
 {
     return std::make_shared<Internal::Bool>(Internal::convertValidators(validators...));
@@ -366,6 +394,7 @@ ValidatorPtr CtxWriteArrayLength(const QString& ctxField);
 ValidatorPtr CtxCheckArrayLength(const QString& ctxField);
 ValidatorPtr CtxAppendToList(const QString& ctxField);
 ValidatorPtr CtxCheckInList(const QString& ctxField);
+ValidatorPtr CtxCheckNotInList(const QString& ctxField);
 ValidatorPtr CtxClearRecord(const QString& ctxField);
 
 } // namespace JsonValidator
