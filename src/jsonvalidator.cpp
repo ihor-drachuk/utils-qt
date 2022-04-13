@@ -137,6 +137,22 @@ bool String::check(ContextData& ctx, Logger& logger, const QString& path, const 
         return false;
     }
 
+    if (m_hex) {
+        auto str = value.toString();
+
+        bool ok = false;
+
+        if (str.left(2) == "0x") {
+            str = str.mid(2);
+            str.toLongLong(&ok, 16);
+        }
+
+        if (!ok) {
+            logger.notifyError(path, "Expected HEX-number string, but isn't");
+            return false;
+        }
+    }
+
     return checkNested(ctx, logger, path, value);
 }
 
@@ -257,6 +273,20 @@ bool CtxCheckInList::check(ContextData& ctx, Logger& logger, const QString& path
     return true;
 }
 
+bool CtxCheckNotInList::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value)
+{
+    assert(!ctx.contains(m_ctxField) || ctx.value(m_ctxField).type() == QVariant::Type::List);
+
+    auto list = ctx.value(m_ctxField).toList();
+
+    if (list.contains(value)) {
+        logger.notifyError(path, QString("This value failed not-in-list check: %1").arg(valueToString(value)));
+        return false;
+    }
+
+    return true;
+}
+
 bool CtxClearRecord::check(ContextData& ctx, Logger& /*logger*/, const QString& /*path*/, const QJsonValue& /*value*/)
 {
     ctx.remove(m_ctxField);
@@ -291,6 +321,7 @@ ValidatorPtr CtxWriteArrayLength(const QString& ctxField) { return std::make_sha
 ValidatorPtr CtxCheckArrayLength(const QString& ctxField) { return std::make_shared<Internal::CtxCheckArrayLength>(ctxField); }
 ValidatorPtr CtxAppendToList(const QString& ctxField) { return std::make_shared<Internal::CtxAppendToList>(ctxField); }
 ValidatorPtr CtxCheckInList(const QString& ctxField) { return std::make_shared<Internal::CtxCheckInList>(ctxField); }
+ValidatorPtr CtxCheckNotInList(const QString& ctxField) { return std::make_shared<Internal::CtxCheckNotInList>(ctxField); }
 ValidatorPtr CtxClearRecord(const QString& ctxField) { return std::make_shared<Internal::CtxClearRecord>(ctxField); }
 
 } // namespace JsonValidator
