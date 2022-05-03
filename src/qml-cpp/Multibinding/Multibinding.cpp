@@ -10,6 +10,7 @@ struct Multibinding::impl_t
 {
     MultibindingItem* lastChanged { nullptr };
 
+    bool running { true };
     QVariant value;
     bool recursionBlocking { false };
     QList<QObject*> loopbackGuarded;
@@ -97,6 +98,9 @@ void Multibinding::onChanged(MultibindingItem* srcProp)
 {
     assert(srcProp);
 
+    if (!running())
+        return;
+
     if (impl().recursionBlocking)
         return;
 
@@ -115,12 +119,20 @@ void Multibinding::onChanged(MultibindingItem* srcProp)
 void Multibinding::onSyncNeeded(MultibindingItem* srcProp)
 {
     assert(srcProp);
+
+    if (!running())
+        return;
+
     srcProp->write(impl().value);
 }
 
 void Multibinding::onTriggered(MultibindingItem* srcProp)
 {
     assert(srcProp);
+
+    if (!running())
+        return;
+
     if (!impl().loopbackGuardMs) return;
 
     if (impl().loopbackGuarded.contains(srcProp)) {
@@ -131,6 +143,49 @@ void Multibinding::onTriggered(MultibindingItem* srcProp)
 void Multibinding::onTimeout()
 {
     onChanged(impl().lastChanged);
+}
+
+void Multibinding::onEnabled()
+{
+    assert(running());
+
+    MultibindingItem* first {};
+    MultibindingItem* source {};
+
+    auto children = childItems();
+    for (auto item: children) {
+        if (auto mbItem = qobject_cast<MultibindingItem*>(item)) {
+            if (!first)
+                first = mbItem;
+
+            if (mbItem->reAttachBehvior() == MultibindingItem::ReAttachBehavior::SyncMultibinding) {
+                source = mbItem;
+                break;
+            }
+        }
+    }
+
+    MultibindingItem* selection = source ? source : first;
+    if (!selection)
+        return;
+
+    selection->announce();
+}
+
+bool Multibinding::running() const
+{
+    return impl().running;
+}
+
+void Multibinding::setRunning(bool value)
+{
+    if (impl().running == value)
+        return;
+
+    impl().running = value;
+    if (impl().running) onEnabled();
+
+    emit runningChanged(impl().running);
 }
 
 const QList<QObject*>& Multibinding::loopbackGuarded() const
