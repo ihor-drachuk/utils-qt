@@ -6,6 +6,7 @@ class MultibindingItem;
 class Multibinding : public QQuickItem
 {
     Q_OBJECT
+    Q_PROPERTY(bool running READ running WRITE setRunning NOTIFY runningChanged)
     Q_PROPERTY(QVariant value READ value WRITE setValue NOTIFY valueChanged)
     Q_PROPERTY(QList<QObject*> loopbackGuarded READ loopbackGuarded WRITE setLoopbackGuarded NOTIFY loopbackGuardedChanged)
     Q_PROPERTY(int loopbackGuardMs READ loopbackGuardMs WRITE setLoopbackGuardMs NOTIFY loopbackGuardMsChanged)
@@ -23,16 +24,19 @@ signals:
 
 // Properties support
 public:
+    bool running() const;
     QVariant value() const;
     const QList<QObject*>& loopbackGuarded() const;
     int loopbackGuardMs() const;
 
 public slots:
+    void setRunning(bool value);
     void setValue(const QVariant& value);
     void setLoopbackGuarded(const QList<QObject*>& newLoopbackGuarded);
     void setLoopbackGuardMs(int newLoopbackGuardMs);
 
 signals:
+    void runningChanged(bool running);
     void valueChanged(const QVariant& value);
     void loopbackGuardedChanged(const QList<QObject*>& loopbackGuarded);
     void loopbackGuardMsChanged(int loopbackGuardMs);
@@ -47,6 +51,7 @@ private:
     void onSyncNeeded(MultibindingItem* srcProp);
     void onTriggered(MultibindingItem* srcProp);
     void onTimeout();
+    void onEnabled();
 
 private:
     struct impl_t;
