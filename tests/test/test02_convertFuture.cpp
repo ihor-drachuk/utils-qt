@@ -59,7 +59,7 @@ TEST(UtilsQt, FutureBridgeTest)
 
         bool ok = false;
 
-        auto conv = convertFuture<void, const char*>(f, [&]() -> std::optional<const char*> { ok = true; return {}; });
+        auto conv = convertFuture<int, const char*>(f, [&](int) -> std::optional<const char*> { ok = true; return {}; });
         ASSERT_TRUE(conv.future.isCanceled());
         ASSERT_TRUE(conv.future.isFinished());
         ASSERT_FALSE(ok);
@@ -140,7 +140,7 @@ TEST(UtilsQt, FutureBridgeTest_Timed)
 
         bool ok = false;
 
-        auto conv = convertFuture<void, const char*>(f, [&]() -> std::optional<const char*> { ok = true; return {}; });
+        auto conv = convertFuture<int, const char*>(f, [&](int) -> std::optional<const char*> { ok = true; return {}; });
         ASSERT_FALSE(conv.future.isFinished());
         waitForFuture<QEventLoop>(conv.future);
         ASSERT_TRUE(conv.future.isCanceled());

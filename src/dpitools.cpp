@@ -14,7 +14,11 @@
 class WinEventFilter : public QAbstractNativeEventFilter
 {
 public:
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+    bool nativeEventFilter(const QByteArray& /*eventType*/, void* message, qintptr* /*result*/) override {
+#else
     bool nativeEventFilter(const QByteArray& /*eventType*/, void* message, long* /*result*/) override {
+#endif
         MSG* msg = static_cast<MSG*>( message );
 
         if (msg->message == 0x02e0 /*WM_DPICHANGED*/) {

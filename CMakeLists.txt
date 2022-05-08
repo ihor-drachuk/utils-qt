@@ -11,7 +11,8 @@ if (NOT TARGET utils-cpp)
     add_subdirectory(3rd-party/utils-cpp)
 endif()
 
-find_package(Qt5 COMPONENTS Core Quick REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Quick REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Quick)
 
 FILE(GLOB_RECURSE SOURCES src/*.cpp src/*.qrc src/*.h headers/*.h)
 
@@ -29,7 +30,7 @@ if(MSVC)
     set_target_properties(utils-qt PROPERTIES STATIC_LIBRARY_OPTIONS "/ignore:4221")
 endif()
 
-target_link_libraries(utils-qt PUBLIC Qt5::Core Qt5::Quick utils-cpp)
+target_link_libraries(utils-qt PUBLIC Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick utils-cpp)
 target_include_directories(utils-qt PUBLIC headers)
 
 if (UTILS_QT_CI_RUN)

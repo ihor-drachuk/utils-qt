@@ -54,7 +54,7 @@ public:
         return m_future.future();
     }
 
-    QFuture<void> mergeFuturesAny()
+    auto mergeFuturesAny()
     {
         Q_ASSERT(!m_used);
         m_used = true;
@@ -181,7 +181,7 @@ QFuture<std::tuple<std::optional<Ts>...>> mergeFuturesAll(QObject* ctx, const QF
 }
 
 template<typename... Ts>
-QFuture<void> mergeFuturesAny(QObject* ctx, const std::tuple<QFuture<Ts>...>& futures)
+auto mergeFuturesAny(QObject* ctx, const std::tuple<QFuture<Ts>...>& futures)
 {
     auto unifier = new Internal::FuturesUnifier<Ts...>(futures, true);
 
@@ -192,7 +192,7 @@ QFuture<void> mergeFuturesAny(QObject* ctx, const std::tuple<QFuture<Ts>...>& fu
 }
 
 template<typename... Ts>
-QFuture<void> mergeFuturesAny(QObject* ctx, const QFuture<Ts>&... futures)
+auto mergeFuturesAny(QObject* ctx, const QFuture<Ts>&... futures)
 {
     return mergeFuturesAny(ctx, std::make_tuple(futures...));
 }

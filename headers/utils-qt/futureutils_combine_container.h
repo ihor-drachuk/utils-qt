@@ -118,7 +118,7 @@ private:
     int m_gotResults {};
     bool m_destroying { false };
     QFutureInterface<RetType> m_targetFuture;
-    QFutureWatcher<T> m_targetFutureWatcher;
+    QFutureWatcher<RetType> m_targetFutureWatcher;
     QVector<std::shared_ptr<QFutureWatcher<T>>> m_sourceFutureWatchers;
 };
 
