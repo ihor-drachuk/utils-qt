@@ -38,8 +38,15 @@ NumericalValidator::ValueRangeStatus NumericalValidator::isValue(const QString& 
     if (impl().step.type() == QVariant::Type::Double) {
         QString top = QString::number(impl().rangeTop.toDouble());
         QString bottom = QString::number(impl().rangeBottom.toDouble());
+
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+        validateFixup(top, impl().standartValidator->locale().decimalPoint()[0]);
+        validateFixup(bottom, impl().standartValidator->locale().decimalPoint()[0]);
+#else
         validateFixup(top, impl().standartValidator->locale().decimalPoint());
         validateFixup(bottom, impl().standartValidator->locale().decimalPoint());
+#endif
+
         if (input == top)
             return TopValue;
         else if (input == bottom)

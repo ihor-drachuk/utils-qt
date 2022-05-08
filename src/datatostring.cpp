@@ -96,7 +96,7 @@ QString dataToString(const void* data, size_t sz)
     for (int i = 0; i < ranges.size(); i++) {
         QPair<int, int> currentRange = ranges.at(i);
         std::optional<QPair<int, int>> nextRange = (i == ranges.size() - 1) ? std::nullopt : std::optional<QPair<int, int>>(ranges.at(i+1));
-        result += str.midRef(currentRange.first, currentRange.second);
+        result += str.mid(currentRange.first, currentRange.second);
 
         if (nextRange) {
             int rawStart = currentRange.first + currentRange.second;
