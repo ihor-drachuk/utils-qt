@@ -9,6 +9,7 @@
 #include <utils-qt/qml-cpp/Multibinding/Transformers/JsTransformer.h>
 #include <utils-qt/qml-cpp/Multibinding/Transformers/ScaleNum.h>
 #include <utils-qt/qml-cpp/NumericalValidator.h>
+#include <utils-qt/qml-cpp/NumericValidatorInt.h>
 #include <utils-qt/qml-cpp/QmlUtils.h>
 #include <utils-qt/mergedlistmodel.h>
 
@@ -30,6 +31,7 @@ void registerAll(QQmlEngine& engine)
     JsTransformer::setJsEngine(&engine);
     ScaleNum::registerTypes();
     NumericalValidator::registerTypes();
+    NumericValidatorInt::registerTypes();
     QmlUtils::registerTypes();
     MergedListModel::registerTypes();
 }
