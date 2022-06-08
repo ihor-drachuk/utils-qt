@@ -1,6 +1,7 @@
 #include <utils-qt/qml.h>
 
 #include <utils-qt/qml/qml-controls.h>
+#include <utils-qt/qml-cpp/FileWatcher.h>
 #include <utils-qt/qml-cpp/ListModelItemProxy.h>
 #include <utils-qt/qml-cpp/ListModelTools.h>
 #include <utils-qt/qml-cpp/Multibinding/Multibinding.h>
@@ -22,6 +23,7 @@ namespace Qml {
 void registerAll(QQmlEngine& engine)
 {
     QmlControls::init(engine);
+    FileWatcher::registerTypes();
     ListModelItemProxy::registerTypes();
     ListModelTools::registerTypes();
     Multibinding::registerTypes();

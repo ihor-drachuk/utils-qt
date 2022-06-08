@@ -6,4 +6,5 @@ Item {
     Repeater2 { }
     ListModelItemProxy { }
     ListModelTools { }
+    FileWatcher { }
 }
