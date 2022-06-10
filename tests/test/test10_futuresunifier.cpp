@@ -6,7 +6,7 @@
 #include <utils-qt/futuresunifier.h>
 #include <string>
 
-#ifdef __APPLE__
+#ifdef UTILS_QT_MACOSX
 constexpr int time1 = 50;
 constexpr int time2 = 350;
 constexpr int time3 = 900;

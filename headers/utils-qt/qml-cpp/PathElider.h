@@ -1,0 +1,78 @@
+#pragma once
+#include <QObject>
+#include <QString>
+#include <QFont>
+#include <tuple>
+#include <optional>
+#include <vector>
+#include <utils-cpp/pimpl.h>
+
+class QStringList;
+class QRegularExpression;
+
+struct PathEliderDecomposition
+{
+public:
+    QString protocol;
+    QStringList subdirs;
+    std::optional<QChar> separator;
+    QString name;
+
+    auto tie() const { return std::tie(protocol, subdirs, separator, name); }
+    bool operator== (const PathEliderDecomposition& rhs) const { return tie() == rhs.tie(); }
+    bool operator!= (const PathEliderDecomposition& rhs) const { return tie() != rhs.tie(); }
+    QChar getSeparator() const { return separator ? *separator : QChar(); };
+    QString getSeparatorStr() const { return separator ? QString(*separator) : ""; };
+    QString combine(std::vector<bool> skipDirs = {}) const;
+
+public:
+    Q_GADGET
+    Q_PROPERTY(QString protocol MEMBER protocol)
+    Q_PROPERTY(QStringList subdirs MEMBER subdirs)
+    Q_PROPERTY(QChar separator READ getSeparator MEMBER separator)
+    Q_PROPERTY(QString name MEMBER name)
+};
+
+class PathElider : public QObject
+{
+    Q_OBJECT
+public:
+    Q_PROPERTY(QString sourceText READ sourceText WRITE setSourceText NOTIFY sourceTextChanged)
+    Q_PROPERTY(QFont font READ font WRITE setFont NOTIFY fontChanged)
+    Q_PROPERTY(int widthLimit READ widthLimit WRITE setWidthLimit NOTIFY widthLimitChanged)
+    Q_PROPERTY(QString elidedText READ elidedText /*WRITE setElidedText*/ NOTIFY elidedTextChanged)
+
+    static void registerTypes();
+
+    explicit PathElider(QObject* parent = nullptr);
+    ~PathElider() override;
+
+    Q_INVOKABLE PathEliderDecomposition decomposePath(const QString& path) const;
+
+// --- Properties support ---
+public:
+    const QString& sourceText() const;
+    void setSourceText(const QString& value);
+    const QFont& font() const;
+    void setFont(const QFont& value);
+    int widthLimit() const;
+    void setWidthLimit(int value);
+    const QString& elidedText() const;
+
+private:
+    void setElidedText(const QString& value);
+
+signals:
+    void sourceTextChanged(const QString& sourceText);
+    void fontChanged(const QFont& font);
+    void widthLimitChanged(int widthLimit);
+    void elidedTextChanged(const QString& elidedText);
+// --- ---
+
+private:
+    static QStringList separateSubdirs(const QString& path);
+    void recalculate();
+
+private:
+    DECLARE_PIMPL
+};

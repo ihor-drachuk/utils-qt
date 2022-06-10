@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 PROJECT(utils-qt)
 
 option(UTILS_QT_ENABLE_TESTS     "utils-qt: Enable tests" OFF)
-option(UTILS_QT_SKIP_QML_TESTS   "utils-qt: Allow QML tests" OFF)
 option(UTILS_QT_ENABLE_BENCHMARK "utils-qt: Enable benchmark" OFF)
+option(UTILS_QT_NO_GUI_TESTS     "utils-qt: Disable GUI tests" OFF)
 
 set(UTILS_QT_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -37,8 +37,8 @@ endif()
 target_link_libraries(utils-qt PUBLIC Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick utils-cpp)
 target_include_directories(utils-qt PUBLIC headers)
 
-if (UTILS_QT_CI_RUN)
-    target_compile_definitions(utils-qt PUBLIC UTILS_QT_CI_RUN)
+if (UTILS_QT_NO_GUI_TESTS)
+    target_compile_definitions(utils-qt PUBLIC UTILS_QT_NO_GUI_TESTS)
 endif()
 
 add_subdirectory(tests)
