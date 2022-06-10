@@ -28,7 +28,7 @@ jobs:
       run: |
        echo "GENERATOR=Unix Makefiles" >> $GITHUB_ENV
        echo "CORES=$(nproc --all)" >> $GITHUB_ENV
-       echo "QML_TESTS=-DUTILS_QT_SKIP_QML_TESTS=ON" >> $GITHUB_ENV
+       echo "QML_TESTS=-DUTILS_QT_NO_GUI_TESTS=ON" >> $GITHUB_ENV
 
     - name: "Set OS-specific values (Mac)"
       if: ${{ runner.os == 'macOS' }}
