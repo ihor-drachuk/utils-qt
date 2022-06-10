@@ -2,10 +2,13 @@
 
 #include <optional>
 
+#include <QFile>
 #include <QQmlEngine>
 #include <QImageReader>
 #include <QFileInfo>
 #include <QQuickWindow>
+#include <QRegularExpression>
+#include <QUrl>
 #ifdef WIN32
 #include <Windows.h>
 #endif
@@ -130,6 +133,64 @@ bool QmlUtils::compare(const QVariant& value1, const QVariant& value2) const
     }
 
     return (value1 == value2);
+}
+
+QString QmlUtils::extractByRegex(const QString& source, const QString& pattern) const
+{
+    QRegularExpression regex(pattern);
+    auto match = regex.match(source);
+    return match.hasMatch() ? match.captured() : "";
+}
+
+QStringList QmlUtils::extractByRegexGroups(const QString& source, const QString& pattern, const QList<int>& groups) const
+{
+    QRegularExpression regex(pattern);
+    auto match = regex.match(source);
+    if (!match.hasMatch()) return {};
+
+    QStringList result;
+    for (auto i : groups) {
+        if (i > match.lastCapturedIndex()) return {};
+        result.append(match.captured(i));
+    }
+
+    return result;
+}
+
+QString QmlUtils::toHex(int value, bool upperCase, int width) const
+{
+    auto result = QStringLiteral("%1").arg(value, width, 16, QChar('0'));
+    return upperCase ? result.toUpper() : result;
+}
+
+QString QmlUtils::sizeConv(int size, int limit, int decimals) const
+{
+    if (!size)
+        return "0 bytes";
+
+    const char* prefixes[] = {"bytes", "Kb", "Mb", "Gb", "Tb"};
+    constexpr int prefixesLen = sizeof(prefixes) / sizeof(*prefixes);
+    float result = size;
+    int i = 0;
+
+    while (i < prefixesLen - 1 && result >= limit) {
+        result /= 1024;
+        i++;
+    }
+
+    return QStringLiteral("%1 %2")
+            .arg(result, 0, 'f', i == 0 ? 0 : decimals)
+            .arg(prefixes[i]);
+}
+
+bool QmlUtils::urlFileExists(const QUrl& url) const
+{
+    return localFileExists(url.toLocalFile());
+}
+
+bool QmlUtils::localFileExists(const QString& fileName) const
+{
+    return QFile::exists(fileName);
 }
 
 void QmlUtils::showWindow(QObject* win)

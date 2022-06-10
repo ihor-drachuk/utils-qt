@@ -1,5 +1,7 @@
 #pragma once
 #include <QObject>
+#include <QList>
+#include <QStringList>
 #include <utils-cpp/pimpl.h>
 
 class QmlUtils : public QObject
@@ -26,6 +28,12 @@ public:
     Q_INVOKABLE bool isInteger(const QVariant& value) const;
     Q_INVOKABLE bool isNumber(const QVariant& value) const;
     Q_INVOKABLE bool compare(const QVariant& value1, const QVariant& value2) const;
+    Q_INVOKABLE QString extractByRegex(const QString& source, const QString& pattern) const;
+    Q_INVOKABLE QStringList extractByRegexGroups(const QString& source, const QString& pattern, const QList<int>& groups) const;
+    Q_INVOKABLE QString toHex(int value, bool upperCase = true, int width = 0) const;
+    Q_INVOKABLE QString sizeConv(int size, int limit = 1000, int decimals = 1) const;
+    Q_INVOKABLE bool urlFileExists(const QUrl& url) const;
+    Q_INVOKABLE bool localFileExists(const QString& fileName) const;
 
     Q_INVOKABLE void showWindow(QObject* win);
     Q_INVOKABLE void minimizeWindow(QObject* win);
