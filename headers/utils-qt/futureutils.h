@@ -120,7 +120,7 @@ using QFutureInterfaceWrapperPtr = std::shared_ptr<QFutureInterfaceWrapper<T>>;
 template <typename C, typename T>
 void call(const C& c, const QFuture<T>& future)
 {
-    const_cast<C&>(c)(future.result());
+    const_cast<C&>(c)(std::optional<T>(future.result()));
 }
 
 template <typename C>
@@ -132,7 +132,7 @@ void call(const C& c, const QFuture<void>&)
 template <typename Callable, typename T>
 void callCanceled(const Callable& callable, const QFuture<T>&)
 {
-    const_cast<Callable&>(callable)({});
+    const_cast<Callable&>(callable)(std::optional<T>{});
 }
 
 template <typename Callable>
