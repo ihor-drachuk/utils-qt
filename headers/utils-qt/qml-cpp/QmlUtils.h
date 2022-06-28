@@ -23,6 +23,7 @@ public:
     Q_INVOKABLE QString realFileName(const QString& str) const;
     Q_INVOKABLE QString realFileNameUrl(const QString& str) const;
     Q_INVOKABLE QString extractFileName(const QString& filePath) const;
+    Q_INVOKABLE QString pathUrlFromLocalFile(const QString& localFile) const;
     Q_INVOKABLE bool isNull(const QVariant& value) const;
     Q_INVOKABLE bool isFloat(const QVariant& value) const;
     Q_INVOKABLE bool isInteger(const QVariant& value) const;
@@ -60,7 +61,7 @@ signals:
 
 private:
     QmlUtils();
-    ~QmlUtils();
+    ~QmlUtils() override;
 
     void updateExecutionState();
 

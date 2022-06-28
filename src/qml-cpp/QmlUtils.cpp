@@ -93,6 +93,11 @@ QString QmlUtils::extractFileName(const QString& filePath) const
     return QFileInfo(normalizePath(filePath)).fileName();
 }
 
+QString QmlUtils::pathUrlFromLocalFile(const QString& localFile) const
+{
+    return QUrl::fromLocalFile(QFileInfo(localFile).absolutePath()).toString();
+}
+
 bool QmlUtils::isNull(const QVariant& value) const
 {
     return value.isNull() || !value.isValid();
