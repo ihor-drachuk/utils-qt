@@ -13,6 +13,8 @@
 #include <utils-qt/qml-cpp/NumericalValidator.h>
 #include <utils-qt/qml-cpp/NumericValidatorInt.h>
 #include <utils-qt/qml-cpp/QmlUtils.h>
+#include <utils-qt/qml-cpp/Geometry/Geometry.h>
+#include <utils-qt/qml-cpp/Geometry/Polygon.h>
 #include <utils-qt/mergedlistmodel.h>
 
 #include <QQmlEngine>
@@ -37,6 +39,8 @@ void registerAll(QQmlEngine& engine)
     NumericalValidator::registerTypes();
     NumericValidatorInt::registerTypes();
     QmlUtils::registerTypes();
+    Geometry::registerTypes();
+    Polygon::registerTypes();
     MergedListModel::registerTypes();
 }
 
