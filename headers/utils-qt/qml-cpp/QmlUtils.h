@@ -15,6 +15,9 @@ public:
     Q_PROPERTY(bool displayRequired READ displayRequired WRITE setDisplayRequired NOTIFY displayRequiredChanged)
     Q_PROPERTY(bool systemRequired READ systemRequired WRITE setSystemRequired NOTIFY systemRequiredChanged)
 #endif
+    Q_PROPERTY(int keyModifiers READ keyModifiers /*WRITE setKeyModifiers*/ NOTIFY keyModifiersChanged)
+
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
     Q_INVOKABLE bool isImage(const QString& fileName) const;
     Q_INVOKABLE QString normalizePath(const QString& str) const;
@@ -45,6 +48,7 @@ public:
     bool displayRequired() const;
     bool systemRequired() const;
 #endif
+    int keyModifiers() const;
 
 public slots:
 #ifdef WIN32
@@ -52,11 +56,15 @@ public slots:
     void setSystemRequired(bool value);
 #endif
 
+private slots:
+    void setKeyModifiers(int value);
+
 signals:
 #ifdef WIN32
     void displayRequiredChanged(bool displayRequired);
     void systemRequiredChanged(bool systemRequired);
 #endif
+    void keyModifiersChanged(int keyModifiers);
 // --- ---
 
 private:

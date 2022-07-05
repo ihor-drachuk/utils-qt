@@ -8,6 +8,7 @@
 #include <QFileInfo>
 #include <QQuickWindow>
 #include <QRegularExpression>
+#include <QGuiApplication>
 #include <QUrl>
 #ifdef WIN32
 #include <Windows.h>
@@ -28,6 +29,7 @@ struct QmlUtils::impl_t
     bool displayRequired { false };
     bool systemRequired { false };
 #endif
+    int keyModifiers {};
 };
 
 
@@ -44,6 +46,22 @@ void QmlUtils::registerTypes()
         engine->setObjectOwnership(ret, QQmlEngine::CppOwnership);
         return ret;
     });
+}
+
+bool QmlUtils::eventFilter(QObject* /*watched*/, QEvent* event)
+{
+    switch (event->type()) {
+        case QEvent::KeyPress:
+        case QEvent::KeyRelease:
+            break;
+
+        default:
+            return false;
+    }
+
+    const auto km = QGuiApplication::queryKeyboardModifiers();
+    setKeyModifiers(static_cast<int>(km));
+    return false;
 }
 
 bool QmlUtils::isImage(const QString& fileName) const
@@ -278,10 +296,16 @@ QmlUtils::QmlUtils()
 {
     createImpl();
     updateExecutionState();
+
+    auto app = QGuiApplication::instance();
+    Q_ASSERT(app);
+    app->installEventFilter(this);
 }
 
 QmlUtils::~QmlUtils()
 {
+    if (auto app = QGuiApplication::instance())
+        app->removeEventFilter(this);
 }
 
 void QmlUtils::updateExecutionState()
@@ -291,4 +315,17 @@ void QmlUtils::updateExecutionState()
                             (impl().systemRequired ? ES_SYSTEM_REQUIRED : 0) |
                             (impl().displayRequired ? ES_DISPLAY_REQUIRED : 0));
 #endif
+}
+
+int QmlUtils::keyModifiers() const
+{
+    return impl().keyModifiers;
+}
+
+void QmlUtils::setKeyModifiers(int value)
+{
+    if (impl().keyModifiers == value)
+        return;
+    impl().keyModifiers = value;
+    emit keyModifiersChanged(impl().keyModifiers);
 }
