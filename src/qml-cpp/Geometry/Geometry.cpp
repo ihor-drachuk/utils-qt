@@ -21,6 +21,34 @@ void Geometry::registerTypes()
     });
 }
 
+
+QPolygonF Geometry::polygonScale(const QPolygonF& polygon, qreal factor) const
+{
+    auto result = polygon;
+    polygonScaleRef(result, factor);
+    return result;
+}
+
+QVector<QPolygonF> Geometry::polygonsScale(const QVector<QPolygonF>& polygons, qreal factor) const
+{
+    auto result = polygons;
+    polygonsScaleRef(result, factor);
+    return result;
+}
+
+void Geometry::polygonScaleRef(QPolygonF& polygon, qreal factor) const
+{
+    for (auto& x : polygon)
+        x *= factor;
+}
+
+void Geometry::polygonsScaleRef(QVector<QPolygonF>& polygons, qreal factor) const
+{
+    for (auto& polygon : polygons)
+        for (auto& x : polygon)
+            x *= factor;
+}
+
 Geometry::Geometry()
 {
     createImpl();
