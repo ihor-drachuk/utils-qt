@@ -30,9 +30,35 @@ if(MSVC)
     set_target_properties(utils-qt PROPERTIES STATIC_LIBRARY_OPTIONS "/ignore:4221")
 endif()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    target_compile_definitions(utils-qt PUBLIC UTILS_QT_MACOSX)
+# --- System detection ---
+if (WIN32)
+    set(UTILS_QT_OS_WIN TRUE)
 endif()
+
+if(UNIX AND NOT APPLE)
+    set(UTILS_QT_OS_LINUX TRUE)
+endif()
+
+if(APPLE)
+    set(UTILS_QT_OS_MACOS TRUE)
+endif()
+
+if (MSVC)
+    set(UTILS_QT_COMPILER_MSVC TRUE)
+endif()
+
+if (UTILS_QT_OS_WIN)
+    target_compile_definitions(utils-qt PUBLIC UTILS_QT_OS_WIN=1)
+endif()
+
+if (UTILS_QT_OS_MACOS)
+    target_compile_definitions(utils-qt PUBLIC UTILS_QT_OS_MACOS=1)
+endif()
+
+if (UTILS_QT_OS_LINUX)
+    target_compile_definitions(utils-qt PUBLIC UTILS_QT_OS_LINUX=1)
+endif()
+# --- ---
 
 target_link_libraries(utils-qt PUBLIC Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick utils-cpp)
 target_include_directories(utils-qt PUBLIC headers)
