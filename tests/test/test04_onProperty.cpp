@@ -5,7 +5,7 @@
 #include <QElapsedTimer>
 #include <QEventLoop>
 
-#ifdef UTILS_QT_MACOSX
+#ifdef UTILS_QT_OS_MACOS
 constexpr float timeFactor = 3;
 #else
 constexpr float timeFactor = 1;

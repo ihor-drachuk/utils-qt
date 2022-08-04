@@ -9,7 +9,7 @@
 
 #include <utils-qt/futureutils.h>
 
-#ifdef UTILS_QT_MACOSX
+#ifdef UTILS_QT_OS_MACOS
 constexpr int WaitTime = 1000;
 #else
 constexpr int WaitTime = 100;

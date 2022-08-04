@@ -10,7 +10,7 @@
 #include <QRegularExpression>
 #include <QGuiApplication>
 #include <QUrl>
-#ifdef WIN32
+#ifdef UTILS_QT_OS_WIN
 #include <Windows.h>
 #endif
 
@@ -18,14 +18,22 @@
 namespace {
     template<size_t N> constexpr size_t length(char const (&)[N]) { return N-1; }
 
-    const char filePrefix[] = "file:///";
+    const char filePrefixWin[] = "file:///";
+    constexpr int filePrefixWinLen = length(filePrefixWin);
+
+    const char filePrefix[] = "file://";
     constexpr int filePrefixLen = length(filePrefix);
+
+    const char qrcPrefix[] = "qrc:/";
+    constexpr int qrcPrefixLen = length(qrcPrefix);
+    const char qrcPrefixReplacement[] = ":/";
+    constexpr int qrcPrefixReplacementLen = length(qrcPrefixReplacement);
 }
 
 
 struct QmlUtils::impl_t
 {
-#ifdef WIN32
+#ifdef UTILS_QT_OS_WIN
     bool displayRequired { false };
     bool systemRequired { false };
 #endif
@@ -64,29 +72,77 @@ bool QmlUtils::eventFilter(QObject* /*watched*/, QEvent* event)
     return false;
 }
 
+PathDetails QmlUtils::analyzePath(const QString& str) const
+{
+    if ((str.size() >= 2 && str[1] == ":")) {
+        return {str, PathDetails::Windows, true};
+
+    } else if (str.startsWith(filePrefixWin)) {
+        return {str.mid(filePrefixWinLen), PathDetails::Windows, true};
+
+    } else if (str.startsWith("/")) {
+        return {str, PathDetails::NonWindows, true};
+
+    } else if (str.startsWith(filePrefix)) {
+        return {str.mid(filePrefixLen), PathDetails::NonWindows, true};
+
+    } else if (str.startsWith(qrcPrefix)) {
+        return {qrcPrefixReplacement + str.mid(qrcPrefixLen), PathDetails::Qrc, true};
+
+    } else if (str.startsWith(qrcPrefixReplacement)) {
+        return {str, PathDetails::Qrc, true};
+    }
+
+    return {str, PathDetails::Unknown, false};
+}
+
+QString QmlUtils::toUrl(const QString& str) const
+{
+    const auto details = analyzePath(str);
+
+    if (!details.isAbsolute)
+        return str;
+
+    switch (details.location) {
+        case PathDetails::Unknown:
+            return details.path;
+            break;
+
+        case PathDetails::Windows:
+            return "file:///" + details.path;
+            break;
+
+        case PathDetails::NonWindows:
+            return "file://" + details.path;
+            break;
+
+        case PathDetails::Qrc:
+            return qrcPrefix + details.path;
+            break;
+    }
+
+    assert(!"Unexpected control flow!");
+    return {};
+}
+
 bool QmlUtils::isImage(const QString& fileName) const
 {
     return !QImageReader::imageFormat(realFileName(fileName)).isEmpty();
 }
 
+QSize QmlUtils::imageSize(const QString& fileName) const
+{
+    return QImageReader(realFileName(fileName)).size();
+}
+
 QString QmlUtils::normalizePath(const QString& str) const
 {
-    if (str.isEmpty())
-        return QString();
-
-    if (str.startsWith(filePrefix)) {
-        return str.mid(filePrefixLen);
-    } else {
-        return str;
-    }
+    return analyzePath(str).path;
 }
 
 QString QmlUtils::normalizePathUrl(const QString& str) const
 {
-    if (str.isEmpty())
-        return QString();
-
-    return "file:///" + normalizePath(str);
+    return toUrl(normalizePath(str));
 }
 
 int QmlUtils::bound(int min, int value, int max) const
@@ -103,17 +159,12 @@ QString QmlUtils::realFileName(const QString& str) const
 
 QString QmlUtils::realFileNameUrl(const QString& str) const
 {
-    return "file:///" + realFileName(str);
+    return toUrl(realFileName(str));
 }
 
 QString QmlUtils::extractFileName(const QString& filePath) const
 {
     return QFileInfo(normalizePath(filePath)).fileName();
-}
-
-QString QmlUtils::pathUrlFromLocalFile(const QString& localFile) const
-{
-    return QUrl::fromLocalFile(QFileInfo(localFile).absolutePath()).toString();
 }
 
 bool QmlUtils::isNull(const QVariant& value) const
@@ -225,7 +276,7 @@ void QmlUtils::showWindow(QObject* win)
     flags &= ~Qt::WindowState::WindowMinimized;
     window->setWindowStates(flags);
 
-#ifdef WIN32
+#ifdef UTILS_QT_OS_WIN
     //auto status = AllowSetForegroundWindow(GetCurrentProcessId()); assert(status);
     auto hWnd = (void*)window->winId();
     auto winId = (HWND)hWnd;
@@ -237,7 +288,7 @@ void QmlUtils::showWindow(QObject* win)
     AttachThreadInput(windowThreadProcessId, currentThreadId, false);
 #else
     window->requestActivate();
-#endif // WIN32
+#endif // UTILS_QT_OS_WIN
 }
 
 void QmlUtils::minimizeWindow(QObject* win)
@@ -250,7 +301,7 @@ void QmlUtils::minimizeWindow(QObject* win)
     window->setWindowStates(flags);
 }
 
-#ifdef WIN32
+#ifdef UTILS_QT_OS_WIN
 bool QmlUtils::displayRequired() const
 {
     return impl().displayRequired;
@@ -258,7 +309,7 @@ bool QmlUtils::displayRequired() const
 #endif
 
 
-#ifdef WIN32
+#ifdef UTILS_QT_OS_WIN
 bool QmlUtils::systemRequired() const
 {
     return impl().systemRequired;
@@ -266,7 +317,7 @@ bool QmlUtils::systemRequired() const
 #endif
 
 
-#ifdef WIN32
+#ifdef UTILS_QT_OS_WIN
 void QmlUtils::setDisplayRequired(bool value)
 {
     if (impl().displayRequired == value)
@@ -279,7 +330,7 @@ void QmlUtils::setDisplayRequired(bool value)
 #endif
 
 
-#ifdef WIN32
+#ifdef UTILS_QT_OS_WIN
 void QmlUtils::setSystemRequired(bool value)
 {
     if (impl().systemRequired == value)
@@ -310,7 +361,7 @@ QmlUtils::~QmlUtils()
 
 void QmlUtils::updateExecutionState()
 {
-#ifdef WIN32
+#ifdef UTILS_QT_OS_WIN
     SetThreadExecutionState(ES_CONTINUOUS |
                             (impl().systemRequired ? ES_SYSTEM_REQUIRED : 0) |
                             (impl().displayRequired ? ES_DISPLAY_REQUIRED : 0));
