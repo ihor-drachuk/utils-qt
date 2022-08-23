@@ -38,7 +38,7 @@ TEST(UtilsQt, RetryingFuture_BasicInt)
 TEST(UtilsQt, RetryingFuture_Retryed)
 {
     QObject context;
-    int count = 3;
+    int count = 2;
 
     auto future = createRetryFuture(&context, [&count]() ->QFuture<bool> {
                                         count--;
@@ -52,10 +52,27 @@ TEST(UtilsQt, RetryingFuture_Retryed)
     ASSERT_TRUE(count == 0);
 }
 
-TEST(UtilsQt, RetryingFuture_Cancel)
+TEST(UtilsQt, RetryingFuture_Retryed_Zero)
 {
     QObject context;
     int count = 3;
+
+    auto future = createRetryFuture(&context, [&count]() ->QFuture<bool> {
+                                        count--;
+                                        if (count == 0)
+                                            return createTimedFuture(48, true);
+                                        return createTimedCanceledFuture<bool>(26);
+                                    }, {}, 0);
+
+    waitForFuture<QEventLoop>(future);
+    ASSERT_TRUE(future.isCanceled());
+    ASSERT_TRUE(count == 2);
+}
+
+TEST(UtilsQt, RetryingFuture_Cancel)
+{
+    QObject context;
+    int count = 4;
 
     auto future = createRetryFuture(&context, [&count]() ->QFuture<bool> {
                                         count--;
@@ -70,7 +87,7 @@ TEST(UtilsQt, RetryingFuture_Cancel)
 TEST(UtilsQt, RetryingFuture_BasicInt_with_checker)
 {
     QObject context;
-    int count = 3;
+    int count = 4;
 
     auto future = createRetryFuture(&context, [&count]() ->QFuture<int> {
                                         count--;
@@ -89,7 +106,7 @@ TEST(UtilsQt, RetryingFuture_BasicInt_with_checker)
 TEST(UtilsQt, RetryingFuture_Cancel_with_checker)
 {
     QObject context;
-    int count = 3;
+    int count = 4;
 
     auto future = createRetryFuture(&context, [&count]() ->QFuture<bool> {
                                         count--;
