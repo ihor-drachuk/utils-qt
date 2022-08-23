@@ -9,85 +9,95 @@
 
 namespace Internal {
 
-template<typename Process, typename ReturnType>
+template<typename FutureProvider, typename ReturnType>
 struct RetryFutureCtx
 {
-    RetryFutureCtx(const Process& process, const std::function<bool(const ReturnType&)>& checkFunction, unsigned int retryCount, unsigned int retryTimeout)
-        : futureProcess(process),
-          checker(checkFunction),
-          retryCnt(retryCount),
-          retryInterval(retryTimeout)
+    RetryFutureCtx(const FutureProvider& process, const std::function<bool(const ReturnType&)>& checkFunction, unsigned int retryCount, unsigned int retryTimeout)
+        : m_futureProvider(process),
+          m_checker(checkFunction),
+          m_retryCnt(retryCount),
+          m_retryInterval(retryTimeout)
     {
         request();
     }
 
-    ~RetryFutureCtx() {}
+    ~RetryFutureCtx() {
+        if (!m_watcher->future().isFinished())
+            m_futureInterface.reportCanceled();
+    }
 
-    Process futureProcess;  // QFuture<T> func();
-    std::function<bool(ReturnType)> checker;
+    QObject* getTracker() {
+        return &m_tracker;
+    }
 
-    QObject tracker;
-    unsigned int retryCnt {0};
-    unsigned int retryInterval {0};
-    std::unique_ptr<QFutureWatcher<ReturnType>> watcher;
-    QFutureInterface<ReturnType> futureInterface;
+    QFuture<ReturnType> getFuture() {
+        return m_futureInterface.future();
+    }
 
     void onFinished() {
-        retryCnt--;
-        if (watcher->future().isCanceled()) {
+        if (m_watcher->future().isCanceled()) {
             onRetry();
         } else {
-            auto result = watcher->future().result();
-            if (checker) {
-                if (!checker(result)) {
-                    onRetry();
-                    return;
-                }
+            auto result = m_watcher->future().result();
+            if (m_checker && !m_checker(result)) {
+                onRetry();
+                return;
             }
 
-            futureInterface.reportResult(result);
-            futureInterface.reportFinished();
+            m_futureInterface.reportResult(result);
+            m_futureInterface.reportFinished();
             deleteMe();
         }
     }
 
     void onRetry() {
-        if (retryCnt == 0) {
-            futureInterface.cancel();
-            futureInterface.reportFinished();
+        if (m_retryCnt == 0) {
+            m_futureInterface.cancel();
+            m_futureInterface.reportFinished();
             deleteMe();
             return;
         }
 
-        QTimer::singleShot(retryInterval, &tracker, [this](){ request(); });
+        m_retryCnt--;
+        QTimer::singleShot(m_retryInterval, &m_tracker, [this](){ request(); });
     }
 
     void deleteMe() {
         auto deleter = new QObject();
-        QObject::connect(deleter, &QObject::destroyed, &tracker, [this](){ delete this; }, Qt::QueuedConnection);
+        QObject::connect(deleter, &QObject::destroyed, &m_tracker, [this](){ delete this; }, Qt::QueuedConnection);
         delete deleter;
     }
 
     void request() {
-        auto future = futureProcess();
-        watcher.reset(new QFutureWatcher<ReturnType>);
-        if (!future.isFinished()) QObject::connect(watcher.get(), &QFutureWatcherBase::finished, [this](){ onFinished(); });
-        watcher->setFuture(future);
+        auto future = m_futureProvider();
+        m_watcher.reset(new QFutureWatcher<ReturnType>);
+        if (!future.isFinished()) QObject::connect(m_watcher.get(), &QFutureWatcherBase::finished, [this](){ onFinished(); });
+        m_watcher->setFuture(future);
         if (future.isFinished())  onFinished();
     }
+
+private:
+    FutureProvider m_futureProvider;  // QFuture<T> func();
+    std::function<bool(ReturnType)> m_checker;
+
+    QObject m_tracker;
+    unsigned int m_retryCnt {0};
+    unsigned int m_retryInterval {0};
+    std::unique_ptr<QFutureWatcher<ReturnType>> m_watcher;
+    QFutureInterface<ReturnType> m_futureInterface;
 };
 
 } // namespace Internal
 
-template<typename Process, typename ReturnType = std::result_of_t<Process()>>
+template<typename FutureProvider, typename ReturnType = std::result_of_t<FutureProvider()>>
 ReturnType createRetryFuture(const QObject* context,
-                             const Process& process,    // QFuture<T> func();
+                             const FutureProvider& process,    // QFuture<T> func();
                              const std::function<bool(const decltype(ReturnType().result())&)>& checker = {},
                              unsigned int retryCount = 3,
                              unsigned int retryInterval = 1000)
 {
-    auto ctx = new ::Internal::RetryFutureCtx<Process, decltype(ReturnType().result())>(process, checker, retryCount, retryInterval);
-    QObject::connect(context, &QObject::destroyed, &ctx->tracker, [ctx](){ delete ctx; });
+    auto ctx = new ::Internal::RetryFutureCtx<FutureProvider, decltype(ReturnType().result())>(process, checker, retryCount, retryInterval);
+    QObject::connect(context, &QObject::destroyed, ctx->getTracker(), [ctx](){ delete ctx; });
 
-    return ctx->futureInterface.future();
+    return ctx->getFuture();
 }
