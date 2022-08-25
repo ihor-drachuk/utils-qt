@@ -25,7 +25,7 @@ struct RetryFutureCtx
         if (m_watcher->future().isFinished())
             return;
 
-        m_futureInterface.cancel();
+        m_futureInterface.reportCanceled();
         m_futureInterface.reportFinished();
     }
 
@@ -55,7 +55,7 @@ struct RetryFutureCtx
 
     void onRetry() {
         if (m_retryCnt == 0) {
-            m_futureInterface.cancel();
+            m_futureInterface.reportCanceled();
             m_futureInterface.reportFinished();
             deleteMe();
             return;
