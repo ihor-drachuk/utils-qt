@@ -12,8 +12,8 @@ namespace Internal {
 template<typename FutureProvider, typename ReturnType>
 struct RetryFutureCtx
 {
-    RetryFutureCtx(const FutureProvider& process, const std::function<bool(const ReturnType&)>& checkFunction, unsigned int retryCount, unsigned int retryTimeout)
-        : m_futureProvider(process),
+    RetryFutureCtx(const FutureProvider& futureProvider, const std::function<bool(const ReturnType&)>& checkFunction, unsigned int retryCount, unsigned int retryTimeout)
+        : m_futureProvider(futureProvider),
           m_checker(checkFunction),
           m_retryCnt(retryCount),
           m_retryInterval(retryTimeout)
@@ -22,8 +22,11 @@ struct RetryFutureCtx
     }
 
     ~RetryFutureCtx() {
-        if (!m_watcher->future().isFinished())
-            m_futureInterface.reportCanceled();
+        if (m_watcher->future().isFinished())
+            return;
+
+        m_futureInterface.cancel();
+        m_futureInterface.reportFinished();
     }
 
     QObject* getTracker() {
@@ -91,12 +94,12 @@ private:
 
 template<typename FutureProvider, typename ReturnType = std::result_of_t<FutureProvider()>>
 ReturnType createRetryFuture(const QObject* context,
-                             const FutureProvider& process,    // QFuture<T> func();
+                             const FutureProvider& futureProvider,    // QFuture<T> func();
                              const std::function<bool(const decltype(ReturnType().result())&)>& checker = {},
                              unsigned int retryCount = 3,
                              unsigned int retryInterval = 1000)
 {
-    auto ctx = new ::Internal::RetryFutureCtx<FutureProvider, decltype(ReturnType().result())>(process, checker, retryCount, retryInterval);
+    auto ctx = new ::Internal::RetryFutureCtx<FutureProvider, decltype(ReturnType().result())>(futureProvider, checker, retryCount, retryInterval);
     QObject::connect(context, &QObject::destroyed, ctx->getTracker(), [ctx](){ delete ctx; });
 
     return ctx->getFuture();
