@@ -51,6 +51,7 @@ private:
     void onSyncNeeded(MultibindingItem* srcProp);
     void onTriggered(MultibindingItem* srcProp);
     void onTimeout();
+    void onDisabled();
     void onEnabled();
 
 private:
