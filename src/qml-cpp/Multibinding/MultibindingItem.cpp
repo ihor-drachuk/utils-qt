@@ -1,6 +1,7 @@
 #include <utils-qt/qml-cpp/Multibinding/MultibindingItem.h>
 
 #include <utils-qt/invoke_method.h>
+#include <utils-qt/qml-cpp/Multibinding/Multibinding.h>
 #include <utils-qt/qml-cpp/Multibinding/Transformers/AbstractTransformer.h>
 #include <QQmlEngine>
 #include <QQmlProperty>
@@ -45,14 +46,14 @@ MultibindingItem::MultibindingItem(QQuickItem* parent)
     m_delayMsWTimer.setFactory([this](){
         auto timer = new QTimer();
         timer->setSingleShot(true);
-        QObject::connect(timer, &QTimer::timeout, this, [this](){ writeImpl(m_delayedWriteValue); });
+        QObject::connect(timer, &QTimer::timeout, this, [this](){ writeImpl(m_delayedWriteValue, false); });
         return timer;
     });
 
     m_enableRDelayTimer.setFactory([this](){
         auto timer = new QTimer();
         timer->setSingleShot(true);
-        QObject::connect(timer, &QTimer::timeout, this, [this](){ setEnableRImpl(m_enableRCached);});
+        QObject::connect(timer, &QTimer::timeout, this, [this](){ setEnableRImpl(m_enableRCached); });
         return timer;
     });
 
@@ -70,21 +71,34 @@ void MultibindingItem::initialize()
 
 QVariant MultibindingItem::read() const
 {
-    assert(object() || !"Object pointer is null!");
-    assert(!propertyName().isEmpty() || !"Property name is empty!");
-    assert(QQmlProperty(object(), propertyName()).isValid() || !"There is no property with specified name in specified object!");
-
-    auto value = QQmlProperty::read(object(), propertyName());
+    auto result = directRead();
 
     if (m_transformer)
-        value = m_transformer->readConverter(value);
+        result = m_transformer->readConverter(result);
 
-    return value;
+    return result;
 }
 
-void MultibindingItem::write(const QVariant& value)
+QVariant MultibindingItem::directRead() const
 {
-    if (!m_enableW)
+    QVariant result;
+
+    if (m_connected) {
+        assert(object() || !"Object pointer is null!");
+        assert(!propertyName().isEmpty() || !"Property name is empty!");
+        assert(QQmlProperty(object(), propertyName()).isValid() || !"There is no property with specified name in specified object!");
+        result = QQmlProperty::read(object(), propertyName());
+    } else {
+        assert(!object() && propertyName().isEmpty());
+        result = m_cache;
+    }
+
+    return result;
+}
+
+void MultibindingItem::write(const QVariant& value, bool byProperty)
+{
+    if (!byProperty && !m_enableW)
         return;
 
     if (m_delayMsW) {
@@ -94,8 +108,13 @@ void MultibindingItem::write(const QVariant& value)
             m_delayMsWTimer->start(m_delayMsW);
         }
     } else {
-        writeImpl(value);
+        writeImpl(value, byProperty);
     }
+}
+
+void MultibindingItem::writeByProperty(const QVariant& value)
+{
+    write(value, true);
 }
 
 void MultibindingItem::setObject(QObject* value)
@@ -423,32 +442,42 @@ void MultibindingItem::changedHandler2()
     }
 }
 
-void MultibindingItem::writeImpl(const QVariant& value)
+void MultibindingItem::writeImpl(const QVariant& value, bool byProperty)
 {
     if (m_queuedW) {
         setQueuedWPending(true);
-        UtilsQt::invokeMethod(this, [this, value](){ writeImpl2(value); }, Qt::QueuedConnection);
+        UtilsQt::invokeMethod(this, [this, value, byProperty](){ writeImpl2(value, byProperty); }, Qt::QueuedConnection);
     } else {
-        writeImpl2(value);
+        writeImpl2(value, byProperty);
     }
 }
 
-void MultibindingItem::writeImpl2(QVariant value)
+void MultibindingItem::writeImpl2(QVariant value, bool byProperty)
 {
     setQueuedWPending(false);
 
-    if (!m_enableW)
-        return;
+    assert(dynamic_cast<Multibinding*>(parent()));
+    const auto masterRunning = static_cast<Multibinding*>(parent())->running();
 
-    assert(object());
-    assert(!propertyName().isEmpty());
-    assert(QQmlProperty(object(), propertyName()).isValid());
+    const auto canWrite = (m_enableW && masterRunning) || byProperty;
+
+    if (!canWrite)
+        return;
 
     if (m_enableR && compare(read(), value))
         return;
 
     if (m_transformer)
-        value = m_transformer->writeConverter(value, QQmlProperty::read(object(), propertyName()));
+        value = m_transformer->writeConverter(value, directRead());
 
-    QQmlProperty::write(object(), propertyName(), value);
+    if (m_connected) {
+        assert(object());
+        assert(!propertyName().isEmpty());
+        assert(QQmlProperty(object(), propertyName()).isValid());
+        QQmlProperty::write(object(), propertyName(), value);
+    } else {
+        assert(!object() && propertyName().isEmpty());
+        m_cache = value;
+        changedHandler();
+    }
 }

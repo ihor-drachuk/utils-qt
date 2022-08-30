@@ -24,7 +24,7 @@ public:
 
     Q_PROPERTY(QObject* object READ object WRITE setObject NOTIFY objectChanged)
     Q_PROPERTY(QString propertyName READ propertyName WRITE setPropertyName NOTIFY propertyNameChanged)
-    Q_PROPERTY(QVariant value READ read WRITE write NOTIFY changed)
+    Q_PROPERTY(QVariant value READ read WRITE writeByProperty NOTIFY changed)
     Q_PROPERTY(AbstractTransformer* transformer READ transformer WRITE setTransformer NOTIFY transformerChanged)
     Q_PROPERTY(ReAttachBehavior reAttachBehvior READ reAttachBehvior WRITE setReAttachBehvior NOTIFY reAttachBehviorChanged)
 
@@ -53,7 +53,9 @@ public:
 
     void initialize();
     QVariant read() const;
-    void write(const QVariant& value);
+    QVariant directRead() const;
+    void write(const QVariant& value, bool byProperty = false);
+    void writeByProperty(const QVariant& value);
 
     Q_INVOKABLE void sync() { emit needSync(); }
     Q_INVOKABLE void announce() { emit changed(); }
@@ -137,8 +139,8 @@ private slots:
     void changedHandler2();
 
 private:
-    void writeImpl(const QVariant& value);
-    void writeImpl2(QVariant value);
+    void writeImpl(const QVariant& value, bool byProperty);
+    void writeImpl2(QVariant value, bool byProperty);
     bool isReady() const;
     void detachProperty();
     void attachProperty();
@@ -146,6 +148,7 @@ private:
     void onAfterTransformerUpdated();
 
 private:
+    QVariant m_cache;
     bool m_connected { false };
     QObject* m_object { nullptr };
     QString m_propertyName;

@@ -43,7 +43,9 @@ void Multibinding::setValue(const QVariant& value)
         return;
 
     impl().value = value;
-    sync();
+
+    if (impl().running)
+        sync();
 
     emit valueChanged(impl().value);
 }
@@ -145,6 +147,12 @@ void Multibinding::onTimeout()
     onChanged(impl().lastChanged);
 }
 
+void Multibinding::onDisabled()
+{
+    assert(!running());
+    setValue({});
+}
+
 void Multibinding::onEnabled()
 {
     assert(running());
@@ -183,7 +191,12 @@ void Multibinding::setRunning(bool value)
         return;
 
     impl().running = value;
-    if (impl().running) onEnabled();
+
+    if (impl().running) {
+        onEnabled();
+    } else {
+        onDisabled();
+    }
 
     emit runningChanged(impl().running);
 }
