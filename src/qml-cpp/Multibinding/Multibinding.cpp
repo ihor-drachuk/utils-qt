@@ -11,6 +11,7 @@ struct Multibinding::impl_t
     MultibindingItem* lastChanged { nullptr };
 
     bool running { true };
+    bool outdated { false };
     QVariant value;
     bool recursionBlocking { false };
     QList<QObject*> loopbackGuarded;
@@ -39,9 +40,10 @@ Multibinding::~Multibinding()
 
 void Multibinding::setValue(const QVariant& value)
 {
-    if (impl().value == value)
+    if (!impl().outdated && impl().value == value)
         return;
 
+    impl().outdated = false;
     impl().value = value;
 
     if (impl().running)
@@ -150,7 +152,7 @@ void Multibinding::onTimeout()
 void Multibinding::onDisabled()
 {
     assert(!running());
-    setValue({});
+    impl().outdated = true;
 }
 
 void Multibinding::onEnabled()
