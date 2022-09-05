@@ -16,10 +16,15 @@ bool isFloat(const QVariant& value) {
 }
 
 bool compare(const QVariant& a, const QVariant& b) {
-    if (isFloat(a) || isFloat(b))
+    if (isFloat(a) || isFloat(b)) {
         return qFuzzyCompare(a.toDouble(), b.toDouble());
-    else
+    } else if (a.canConvert<QJSValue>() && b.canConvert<QJSValue>()) {
+        auto ja = a.value<QJSValue>();
+        auto jb = b.value<QJSValue>();
+        return ja.strictlyEquals(jb);
+    } else {
         return (a == b);
+    }
 }
 
 } // namespace
@@ -390,6 +395,8 @@ void MultibindingItem::attachProperty()
     auto qmpProp = QQmlProperty(object(), propertyName());
     qmpProp.connectNotifySignal(this, SLOT(changedHandler()));
 
+    m_connected = true;
+
     switch (m_reAttachBehvior) {
         case SyncMultibinding:
             emit changed();
@@ -399,8 +406,6 @@ void MultibindingItem::attachProperty()
             emit needSync();
             break;
     }
-
-    m_connected = true;
 }
 
 void MultibindingItem::onBeforeTransformerUpdated()
