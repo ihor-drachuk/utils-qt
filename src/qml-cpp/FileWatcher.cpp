@@ -51,8 +51,8 @@ void FileWatcher::setFileName(const QUrl& value)
         return;
 
     bool isChanged = false;
-    LateSetter _ls1(impl().fileName, value, [this](const auto& v){ emit fileNameChanged(v); }, &isChanged);
-    LateSetter _ls2(impl().localFileName, value.toLocalFile(), [this](const auto& v){ emit localFileNameChanged(v); }, &isChanged);
+    auto _ls1 = MakeLateSetter(impl().fileName, value, [this](const auto& v){ emit fileNameChanged(v); }, &isChanged);
+    auto _ls2 = MakeLateSetter(impl().localFileName, value.toLocalFile(), [this](const auto& v){ emit localFileNameChanged(v); }, &isChanged);
     recreateWatcher();
     updateFileInfo(&isChanged, false);
 }
@@ -68,8 +68,8 @@ void FileWatcher::setLocalFileName(const QString& value)
         return;
 
     bool isChanged = false;
-    LateSetter _ls1(impl().localFileName, value,                                     [this](const auto& v){ emit localFileNameChanged(v); }, &isChanged);
-    LateSetter _ls2(impl().fileName,      QUrl::fromLocalFile(impl().localFileName), [this](const auto& v){ emit fileNameChanged(v); }, &isChanged);
+    auto _ls1 = MakeLateSetter(impl().localFileName, value,                                     [this](const auto& v){ emit localFileNameChanged(v); }, &isChanged);
+    auto _ls2 = MakeLateSetter(impl().fileName,      QUrl::fromLocalFile(impl().localFileName), [this](const auto& v){ emit fileNameChanged(v); }, &isChanged);
     recreateWatcher();
     updateFileInfo(&isChanged, false);
 }
@@ -121,9 +121,9 @@ void FileWatcher::updateFileInfo(bool* changedFlag, bool readdPaths)
     bool ownIsChanged = false;
     if (!changedFlag) changedFlag = &ownIsChanged;
 
-    LateSetter _ls3(impl().fileExists, QFile::exists(impl().localFileName),   [this](const auto& v){ emit fileExistsChanged(v); }, changedFlag);
-    LateSetter _ls4(impl().hasAccess,  checkReadAccess(impl().localFileName), [this](const auto& v){ emit hasAccessChanged(v); }, changedFlag);
-    LateSetter _ls5(impl().size,       checkSize(impl().localFileName),       [this](const auto& v){ emit sizeChanged(v); }, changedFlag);
+    auto _ls3 = MakeLateSetter(impl().fileExists, QFile::exists(impl().localFileName),   [this](const auto& v){ emit fileExistsChanged(v); }, changedFlag);
+    auto _ls4 = MakeLateSetter(impl().hasAccess,  checkReadAccess(impl().localFileName), [this](const auto& v){ emit hasAccessChanged(v); }, changedFlag);
+    auto _ls5 = MakeLateSetter(impl().size,       checkSize(impl().localFileName),       [this](const auto& v){ emit sizeChanged(v); }, changedFlag);
 
     if (readdPaths) {
         impl().fsWatcher->addPaths(QStringList{
@@ -153,7 +153,7 @@ int FileWatcher::checkSize(const QString& fileName)
     if (result > std::numeric_limits<int>::max())
         throw std::runtime_error("Unsupported file size!");
 
-    return result;
+    return static_cast<int>(result);
 }
 
 int FileWatcher::size() const

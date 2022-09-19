@@ -26,3 +26,9 @@ private:
     Signal m_signal;
     bool m_isChanged {};
 };
+
+template<typename T, typename Signal>
+LateSetter<T, Signal> MakeLateSetter(T& oldValue, const T& newValue, const Signal& signal, bool* changedFlag = nullptr)
+{
+    return LateSetter<T, Signal>(oldValue, newValue, signal, changedFlag);
+}

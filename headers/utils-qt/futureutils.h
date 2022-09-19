@@ -105,6 +105,7 @@ public:
         m_interface.reportFinished();
     }
 
+    bool isCanceled() const { return m_interface.isCanceled(); }
     bool isFinished() const { return m_interface.isFinished(); }
 
     QFuture<T> future() { return m_interface.future(); }

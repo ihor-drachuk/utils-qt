@@ -78,16 +78,16 @@ INSTANTIATE_TEST_SUITE_P(
     Test,
     PathElider_Basic1_Regexp,
     testing::Values(
-        DataPack2{":/devices/MX-10/EU/image.png",      {":/",    {"devices", "MX-10", "EU"}, '/',  "image.png"}, 0.99, ":/devices/.../EU/image.png"},
-        DataPack2{"qrc:/devices/MX-10/EU/image.png",   {"qrc:/", {"devices", "MX-10", "EU"}, '/',  "image.png"}, 0.85, "qrc:/.../EU/image.png"},
-        DataPack2{"/devices/MX-10/EU/image.png",       {"/",     {"devices", "MX-10", "EU"}, '/',  "image.png"}, 0.5,  "/.../image.png"},
-        DataPack2{"D:\\devices\\MX-10\\EU\\image.png", {"D:\\",  {"devices", "MX-10", "EU"}, '\\', "image.png"}, 0.45, "...\\image.png"},
-        DataPack2{"D:\\subdir\\image.png",             {"D:\\",  {"subdir"},                 '\\', "image.png"}, 0.55,  "...age.png"},
-        DataPack2{"D:\\image.png",                     {"D:\\",  {},                         {},   "image.png"}, 1.1,  "D:\\image.png"},
-        DataPack2{"image.png",                         {"",      {},                         {},   "image.png"}, 1.1,  "image.png"},
-        DataPack2{"somedir1/somedir2/image.png",       {"",      {"somedir1", "somedir2"},   '/',  "image.png"}, 1.1,  "somedir1/somedir2/image.png"},
-        DataPack2{"somedir1/somedir2/",                {"",      {"somedir1", "somedir2"},   '/',  "",        }, 1.1,  "somedir1/somedir2/"},
-        DataPack2{"somedir1/name",                     {"",      {"somedir1"},               '/',  "name",    }, 1.1,  "somedir1/name"}
+        DataPack2{":/devices/MX-10/EU/image.png",      {":/",    {"devices", "MX-10", "EU"}, '/',  "image.png"}, 0.99f, ":/devices/.../EU/image.png"},
+        DataPack2{"qrc:/devices/MX-10/EU/image.png",   {"qrc:/", {"devices", "MX-10", "EU"}, '/',  "image.png"}, 0.85f, "qrc:/.../EU/image.png"},
+        DataPack2{"/devices/MX-10/EU/image.png",       {"/",     {"devices", "MX-10", "EU"}, '/',  "image.png"}, 0.5f,  "/.../image.png"},
+        DataPack2{"D:\\devices\\MX-10\\EU\\image.png", {"D:\\",  {"devices", "MX-10", "EU"}, '\\', "image.png"}, 0.45f, "...\\image.png"},
+        DataPack2{"D:\\subdir\\image.png",             {"D:\\",  {"subdir"},                 '\\', "image.png"}, 0.55f,  "...age.png"},
+        DataPack2{"D:\\image.png",                     {"D:\\",  {},                         {},   "image.png"}, 1.1f,  "D:\\image.png"},
+        DataPack2{"image.png",                         {"",      {},                         {},   "image.png"}, 1.1f,  "image.png"},
+        DataPack2{"somedir1/somedir2/image.png",       {"",      {"somedir1", "somedir2"},   '/',  "image.png"}, 1.1f,  "somedir1/somedir2/image.png"},
+        DataPack2{"somedir1/somedir2/",                {"",      {"somedir1", "somedir2"},   '/',  "",        }, 1.1f,  "somedir1/somedir2/"},
+        DataPack2{"somedir1/name",                     {"",      {"somedir1"},               '/',  "name",    }, 1.1f,  "somedir1/name"}
     )
 );
 

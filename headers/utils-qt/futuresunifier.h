@@ -22,23 +22,29 @@ class FuturesUnifier : public FuturesUnifierBase
 {
 public:
     FuturesUnifier(const std::tuple<QFuture<Ts>...>& futures, bool autodelete = false)
-        : m_futures(futures)
+        : m_inFutures(futures)
     {
         if (autodelete) {
-            using ResultType = decltype(m_future.future().result());
+            using ResultType = decltype(m_outFutureResults.future().result());
             auto selfWatcher = new QFutureWatcher<ResultType>(this);
             QObject::connect(selfWatcher, &QFutureWatcherBase::finished, this, &QObject::deleteLater);
-            selfWatcher->setFuture(m_future.future());
+            selfWatcher->setFuture(m_outFutureResults.future());
         }
+
+        QObject::connect(&m_outFutureWatcher, &QFutureWatcherBase::canceled, this, [this](){
+            std::apply([this](auto&... xs){ (xs.cancel(), ...); }, m_inFutures);
+        });
+
+        m_outFutureWatcher.setFuture(m_outFutureResults.future());
     }
 
     ~FuturesUnifier()
     {
         if (!m_used) return;
 
-        if (!m_future.isFinished()) {
-            m_future.reportCanceled();
-            m_future.reportFinished();
+        if (!m_outFutureResults.isFinished()) {
+            m_outFutureResults.reportCanceled();
+            m_outFutureResults.reportFinished();
         }
     }
 
@@ -47,11 +53,11 @@ public:
         Q_ASSERT(!m_used);
         m_used = true;
 
-        m_future.setProgressRange(0, sizeof... (Ts));
+        m_outFutureResults.setProgressRange(0, m_maxCounter);
 
         waitForAllFutures();
 
-        return m_future.future();
+        return m_outFutureResults.future();
     }
 
     auto mergeFuturesAny()
@@ -61,7 +67,7 @@ public:
 
         waitForAnyFuture();
 
-        return m_future.future();
+        return m_outFutureResults.future();
     }
 
 private:
@@ -73,38 +79,40 @@ private:
     template <size_t I = 0>
     void waitForAllFutures(typename std::enable_if<!( I >= sizeof... (Ts)), void>::type* = nullptr)
     {
-        auto inFuture = std::get<I>(m_futures);
+        auto inFuture = std::get<I>(m_inFutures);
         if (inFuture.isFinished()) {
-            m_future.setProgressValue(m_future.progressValue() + 1);
-
             if (inFuture.isCanceled()) {
-                std::get<I>(m_tuple) = {};
+                std::get<I>(m_results) = {};
             } else {
-                std::get<I>(m_tuple) = inFuture.result();
+                std::get<I>(m_results) = inFuture.result();
             }
 
-            if (m_future.progressValue() == m_future.progressMaximum()) {
-                m_future.reportResult(m_tuple);
-                m_future.reportFinished();
+            m_resultsCounter++;
+            m_outFutureResults.setProgressValue(m_resultsCounter);
+
+            if (m_resultsCounter == m_maxCounter) {
+                m_outFutureResults.reportResult(m_results);
+                m_outFutureResults.reportFinished();
             }
         } else {
             using FuturesTypeI = std::tuple_element<I, std::tuple<Ts...>>;
-            QObject::connect(&std::get<I>(m_watcher), &QFutureWatcher<FuturesTypeI>::finished, this, [this]() {
-                m_future.setProgressValue(m_future.progressValue() + 1);
-
-                if (std::get<I>(m_watcher).isCanceled()) {
-                    std::get<I>(m_tuple) = {};
+            QObject::connect(&std::get<I>(m_inWatchers), &QFutureWatcher<FuturesTypeI>::finished, this, [this]() {
+                if (std::get<I>(m_inWatchers).isCanceled()) {
+                    std::get<I>(m_results) = {};
                 } else {
-                    std::get<I>(m_tuple) = std::get<I>(m_watcher).result();
+                    std::get<I>(m_results) = std::get<I>(m_inWatchers).result();
                 }
 
-                if (m_future.progressValue() == m_future.progressMaximum()) {
-                    m_future.reportResult(m_tuple);
-                    m_future.reportFinished();
+                m_resultsCounter++;
+                m_outFutureResults.setProgressValue(m_resultsCounter);
+
+                if (m_resultsCounter == m_maxCounter) {
+                    m_outFutureResults.reportResult(m_results);
+                    m_outFutureResults.reportFinished();
                 }
             });
 
-            std::get<I>(m_watcher).setFuture(inFuture);
+            std::get<I>(m_inWatchers).setFuture(inFuture);
         }
 
         waitForAllFutures<I+1>();
@@ -118,24 +126,24 @@ private:
     template <size_t I = 0>
     void waitForAnyFuture(typename std::enable_if<!( I >= sizeof... (Ts)), void>::type* = nullptr)
     {
-        auto inFuture = std::get<I>(m_futures);
+        auto inFuture = std::get<I>(m_inFutures);
         if (inFuture.isFinished()) {
-            m_future.reportFinished();
+            m_outFutureResults.reportFinished();
             return;
         } else if (inFuture.isCanceled()) {
-            m_future.reportCanceled();
+            m_outFutureResults.reportCanceled();
             return;
         } else {
             using FuturesTypeI = std::tuple_element<I, std::tuple<Ts...>>;
-            QObject::connect(&std::get<I>(m_watcher), &QFutureWatcher<FuturesTypeI>::finished, this, [this]() {
-                m_future.reportFinished();
+            QObject::connect(&std::get<I>(m_inWatchers), &QFutureWatcher<FuturesTypeI>::finished, this, [this]() {
+                m_outFutureResults.reportFinished();
             });
 
-            QObject::connect(&std::get<I>(m_watcher), &QFutureWatcher<FuturesTypeI>::canceled, this, [this]() {
-                m_future.reportCanceled();
+            QObject::connect(&std::get<I>(m_inWatchers), &QFutureWatcher<FuturesTypeI>::canceled, this, [this]() {
+                m_outFutureResults.reportCanceled();
             });
 
-            std::get<I>(m_watcher).setFuture(inFuture);
+            std::get<I>(m_inWatchers).setFuture(inFuture);
         }
 
         waitForAnyFuture<I+1>();
@@ -143,13 +151,14 @@ private:
 
 private:
     bool m_used {false};
-    QFutureInterface<std::tuple<std::optional<Ts>...>> m_future;
-    std::tuple<std::optional<Ts>...> m_tuple;
-    std::tuple<QFuture<Ts>...> m_futures;
-    std::tuple<QFutureWatcher<Ts>...> m_watcher;
+    int m_resultsCounter {};
+    static constexpr int m_maxCounter {sizeof...(Ts)};
+    QFutureInterface<std::tuple<std::optional<Ts>...>> m_outFutureResults;
+    QFutureWatcher<std::tuple<std::optional<Ts>...>> m_outFutureWatcher;
+    std::tuple<std::optional<Ts>...> m_results;
+    std::tuple<QFuture<Ts>...> m_inFutures;
+    std::tuple<QFutureWatcher<Ts>...> m_inWatchers;
 };
-
-} // namespace Internal
 
 template<typename... Ts>
 std::shared_ptr<Internal::FuturesUnifier<Ts...>> createFuturesUnifier(const std::tuple<QFuture<Ts>...>& futures)
@@ -162,6 +171,8 @@ std::shared_ptr<Internal::FuturesUnifier<Ts...>> createFuturesUnifier(const QFut
 {
     return createFuturesUnifier(std::make_tuple(futures...));
 }
+
+} // namespace Internal
 
 template<typename... Ts>
 QFuture<std::tuple<std::optional<Ts>...>> mergeFuturesAll(QObject* ctx, const std::tuple<QFuture<Ts>...>& futures)
