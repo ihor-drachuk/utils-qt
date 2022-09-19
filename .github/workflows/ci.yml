@@ -13,9 +13,12 @@ jobs:
   Build:
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-10.15, windows-2019]
+        os: [ubuntu-18.04, ubuntu-20.04, ubuntu-22.04, macos-10.15, macos-11, macos-12, windows-2019, windows-2022]
         build_type: [Release, Debug]
         use_qt: [yes]
+        exclude:
+            - os: macos-12
+              build_type: Release
 
     runs-on: ${{ matrix.os }}
     if: "!contains(github.event.head_commit.message, 'CI skip') && !contains(github.event.head_commit.message, 'Skip CI')"
@@ -58,6 +61,16 @@ jobs:
        echo "QT_ARCH=win32_msvc2019" >> $GITHUB_ENV
        echo "MSVC_ARCH=-A Win32" >> $GITHUB_ENV
 
+    - name: "Set OS-specific values (Win; 2022)"
+      if: ${{ matrix.os == 'windows-2022' }}
+      shell: bash
+      run: |
+       echo "GENERATOR=Visual Studio 17 2022" >> $GITHUB_ENV
+       echo "CORES=$NUMBER_OF_PROCESSORS" >> $GITHUB_ENV
+       echo "QT_HOST=windows" >> $GITHUB_ENV
+       echo "QT_ARCH=win32_msvc2019" >> $GITHUB_ENV
+       echo "MSVC_ARCH=-A Win32" >> $GITHUB_ENV
+
     - name: Cache Qt
       id: cache-qt
       if: ${{ matrix.use_qt == 'yes' && runner.os != 'Linux' }}
@@ -78,19 +91,32 @@ jobs:
         modules: qtcharts qtdatavis3d qtpurchasing qtvirtualkeyboard qtwebengine qtnetworkauth qtwebglplugin qtscript
         cache: ${{ steps.cache-qt.outputs.cache-hit }}
         setup-python: false
-        
-    - name: Install Qt (Linux)
-      if: ${{ matrix.use_qt == 'yes' && runner.os == 'Linux' }}
-      shell: bash
-      run: |
-       sudo apt-get update
-       sudo apt-get install qt5-default qtdeclarative5-dev
 
     - name: "Add Qt to PATH"
       if: ${{ matrix.use_qt == 'yes' && runner.os != 'Linux' }}
       shell: bash
       run: |
        echo "${{github.workspace}}/qt" >> $GITHUB_PATH
+
+    - name: Install Qt (Linux, 18.04 or 20.04)
+      if: ${{ (matrix.use_qt == 'yes' && matrix.os == 'ubuntu-18.04') || (matrix.use_qt == 'yes' && matrix.os == 'ubuntu-20.04') }}
+      shell: bash
+      run: |
+       sudo add-apt-repository ppa:savoury1/qt-5-15     -n --yes
+       sudo add-apt-repository ppa:savoury1/kde-5-80    -n --yes
+       sudo add-apt-repository ppa:savoury1/gpg         -n --yes
+       sudo add-apt-repository ppa:savoury1/ffmpeg4     -n --yes
+       sudo add-apt-repository ppa:savoury1/vlc3        -n --yes
+       sudo add-apt-repository ppa:savoury1/display     -n --yes
+       sudo add-apt-repository ppa:savoury1/gtk-xenial  -n --yes
+       sudo apt-get update
+       sudo apt-get install qt*5-dev cmake -y
+
+    - name: Install Qt (Linux, 22.04)
+      if: ${{ matrix.use_qt == 'yes' && matrix.os == 'ubuntu-22.04' }}
+      shell: bash
+      run: |
+       sudo apt-get install qt*5-dev cmake -y
 
     - uses: actions/checkout@v2
       with:
