@@ -23,8 +23,7 @@ TEST(UtilsQt, FuturesUnifier_Basic)
         auto f2 = createTimedFuture(time2, std::string("Test"));
         auto f3 = createTimedFuture(time3, 17);
 
-        auto unifier = createFuturesUnifier(f1, f2, f3);
-        auto f = unifier->mergeFuturesAll();
+        auto f = mergeFuturesAll(nullptr, f1, f2, f3);
 
         ASSERT_FALSE(f1.isFinished());
         ASSERT_FALSE(f2.isFinished());
@@ -52,8 +51,7 @@ TEST(UtilsQt, FuturesUnifier_Basic)
         auto f2 = createTimedFuture(time2, std::string("Test"));
         auto f3 = createTimedFuture(time3, 17);
 
-        auto unifier = createFuturesUnifier(f1, f2, f3);
-        auto f = unifier->mergeFuturesAny();
+        auto f = mergeFuturesAny(nullptr, f1, f2, f3);
 
         ASSERT_FALSE(f1.isFinished());
         ASSERT_FALSE(f2.isFinished());
@@ -74,8 +72,7 @@ TEST(UtilsQt, FuturesUnifier_Basic)
         auto f2 = createTimedCanceledFuture<std::string>(time2);
         auto f3 = createTimedFuture(time3, 17);
 
-        auto unifier = createFuturesUnifier(f1, f2, f3);
-        auto f = unifier->mergeFuturesAll();
+        auto f = mergeFuturesAll(nullptr, f1, f2, f3);
 
         ASSERT_TRUE(f1.isFinished());
         ASSERT_FALSE(f2.isFinished());
@@ -103,8 +100,7 @@ TEST(UtilsQt, FuturesUnifier_Basic)
         auto f2 = createTimedFuture(time2, std::string("Test"));
         auto f3 = createTimedFuture(time3, 17);
 
-        auto unifier = createFuturesUnifier(f1, f2, f3);
-        auto f = unifier->mergeFuturesAny();
+        auto f = mergeFuturesAny(nullptr, f1, f2, f3);
 
         ASSERT_FALSE(f1.isFinished());
         ASSERT_FALSE(f2.isFinished());
@@ -125,8 +121,7 @@ TEST(UtilsQt, FuturesUnifier_Basic)
         auto f2 = createTimedCanceledFuture<int>(time2);
         auto f3 = createTimedFuture(time3, 17);
 
-        auto unifier = createFuturesUnifier(f1, f2, f3);
-        auto f = unifier->mergeFuturesAll();
+        auto f = mergeFuturesAll(nullptr, f1, f2, f3);
 
         ASSERT_TRUE(f1.isFinished());
         ASSERT_FALSE(f2.isFinished());

@@ -170,7 +170,7 @@ void PathElider::recalculate()
 
     // Try remove some middle components
     std::vector<bool> skipDirs(decomposition.subdirs.size());
-    auto mit = middle_iterator(skipDirs.begin(), skipDirs.end());
+    auto mit = make_middle_iterator(skipDirs.begin(), skipDirs.end());
     while (mit.isValid()) {
         *mit++ = true;
         auto str = decomposition.combine(skipDirs);
