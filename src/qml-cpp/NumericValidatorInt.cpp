@@ -1,4 +1,4 @@
-#include <utils-qt/qml-cpp/NumericValidatorInt.h>
+#include <UtilsQt/Qml-Cpp/NumericValidatorInt.h>
 
 #include <QQmlEngine>
 

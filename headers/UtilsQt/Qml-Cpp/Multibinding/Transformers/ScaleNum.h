@@ -1,5 +1,5 @@
 #pragma once
-#include <utils-qt/qml-cpp/Multibinding/Transformers/AbstractTransformer.h>
+#include <UtilsQt/Qml-Cpp/Multibinding/Transformers/AbstractTransformer.h>
 
 class ScaleNum : public AbstractTransformer
 {

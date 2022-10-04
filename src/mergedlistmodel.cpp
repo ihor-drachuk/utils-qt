@@ -1,4 +1,4 @@
-#include <utils-qt/mergedlistmodel.h>
+#include <UtilsQt/mergedlistmodel.h>
 
 #include <QRegularExpression>
 #include <QDataStream>
@@ -10,8 +10,8 @@
 #include <unordered_map>
 #include <utils-cpp/scoped_guard.h>
 #include <utils-cpp/container_utils.h>
-#include <utils-qt/convertcontainer.h>
-#include <utils-qt/qml-cpp/QmlUtils.h>
+#include <UtilsQt/convertcontainer.h>
+#include <UtilsQt/Qml-Cpp/QmlUtils.h>
 
 namespace {
 

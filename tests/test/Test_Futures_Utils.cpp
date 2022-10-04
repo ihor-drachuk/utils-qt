@@ -1,11 +1,13 @@
 #include <gtest/gtest.h>
-#include <utils-qt/futureutils.h>
+#include <UtilsQt/Futures/Utils.h>
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QTimer>
 
+using namespace UtilsQt;
 
-TEST(UtilsQt, FutureUtilsTest_createFinished)
+
+TEST(UtilsQt, Futures_Utils_createFinished)
 {
     {
         auto f = createReadyFuture();
@@ -33,7 +35,7 @@ TEST(UtilsQt, FutureUtilsTest_createFinished)
     }
 }
 
-TEST(UtilsQt, FutureUtilsTest_Timed)
+TEST(UtilsQt, Futures_Utils_Timed)
 {
     {
         auto f = createTimedFuture(20);
@@ -73,41 +75,41 @@ TEST(UtilsQt, FutureUtilsTest_Timed)
     }
 }
 
-TEST(UtilsQt, FutureUtilsTest_Future)
+TEST(UtilsQt, Futures_Utils_Future)
 {
     {
         QObject ctx;
 
         auto f = createPromise<int>();
-        ASSERT_FALSE(f->isFinished());
+        ASSERT_FALSE(f.isFinished());
 
-        QTimer::singleShot(20, &ctx, [f](){ f->finish(120); });
+        QTimer::singleShot(20, &ctx, [f]() mutable { f.finish(120); });
 
-        waitForFuture<QEventLoop>(f->future());
+        waitForFuture<QEventLoop>(f.future());
 
-        ASSERT_TRUE(f->isFinished());
-        ASSERT_TRUE(f->future().isFinished());
-        ASSERT_FALSE(f->future().isCanceled());
+        ASSERT_TRUE(f.isFinished());
+        ASSERT_TRUE(f.future().isFinished());
+        ASSERT_FALSE(f.future().isCanceled());
     }
 
     {
         QObject ctx;
 
         auto f = createPromise<int>();
-        ASSERT_FALSE(f->isFinished());
+        ASSERT_FALSE(f.isFinished());
 
-        QTimer::singleShot(20, &ctx, [f](){ f->cancel(); });
+        QTimer::singleShot(20, &ctx, [f]() mutable { f.cancel(); });
 
-        waitForFuture<QEventLoop>(f->future());
+        waitForFuture<QEventLoop>(f.future());
 
-        ASSERT_TRUE(f->isFinished());
-        ASSERT_TRUE(f->future().isFinished());
-        ASSERT_TRUE(f->future().isCanceled());
+        ASSERT_TRUE(f.isFinished());
+        ASSERT_TRUE(f.future().isFinished());
+        ASSERT_TRUE(f.future().isCanceled());
     }
 }
 
 
-TEST(UtilsQt, FutureUtilsTest_onFinished)
+TEST(UtilsQt, Futures_Utils_onFinished)
 {
     {
         QObject ctx;
@@ -167,7 +169,7 @@ TEST(UtilsQt, FutureUtilsTest_onFinished)
     }
 }
 
-TEST(UtilsQt, FutureUtilsTest_Timed_onFinished)
+TEST(UtilsQt, Futures_Utils_Timed_onFinished)
 {
     {
         QObject ctx;
@@ -232,7 +234,7 @@ TEST(UtilsQt, FutureUtilsTest_Timed_onFinished)
 }
 
 
-TEST(UtilsQt, FutureUtilsTest_context)
+TEST(UtilsQt, Futures_Utils_context)
 {
     auto obj = new QObject();
     auto f = createTimedFuture(20, 170, obj);
@@ -249,7 +251,7 @@ TEST(UtilsQt, FutureUtilsTest_context)
     ASSERT_TRUE(f.isCanceled());
 }
 
-TEST(UtilsQt, FutureUtilsTest_reference)
+TEST(UtilsQt, Futures_Utils_reference)
 {
     {
         QObject obj;

@@ -1,4 +1,4 @@
-#include <utils-qt/dpitools.h>
+#include <UtilsQt/dpitools.h>
 
 #include <QtGlobal>
 #include <QCoreApplication>

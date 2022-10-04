@@ -1,4 +1,4 @@
-#include <utils-qt/qml-cpp/Multibinding/Transformers/ScaleNum.h>
+#include <UtilsQt/Qml-Cpp/Multibinding/Transformers/ScaleNum.h>
 #include <QQmlEngine>
 
 

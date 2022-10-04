@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
-#include <utils-qt/on_property.h>
-#include <utils-qt/futureutils.h>
+#include <UtilsQt/OnProperty.h>
+#include <UtilsQt/Futures/Utils.h>
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QEventLoop>
+
+using namespace UtilsQt;
 
 #ifdef UTILS_QT_OS_MACOS
 constexpr float timeFactor = 3;

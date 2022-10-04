@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <utils-qt/datatostring.h>
+#include <UtilsQt/datatostring.h>
 
 
 TEST(UtilsQt, DataToString_Empty)

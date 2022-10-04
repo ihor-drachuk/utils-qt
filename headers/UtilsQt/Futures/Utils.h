@@ -6,7 +6,7 @@
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QTimer>
-#include <utils-qt/invoke_method.h>
+#include <UtilsQt/invoke_method.h>
 
 /*
           Content
@@ -45,36 +45,57 @@
      -> future();
 */
 
-
+namespace UtilsQt {
 
 namespace FutureUtilsInternals {
 
-class QFutureInterfaceWrapperBase : public QObject
+template <typename C, typename T>
+void call(const C& c, const QFuture<T>& future)
 {
-    Q_OBJECT
-};
+    const_cast<C&>(c)(std::optional<T>(future.result()));
+}
+
+template <typename C>
+void call(const C& c, const QFuture<void>&)
+{
+    const_cast<C&>(c)();
+}
+
+template <typename Callable, typename T>
+void callCanceled(const Callable& callable, const QFuture<T>&)
+{
+    const_cast<Callable&>(callable)(std::optional<T>{});
+}
+
+template <typename Callable>
+void callCanceled(const Callable& callable, const QFuture<void>&)
+{
+    const_cast<Callable&>(callable)();
+}
+
+} // namespace FutureUtilsInternals
+
 
 template<typename T>
-class QFutureInterfaceWrapper : public QFutureInterfaceWrapperBase
+class Promise
 {
 public:
-    QFutureInterfaceWrapper(QFutureInterface<T> interface)
-        : m_interface(interface)
+    Promise()
     {
-        if (!m_interface.isStarted() && !m_interface.isFinished()) m_interface.reportStarted();
+        m_interface.reportStarted();
+        m_contextTracker = std::shared_ptr<void>(reinterpret_cast<void*>(1), [f = m_interface](void*) mutable {
+            if (!f.isFinished()) {
+                f.reportCanceled();
+                f.reportFinished();
+            }
+        });
     }
 
-    QFutureInterfaceWrapper(const QFutureInterfaceWrapper<T>&) = delete;
-    QFutureInterfaceWrapper(QFutureInterfaceWrapper<T>&&) = delete;
-
-    ~QFutureInterfaceWrapper()
-    {
-        if (!isFinished())
-            cancel();
-    }
-
-    QFutureInterfaceWrapper<T>& operator= (const QFutureInterfaceWrapper<T>&) = delete;
-    QFutureInterfaceWrapper<T>& operator= (QFutureInterfaceWrapper<T>&&) = delete;
+    Promise(const Promise<T>&) = default;
+    Promise(Promise<T>&&) = default;
+    ~Promise() = default;
+    Promise<T>& operator= (const Promise<T>&) = default;
+    Promise<T>& operator= (Promise<T>&&) = default;
 
     // if [T == void]
     template<typename X = T>
@@ -113,37 +134,8 @@ public:
 
 private:
     QFutureInterface<T> m_interface;
+    std::shared_ptr<void> m_contextTracker;
 };
-
-template<typename T>
-using QFutureInterfaceWrapperPtr = std::shared_ptr<QFutureInterfaceWrapper<T>>;
-
-template <typename C, typename T>
-void call(const C& c, const QFuture<T>& future)
-{
-    const_cast<C&>(c)(std::optional<T>(future.result()));
-}
-
-template <typename C>
-void call(const C& c, const QFuture<void>&)
-{
-    const_cast<C&>(c)();
-}
-
-template <typename Callable, typename T>
-void callCanceled(const Callable& callable, const QFuture<T>&)
-{
-    const_cast<Callable&>(callable)(std::optional<T>{});
-}
-
-template <typename Callable>
-void callCanceled(const Callable& callable, const QFuture<void>&)
-{
-    const_cast<Callable&>(callable)();
-}
-
-} // namespace FutureUtilsInternals
-
 
 template<typename Type, typename Obj, typename Callable,
          typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
@@ -444,8 +436,9 @@ template<typename T>
 }
 
 template<typename T>
-[[nodiscard]] FutureUtilsInternals::QFutureInterfaceWrapperPtr<T> createPromise()
+[[nodiscard]] Promise<T> createPromise()
 {
-    QFutureInterface<T> interface;
-    return std::make_shared<FutureUtilsInternals::QFutureInterfaceWrapper<T>>(interface);
+    return Promise<T>();
 }
+
+} // namespace UtilsQt

@@ -2,8 +2,8 @@
 #include <cassert>
 #include <QObject>
 #include <QTimer>
-#include <utils-qt/invoke_method.h>
-#include <utils-qt/futureutils.h>
+#include <UtilsQt/invoke_method.h>
+#include <UtilsQt/Futures/Utils.h>
 
 namespace UtilsQt {
 
@@ -19,7 +19,7 @@ enum class CancelReason {
     Timeout
 };
 
-namespace Internal {
+namespace OnPropertyInternal {
 
 class PropertyWatcherBase : public QObject
 {
@@ -106,8 +106,8 @@ PropertyWatcher<T, Getter, CancelHandler>* createWatcher(const Getter& getter, c
     return new PropertyWatcher<T, Getter, CancelHandler>(getter, expectedValue, comparison, cancelHandler);
 }
 
-} // namespace Internal
-} // namespace UtilsQt
+} // namespace OnPropertyInternal
+
 
 template<typename T, typename T2, typename Object, typename Handler, typename Handler2 = void (*)(UtilsQt::CancelReason),
          typename std::enable_if<std::is_base_of<QObject, Object>::value>::type* = nullptr>
@@ -120,7 +120,7 @@ void onProperty(Object* object,
                 QObject* context,
                 const Handler& handler,
                 int timeout = -1,
-                const Handler2& cancelHandler = UtilsQt::Internal::cancelStubHandler,
+                const Handler2& cancelHandler = UtilsQt::OnPropertyInternal::cancelStubHandler,
                 Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
     assert(object);
@@ -128,7 +128,7 @@ void onProperty(Object* object,
     assert(notifier);
     assert(context);
 
-    auto watcher = UtilsQt::Internal::createWatcher(
+    auto watcher = UtilsQt::OnPropertyInternal::createWatcher(
                 [object, getter]() -> T { return (object->*getter)(); },
                 expectedValue,
                 comparison,
@@ -146,8 +146,8 @@ void onProperty(Object* object,
 
     watcher->setOnce(once);
 
-    QObject::connect(object, notifier, watcher, &UtilsQt::Internal::PropertyWatcherBase::changed, connectionType);
-    QObject::connect(watcher, &UtilsQt::Internal::PropertyWatcherBase::triggered, context, [handler](){ handler(); }, connectionType);
+    QObject::connect(object, notifier, watcher, &UtilsQt::OnPropertyInternal::PropertyWatcherBase::changed, connectionType);
+    QObject::connect(watcher, &UtilsQt::OnPropertyInternal::PropertyWatcherBase::triggered, context, [handler = handler]() mutable { handler(); }, connectionType);
     UtilsQt::invokeMethod(watcher, [watcher](){ watcher->changed(); }, connectionType);
 }
 
@@ -162,17 +162,19 @@ QFuture<void> onPropertyFuture(Object* object,
                                int timeout = -1,
                                Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
-    auto promise = createPromise<void>();
+    auto promise = UtilsQt::createPromise<void>();
 
     onProperty(object, getter, notifier, expectedValue, comparison, true, context,
-               [promise](){
-                   promise->finish();
+               [promise]() mutable {
+                   promise.finish();
                },
                timeout,
-               [promise](UtilsQt::CancelReason){
-                   promise->cancel();
+               [promise](UtilsQt::CancelReason) mutable {
+                   promise.cancel();
                },
                connectionType);
 
-    return promise->future();
+    return promise.future();
 }
+
+} // namespace UtilsQt

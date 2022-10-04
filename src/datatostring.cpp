@@ -1,4 +1,4 @@
-#include <utils-qt/datatostring.h>
+#include <UtilsQt/datatostring.h>
 
 #include <QVector>
 #include <QChar>

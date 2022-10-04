@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <utils-qt/qml-cpp/FileWatcher.h>
 #include <QEventLoop>
 #include <QStandardPaths>
 #include <QFile>
@@ -7,7 +6,10 @@
 #include <QFileInfo>
 #include <QSignalSpy>
 
-#include <utils-qt/futureutils.h>
+#include <UtilsQt/Futures/Utils.h>
+#include <UtilsQt/Qml-Cpp/FileWatcher.h>
+
+using namespace UtilsQt;
 
 #ifdef UTILS_QT_OS_MACOS
 constexpr int WaitTime = 1000;
