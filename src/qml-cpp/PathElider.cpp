@@ -1,4 +1,4 @@
-#include <utils-qt/qml-cpp/PathElider.h>
+#include <UtilsQt/Qml-Cpp/PathElider.h>
 
 #include <QStringList>
 #include <QQmlEngine>

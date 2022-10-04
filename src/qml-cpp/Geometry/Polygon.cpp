@@ -1,4 +1,4 @@
-#include <utils-qt/qml-cpp/Geometry/Polygon.h>
+#include <UtilsQt/Qml-Cpp/Geometry/Polygon.h>
 
 #include <QQmlEngine>
 #include <QVector>

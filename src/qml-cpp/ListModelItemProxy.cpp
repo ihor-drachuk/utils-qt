@@ -1,4 +1,4 @@
-#include <utils-qt/qml-cpp/ListModelItemProxy.h>
+#include <UtilsQt/Qml-Cpp/ListModelItemProxy.h>
 
 #include <optional>
 #include <cassert>

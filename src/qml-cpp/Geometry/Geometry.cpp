@@ -1,4 +1,4 @@
-#include <utils-qt/qml-cpp/Geometry/Geometry.h>
+#include <UtilsQt/Qml-Cpp/Geometry/Geometry.h>
 
 #include <QQmlEngine>
 

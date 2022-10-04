@@ -1,6 +1,6 @@
 #pragma once
-#include <utils-qt/futureutils.h>
-#include <utils-qt/invoke_method.h>
+#include <UtilsQt/Futures/Utils.h>
+#include <UtilsQt/invoke_method.h>
 
 // TODO:  Add support of QFuture<void> sequences.
 
@@ -102,9 +102,9 @@ public:
 
     QFuture<void> readyPromise()
     {
-        auto f = createPromise<void>();
-        QObject::connect(&getContext()->ownContext, &QObject::destroyed, [f]() { f->finish(); });
-        return f->future();
+        auto f = UtilsQt::createPromise<void>();
+        QObject::connect(&getContext()->ownContext, &QObject::destroyed, [f]() mutable { f.finish(); });
+        return f.future();
     }
 
 protected:
@@ -123,7 +123,7 @@ public:
           m_context(context),
           m_connectionType(connectionType)
     {
-        onFinished(future, context, [ctx = getContext()](const std::optional<T>& result) {
+        UtilsQt::onFinished(future, context, [ctx = getContext()](const std::optional<T>& result) {
             if (!result) {
                 ctx->errorOccured_Internal();
             }
@@ -149,7 +149,7 @@ public:
         QFutureInterface<RetFutureType> interface;
         interface.reportStarted();
 
-        onFinished(m_future, m_context,
+        UtilsQt::onFinished(m_future, m_context,
                    [interface, callable, internalContext = getContext(), m_context = m_context, m_connectionType = m_connectionType]
                    (const std::optional<T>& result) {
             auto interface2 = interface;
@@ -161,11 +161,11 @@ public:
                 try {
                     nextFuture = callable(result);
                 } catch (...) {
-                    nextFuture = createCanceledFuture<RetFutureType>();
+                    nextFuture = UtilsQt::createCanceledFuture<RetFutureType>();
                     internalContext->ex = std::current_exception();
                 }
 
-                onFinished(nextFuture, m_context, [interface, internalContext](const std::optional<RetFutureType>& result) {
+                UtilsQt::onFinished(nextFuture, m_context, [interface, internalContext](const std::optional<RetFutureType>& result) {
                     auto interface2 = interface;
 
                     if (result) {
@@ -206,7 +206,7 @@ public:
     FutureResultBase then(const Callable& callable) {
         getContext()->needInternalHandler = false;
 
-        onFinished(m_future, m_context, [callable, internalContext = getContext()](const std::optional<T>& result) {
+        UtilsQt::onFinished(m_future, m_context, [callable, internalContext = getContext()](const std::optional<T>& result) {
             if (result) {
                 assert(!internalContext->errorFlag);
                 try {
@@ -248,9 +248,9 @@ private:
 
 
 template<typename Type>
-FutureUtilsInternals::FutureResult<Type> connectFutureSeq(const QFuture<Type>& future,
+::FutureUtilsInternals::FutureResult<Type> connectFutureSeq(const QFuture<Type>& future,
                     QObject* context,
                     Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
-    return FutureUtilsInternals::FutureResult<Type>(future, context, connectionType);
+    return ::FutureUtilsInternals::FutureResult<Type>(future, context, connectionType);
 }

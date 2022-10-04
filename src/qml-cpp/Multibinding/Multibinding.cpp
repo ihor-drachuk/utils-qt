@@ -1,9 +1,9 @@
-#include <utils-qt/qml-cpp/Multibinding/Multibinding.h>
+#include <UtilsQt/Qml-Cpp/Multibinding/Multibinding.h>
 
 #include <QQmlEngine>
 #include <QTimer>
 #include <cassert>
-#include <utils-qt/qml-cpp/Multibinding/MultibindingItem.h>
+#include <UtilsQt/Qml-Cpp/Multibinding/MultibindingItem.h>
 
 
 struct Multibinding::impl_t

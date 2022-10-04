@@ -1,4 +1,4 @@
-#include <utils-qt/qml-cpp/Multibinding/Transformers/AbstractTransformer.h>
+#include <UtilsQt/Qml-Cpp/Multibinding/Transformers/AbstractTransformer.h>
 #include <QQmlEngine>
 
 void AbstractTransformer::registerTypes()

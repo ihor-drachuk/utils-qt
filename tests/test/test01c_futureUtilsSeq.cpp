@@ -2,7 +2,9 @@
 
 #include <string>
 #include <QEventLoop>
-#include <utils-qt/futureutils_sequential.h>
+#include <UtilsQt/Futures/futureutils_sequential.h>
+
+using namespace UtilsQt;
 
 
 TEST(UtilsQt, FutureUtilsSeqTest_basic)

@@ -1,6 +1,6 @@
-#include <utils-qt/qml/qml-controls.h>
-#include <utils-qt/qml-cpp/ListModelItemProxy.h>
-#include <utils-qt/qml-cpp/ListModelTools.h>
+#include <UtilsQt/Qml/qml-controls.h>
+#include <UtilsQt/Qml-Cpp/ListModelItemProxy.h>
+#include <UtilsQt/Qml-Cpp/ListModelTools.h>
 #include <QDir>
 #include <QQmlEngine>
 

@@ -1,8 +1,8 @@
-#include <utils-qt/qml-cpp/FileWatcher.h>
+#include <UtilsQt/Qml-Cpp/FileWatcher.h>
 
 #include <stdexcept>
 #include <limits>
-#include <utils-qt/late_setter.h>
+#include <UtilsQt/late_setter.h>
 
 #include <QFileSystemWatcher>
 #include <QFile>

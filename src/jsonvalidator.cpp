@@ -1,4 +1,4 @@
-#include <utils-qt/jsonvalidator.h>
+#include <UtilsQt/jsonvalidator.h>
 
 #include <QJsonDocument>
 #include <QMap>

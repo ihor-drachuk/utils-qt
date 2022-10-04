@@ -1,7 +1,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QTimer>
-#include <utils-qt/qml.h>
+#include <UtilsQt/qml.h>
 
 int main(int argc, char *argv[])
 {

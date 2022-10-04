@@ -1,4 +1,4 @@
-#include <utils-qt/on_property.h>
+#include <UtilsQt/OnProperty.h>
 
 
 int main()

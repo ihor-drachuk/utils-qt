@@ -1,8 +1,8 @@
-#include <utils-qt/qml-cpp/Multibinding/MultibindingItem.h>
+#include <UtilsQt/Qml-Cpp/Multibinding/MultibindingItem.h>
 
-#include <utils-qt/invoke_method.h>
-#include <utils-qt/qml-cpp/Multibinding/Multibinding.h>
-#include <utils-qt/qml-cpp/Multibinding/Transformers/AbstractTransformer.h>
+#include <UtilsQt/invoke_method.h>
+#include <UtilsQt/Qml-Cpp/Multibinding/Multibinding.h>
+#include <UtilsQt/Qml-Cpp/Multibinding/Transformers/AbstractTransformer.h>
 #include <QQmlEngine>
 #include <QQmlProperty>
 #include <cassert>

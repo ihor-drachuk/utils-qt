@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <utils-qt/qvariant_conv.h>
+#include <UtilsQt/qvariant_conv.h>
 
 using namespace UtilsQt::QVariantConv;
 

@@ -4,7 +4,7 @@
 #include <QString>
 #include <QTimer>
 #include <utils-cpp/lazyinit.h>
-#include <utils-qt/qml-cpp/Multibinding/Transformers/AbstractTransformer.h>
+#include <UtilsQt/Qml-Cpp/Multibinding/Transformers/AbstractTransformer.h>
 
 class MultibindingItem : public QQuickItem
 {

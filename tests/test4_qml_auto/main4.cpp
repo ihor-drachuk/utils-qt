@@ -5,7 +5,7 @@
 #include <QQuickWindow>
 #include <QSGRendererInterface>
 #include <cassert>
-#include <utils-qt/qml.h>
+#include <UtilsQt/qml.h>
 
 
 // 'Registrator' is created for compatibility with Qt 5.9

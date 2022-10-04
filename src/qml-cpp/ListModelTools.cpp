@@ -1,4 +1,4 @@
-#include <utils-qt/qml-cpp/ListModelTools.h>
+#include <UtilsQt/Qml-Cpp/ListModelTools.h>
 
 #include <QQmlEngine>
 #include <QQmlContext>

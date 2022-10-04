@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <utils-qt/jsonvalidator.h>
+#include <UtilsQt/jsonvalidator.h>
 
 #include <QJsonValue>
 #include <QJsonObject>

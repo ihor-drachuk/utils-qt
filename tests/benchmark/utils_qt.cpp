@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include <utils-qt/datatostring.h>
+#include <UtilsQt/datatostring.h>
 
 static void StubBenchmark(benchmark::State& state)
 {
