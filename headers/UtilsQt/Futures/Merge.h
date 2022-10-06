@@ -142,12 +142,12 @@ struct FunctionsC<Container<T, Args...>>
 template<typename S>
 struct Functions;
 
-template<template <typename T, typename... Args> class Container, typename T, typename... Args>
-struct Functions<Container<T, Args...>> :
+template<template <typename... Args> class Container, typename... Args>
+struct Functions<Container<Args...>> :
         std::conditional_t<
-            std::is_same_v<Container<T, Args...>, std::tuple<T, Args...>>,
-            FunctionsT<Container<T, Args...>>,
-            FunctionsC<Container<T, Args...>>
+            std::is_same_v<Container<Args...>, std::tuple<Args...>>,
+            FunctionsT<Container<Args...>>,
+            FunctionsC<Container<Args...>>
         >
 { };
 
