@@ -116,6 +116,7 @@ void ListModelItemProxy::setIndex(int value)
 
     impl().index = value;
     reload();
+
     emit indexChanged(impl().index);
 }
 
@@ -262,9 +263,6 @@ void ListModelItemProxy::onRowsRemoved(const QModelIndex& /*parent*/, int first,
     impl().isChanging = false;
 
     auto isRemoved = (impl().index >= first && impl().index <= last);
-    auto shift = last - first + 1;
-    auto suggestedIndex = impl().index - shift;
-
     if (isRemoved)
         emit removed();
 
@@ -274,6 +272,8 @@ void ListModelItemProxy::onRowsRemoved(const QModelIndex& /*parent*/, int first,
         emit indexChanged(impl().index);
 
     } else {
+        auto shift = last - first + 1;
+        auto suggestedIndex = impl().index - shift;
         emit suggestedNewIndex(impl().index, isRemoved ? -1 : suggestedIndex);
 
         if (impl().index >= impl().model->rowCount()) {

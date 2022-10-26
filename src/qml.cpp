@@ -1,6 +1,7 @@
 #include <utils-qt/qml.h>
 
 #include <utils-qt/qml/qml-controls.h>
+#include <utils-qt/qml-cpp/ExclusiveGroupIndex.h>
 #include <utils-qt/qml-cpp/FileWatcher.h>
 #include <utils-qt/qml-cpp/PathElider.h>
 #include <utils-qt/qml-cpp/ListModelItemProxy.h>
@@ -26,6 +27,7 @@ namespace Qml {
 void registerAll(QQmlEngine& engine)
 {
     QmlControls::init(engine);
+    ExclusiveGroupIndex::registerTypes();
     FileWatcher::registerTypes();
     PathElider::registerTypes();
     ListModelItemProxy::registerTypes();
