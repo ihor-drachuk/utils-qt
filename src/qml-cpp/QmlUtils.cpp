@@ -135,6 +135,24 @@ QSize QmlUtils::imageSize(const QString& fileName) const
     return QImageReader(realFileName(fileName)).size();
 }
 
+QColor QmlUtils::colorMakeAccent(const QColor& color, double factor) const
+{
+    const auto hsla = color.toHsl();
+
+    if (hsla.lightnessF() > 0.3) {
+        const auto rgba = color.toRgb();
+        return QColor::fromRgbF(rgba.redF(), rgba.greenF(), rgba.blueF(), rgba.alphaF() * factor);
+    } else {
+        return QColor::fromHslF(hsla.hslHueF(), hsla.hslSaturationF(), hsla.lightnessF() + (factor - 1.0) / 1.5, hsla.alphaF());
+    }
+}
+
+QColor QmlUtils::colorChangeAlpha(const QColor& color, double alpha) const
+{
+    const auto rgba = color.toRgb();
+    return QColor::fromRgbF(rgba.redF(), rgba.greenF(), rgba.blueF(), alpha);
+}
+
 QString QmlUtils::normalizePath(const QString& str) const
 {
     return analyzePath(str).path;

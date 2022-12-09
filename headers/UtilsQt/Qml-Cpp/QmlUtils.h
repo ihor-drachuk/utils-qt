@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <QColor>
 #include <QSize>
 #include <QList>
 #include <QStringList>
@@ -48,6 +49,10 @@ public:
     // Images
     Q_INVOKABLE bool isImage(const QString& fileName) const;
     Q_INVOKABLE QSize imageSize(const QString& fileName) const;
+
+    // Colors
+    Q_INVOKABLE QColor colorMakeAccent(const QColor& color, double factor) const;
+    Q_INVOKABLE QColor colorChangeAlpha(const QColor& color, double alpha) const;
 
     // Numbers
     Q_INVOKABLE int bound(int min, int value, int max) const;
