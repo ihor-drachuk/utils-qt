@@ -16,7 +16,7 @@ struct PathDetails
     };
 
     QString path;
-    Location location;
+    Location location {};
     bool isAbsolute {};
 };
 
@@ -75,6 +75,10 @@ public:
     // Window
     Q_INVOKABLE void showWindow(QObject* win);
     Q_INVOKABLE void minimizeWindow(QObject* win);
+
+signals:
+    void keyPressed(Qt::Key key);
+    void keyReleased(Qt::Key key);
 
 // --- Properties support ---
 public:

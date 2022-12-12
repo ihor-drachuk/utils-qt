@@ -69,6 +69,17 @@ bool QmlUtils::eventFilter(QObject* /*watched*/, QEvent* event)
 
     const auto km = QGuiApplication::queryKeyboardModifiers();
     setKeyModifiers(static_cast<int>(km));
+
+    assert(dynamic_cast<QKeyEvent*>(event));
+    auto keyEvent = static_cast<QKeyEvent*>(event);
+    auto key = static_cast<Qt::Key>(keyEvent->key());
+
+    switch (event->type()) {
+        case QEvent::KeyPress:   emit keyPressed(key);  break;
+        case QEvent::KeyRelease: emit keyReleased(key); break;
+        default:                 assert(!"Unexpected event type!");
+    }
+
     return false;
 }
 
