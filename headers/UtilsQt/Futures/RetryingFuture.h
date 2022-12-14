@@ -9,15 +9,9 @@
   -------------------------------
 
   QFuture<T> f = createRetryingFuture(
-                       context,
-                       // controls lifetime
-
-                       asyncCall,
-                       // []() -> QFuture<T> { ... }
-
-                       validator,
-                       // [](const std::optional<T>& result) -> ValidatorDecision { ... }
-
+                       context,       // controls lifetime
+                       asyncCall,     // []() -> QFuture<T> { ... }
+                       validator,     // [](const std::optional<T>& result) -> ValidatorDecision { ... }
                        callsLimit,    // Default: 3
                        callsInterval  // Default: 1000
   );
@@ -108,6 +102,21 @@ struct ContextHelper<void> : ContextHelperBase
         return [](bool result){
             return result ? ValidatorDecision::ResultIsValid :
                             ValidatorDecision::NeedRetry;
+        };
+    }
+};
+
+template<typename T>
+struct SmartValidator;
+
+template<>
+struct SmartValidator<bool>
+{
+    static auto getValidator() {
+        return [](const std::optional<bool>& result){
+            return result ?  *result ? ValidatorDecision::ResultIsValid :
+                                       ValidatorDecision::NeedRetry :
+                             ValidatorDecision::Cancel;
         };
     }
 };
@@ -233,6 +242,12 @@ QFuture<PT> createRetryingFuture(QObject* context,
     auto ctx = new Context(context, asyncCall, resultValidator, callsLimit, callsInterval);
 
     return ctx->getTargetFuture();
+}
+
+template<typename T>
+auto getSmartValidator()
+{
+    return RetryingFutureInternal::SmartValidator<T>::getValidator();
 }
 
 } // namespace UtilsQt

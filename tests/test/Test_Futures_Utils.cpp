@@ -9,17 +9,42 @@ using namespace UtilsQt;
 
 namespace {
 
-struct DataPack_FuturesSetProperties
+struct DataPack_AnalyzeFutures
 {
     QVector<QFuture<void>> futures;
     UtilsQt::FuturesSetProperties properties;
 };
 
-class UtilsQt_Futures_Regex : public testing::TestWithParam<DataPack_FuturesSetProperties>
+class UtilsQt_Futures_Utils_AnalyzeFutures : public testing::TestWithParam<DataPack_AnalyzeFutures>
+{ };
+
+struct DataPack_FuturesToResults
+{
+    QVector<QFuture<int>> futures;
+    QVector<std::optional<int>> result;
+};
+
+class UtilsQt_Futures_Utils_FuturesToResults : public testing::TestWithParam<DataPack_FuturesToResults>
+{ };
+
+struct DataPack_FuturesToResultsTuple
+{
+    std::tuple<QFuture<int>, QFuture<std::string>> futures;
+    std::tuple<std::optional<int>, std::optional<std::string>> result;
+};
+
+class UtilsQt_Futures_Utils_FuturesToResultsTuple : public testing::TestWithParam<DataPack_FuturesToResultsTuple>
 { };
 
 QFuture<void> createStarted() {
     QFutureInterface<void> fi;
+    fi.reportStarted();
+    return fi.future();
+}
+
+template<typename T>
+QFuture<T> createStarted() {
+    QFutureInterface<T> fi;
     fi.reportStarted();
     return fi.future();
 }
@@ -303,32 +328,71 @@ TEST(UtilsQt, Futures_Utils_reference)
     }
 }
 
-TEST_P(UtilsQt_Futures_Regex, Test)
+TEST_P(UtilsQt_Futures_Utils_AnalyzeFutures, Test)
 {
-    auto dataPack = GetParam();
-    auto result = UtilsQt::analyzeFuturesSet(dataPack.futures);
+    const auto dataPack = GetParam();
+    const auto result = UtilsQt::analyzeFutures(dataPack.futures);
     ASSERT_EQ(result, dataPack.properties);
 }
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    UtilsQt_Futures_Regex,
+    UtilsQt_Futures_Utils_AnalyzeFutures,
     testing::Values(
-            DataPack_FuturesSetProperties{{createStarted(), createStarted(), createStarted()},
-                                          {false, false, true, false, false, true, false, false}},
-            DataPack_FuturesSetProperties{{createStarted(), createStarted(), UtilsQt::createReadyFuture()},
-                                          {false, true, false, false, false, true, false, true}},
-            DataPack_FuturesSetProperties{{UtilsQt::createReadyFuture(), UtilsQt::createReadyFuture(), UtilsQt::createReadyFuture()},
-                                          {true, true, false, false, false, true, true, true}},
+            DataPack_AnalyzeFutures{{createStarted(), createStarted(), createStarted()},
+                                    {false, false, true, false, false, true, false, false}},
+            DataPack_AnalyzeFutures{{createStarted(), createStarted(), UtilsQt::createReadyFuture()},
+                                    {false, true, false, false, false, true, false, true}},
+            DataPack_AnalyzeFutures{{UtilsQt::createReadyFuture(), UtilsQt::createReadyFuture(), UtilsQt::createReadyFuture()},
+                                    {true, true, false, false, false, true, true, true}},
 
-            DataPack_FuturesSetProperties{{createStarted(), UtilsQt::createCanceledFuture<void>()},
-                                          {false, true, false, false, true, false, false, false}},
-            DataPack_FuturesSetProperties{{UtilsQt::createCanceledFuture<void>(), UtilsQt::createCanceledFuture<void>()},
-                                          {true, true, false, true, true, false, false, false}},
-            DataPack_FuturesSetProperties{{createReadyFuture(), UtilsQt::createCanceledFuture<void>()},
-                                          {true, true, false, false, true, false, false, true}},
+            DataPack_AnalyzeFutures{{createStarted(), UtilsQt::createCanceledFuture<void>()},
+                                    {false, true, false, false, true, false, false, false}},
+            DataPack_AnalyzeFutures{{UtilsQt::createCanceledFuture<void>(), UtilsQt::createCanceledFuture<void>()},
+                                    {true, true, false, true, true, false, false, false}},
+            DataPack_AnalyzeFutures{{createReadyFuture(), UtilsQt::createCanceledFuture<void>()},
+                                    {true, true, false, false, true, false, false, true}},
 
-            DataPack_FuturesSetProperties{{},
-                                          {true, true, false, false, false, true, true, true}}
+            DataPack_AnalyzeFutures{{},
+                                    {true, true, false, false, false, true, true, true}}
+    )
+);
+
+TEST_P(UtilsQt_Futures_Utils_FuturesToResults, Test)
+{
+    const auto dataPack = GetParam();
+    const auto result = UtilsQt::futuresToOptResults(dataPack.futures);
+    ASSERT_EQ(result, dataPack.result);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    UtilsQt_Futures_Utils_FuturesToResults,
+    testing::Values(
+            DataPack_FuturesToResults{{createReadyFuture(10), createReadyFuture(15)}, {10, 15}},
+            DataPack_FuturesToResults{{createStarted<int>(), createReadyFuture(15)}, {{}, 15}},
+            DataPack_FuturesToResults{{createCanceledFuture<int>(), createReadyFuture(15)}, {{}, 15}}
+    )
+);
+
+TEST_P(UtilsQt_Futures_Utils_FuturesToResultsTuple, Test)
+{
+    const auto dataPack = GetParam();
+    const auto result = UtilsQt::futuresToOptResults(dataPack.futures);
+    ASSERT_EQ(result, dataPack.result);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    UtilsQt_Futures_Utils_FuturesToResultsTuple,
+    testing::Values(
+            DataPack_FuturesToResultsTuple{std::make_tuple(createReadyFuture(10), createReadyFuture<std::string>("abc")),
+                                           std::make_tuple(std::optional<int>(10), std::optional<std::string>("abc"))},
+
+            DataPack_FuturesToResultsTuple{std::make_tuple(createStarted<int>(), createReadyFuture<std::string>("abc")),
+                                           std::make_tuple(std::optional<int>(), std::optional<std::string>("abc"))},
+
+            DataPack_FuturesToResultsTuple{std::make_tuple(createCanceledFuture<int>(), createReadyFuture<std::string>("abc")),
+                                           std::make_tuple(std::optional<int>(), std::optional<std::string>("abc"))}
     )
 );

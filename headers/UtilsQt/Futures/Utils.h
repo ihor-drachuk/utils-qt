@@ -75,6 +75,23 @@ void callCanceled(const Callable& callable, const QFuture<void>&)
     const_cast<Callable&>(callable)();
 }
 
+template<size_t I = 0, typename... Args>
+void futuresToOptResultsTuple(const std::tuple<QFuture<Args>...>& futures, std::tuple<std::optional<Args>...>& results)
+{
+    if constexpr (I < sizeof...(Args)) {
+        const auto& f = std::get<I>(futures);
+        auto& result = std::get<I>(results);
+
+        if (f.isFinished() && !f.isCanceled()) {
+            result = f.result();
+        } else {
+            result = {};
+        }
+
+        futuresToOptResultsTuple<I+1, Args...>(futures, results);
+    }
+}
+
 } // namespace FutureUtilsInternals
 
 
@@ -88,8 +105,8 @@ struct FuturesSetProperties
     bool someCanceled {};
     bool noneCanceled {};
 
-    bool allFinishedNotCanceled {};
-    bool someFinishedNotCanceled {};
+    bool allCompleted {};  // Finished & !Canceled
+    bool someCompleted {};
 
     [[nodiscard]] static FuturesSetProperties GetBoolFriendly() {
         return {true, false, true, true, false, true, true, false};
@@ -97,7 +114,7 @@ struct FuturesSetProperties
 
     auto asTuple() const { return std::make_tuple(allFinished, someFinished, noneFinished,
                                                   allCanceled, someCanceled, noneCanceled,
-                                                  allFinishedNotCanceled, someFinishedNotCanceled); }
+                                                  allCompleted, someCompleted); }
 
     bool operator== (const FuturesSetProperties& rhs) const { return asTuple() == rhs.asTuple(); }
 };
@@ -468,8 +485,15 @@ template<typename T>
     return Promise<T>();
 }
 
-template<template <typename T, typename... Args> class Container, typename T, typename... Args>
-FuturesSetProperties analyzeFuturesSet(const Container<T, Args...>& futures)
+template<typename T>
+bool futureCompleted(const QFuture<T>& value)
+{
+    return value.isFinished() && !value.isCanceled();
+}
+
+template<template <typename T, typename... Args> class Container, typename T, typename... Args,
+         typename std::enable_if_t<!std::is_same_v<Container<QFuture<T>, Args...>, std::tuple<QFuture<T>, Args...>>>* = nullptr>
+FuturesSetProperties analyzeFutures(const Container<QFuture<T>, Args...>& futures)
 {
     if (std::distance(futures.begin(), futures.end()) == 0)
         return {true, true, false, false, false, true, true, true};
@@ -483,14 +507,66 @@ FuturesSetProperties analyzeFuturesSet(const Container<T, Args...>& futures)
         properties.allCanceled &= x.isCanceled();
         properties.someCanceled |= x.isCanceled();
 
-        properties.someFinishedNotCanceled |= x.isFinished() && !x.isCanceled();
+        properties.someCompleted |= futureCompleted(x);
     }
 
     properties.noneFinished = !properties.someFinished;
     properties.noneCanceled = !properties.someCanceled;
-    properties.allFinishedNotCanceled = properties.allFinished && properties.noneCanceled;
+    properties.allCompleted = properties.allFinished && properties.noneCanceled;
 
     return properties;
+}
+
+template<typename... Args>
+FuturesSetProperties analyzeFutures(const std::tuple<QFuture<Args>...>& futures)
+{
+    if constexpr (sizeof...(Args) == 0)
+        return {true, true, false, false, false, true, true, true};
+
+    auto properties = FuturesSetProperties::GetBoolFriendly();
+
+    std::apply([&](const auto&... xs){ ([&](const auto& x){
+            properties.allFinished &= x.isFinished();
+            properties.someFinished |= x.isFinished();
+
+            properties.allCanceled &= x.isCanceled();
+            properties.someCanceled |= x.isCanceled();
+
+            properties.someCompleted |= futureCompleted(x);
+        } (xs), ...);
+    }, futures);
+
+    properties.noneFinished = !properties.someFinished;
+    properties.noneCanceled = !properties.someCanceled;
+    properties.allCompleted = properties.allFinished && properties.noneCanceled;
+
+    return properties;
+}
+
+template<typename... Args>
+std::tuple<std::optional<Args>...> futuresToOptResults(const std::tuple<QFuture<Args>...>& futures)
+{
+    std::tuple<std::optional<Args>...> results;
+    FutureUtilsInternals::futuresToOptResultsTuple(futures, results);
+    return results;
+}
+
+template<template <typename T, typename... Args> class Container, typename T, typename... Args,
+         typename std::enable_if_t<!std::is_same_v<Container<QFuture<T>, Args...>, std::tuple<QFuture<T>, Args...>>>* = nullptr>
+Container<std::optional<T>, Args...> futuresToOptResults(const Container<QFuture<T>, Args...>& futures)
+{
+    Container<std::optional<T>, Args...> result;
+    auto it = std::back_inserter(result);
+
+    for (const auto& x : futures) {
+        if (futureCompleted(x)) {
+            *it = x.result();
+        } else {
+            *it = {};
+        }
+    }
+
+    return result;
 }
 
 } // namespace UtilsQt
