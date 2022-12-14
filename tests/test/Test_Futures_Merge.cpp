@@ -76,6 +76,23 @@ TEST(UtilsQt, Futures_Merge)
         ASSERT_TRUE(f1.isFinished());
         ASSERT_TRUE(f2.isFinished());
     }
+
+
+    { // std::tuple
+        auto f1 = createTimedFuture<int>(50, 123);
+        auto f2 = createTimedFuture<std::string>(5, "Test");
+        const auto futures = std::make_tuple(f1, f2);
+        auto r = mergeFuturesAll(nullptr, futures);
+
+        waitForFuture<QEventLoop>(r);
+
+        ASSERT_TRUE(r.isStarted());
+        ASSERT_FALSE(r.isCanceled());
+        ASSERT_TRUE(r.isFinished());
+
+        ASSERT_TRUE(f1.isFinished());
+        ASSERT_TRUE(f2.isFinished());
+    }
 }
 
 TEST(UtilsQt, Futures_Merge_Container)
