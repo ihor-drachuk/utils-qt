@@ -295,9 +295,9 @@ QFuture<void> mergeFuturesAll(QObject* context, const QFuture<Ts>&... futures)
 }
 
 template<typename... Ts>
-QFuture<void> mergeFuturesAny(QObject* context, const QFuture<Ts>&... futures)
+QFuture<void> mergeFuturesAll(QObject* context, const std::tuple<QFuture<Ts>...>& futures)
 {
-    auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, std::tie(futures...), Any);
+    auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, futures, All);
     return ctx->targetFuture();
 }
 
@@ -305,6 +305,20 @@ template<template <typename T, typename... Args> class Container, typename T, ty
 QFuture<void> mergeFuturesAll(QObject* context, const Container<T, Args...>& futures)
 {
     auto ctx = new FuturesMergeInternal::Context<Container<T, Args...>>(context, futures, All);
+    return ctx->targetFuture();
+}
+
+template<typename... Ts>
+QFuture<void> mergeFuturesAny(QObject* context, const QFuture<Ts>&... futures)
+{
+    auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, std::tie(futures...), Any);
+    return ctx->targetFuture();
+}
+
+template<typename... Ts>
+QFuture<void> mergeFuturesAny(QObject* context, const std::tuple<QFuture<Ts>...>& futures)
+{
+    auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, futures, Any);
     return ctx->targetFuture();
 }
 
