@@ -1,6 +1,8 @@
 #pragma once
 #include <type_traits>
 #include <optional>
+#include <utility>
+#include <tuple>
 #include <memory>
 #include <QObject>
 #include <QFuture>
@@ -74,6 +76,31 @@ void callCanceled(const Callable& callable, const QFuture<void>&)
 }
 
 } // namespace FutureUtilsInternals
+
+
+struct FuturesSetProperties
+{
+    bool allFinished {};
+    bool someFinished {};
+    bool noneFinished {};
+
+    bool allCanceled {};
+    bool someCanceled {};
+    bool noneCanceled {};
+
+    bool allFinishedNotCanceled {};
+    bool someFinishedNotCanceled {};
+
+    [[nodiscard]] static FuturesSetProperties GetBoolFriendly() {
+        return {true, false, true, true, false, true, true, false};
+    }
+
+    auto asTuple() const { return std::make_tuple(allFinished, someFinished, noneFinished,
+                                                  allCanceled, someCanceled, noneCanceled,
+                                                  allFinishedNotCanceled, someFinishedNotCanceled); }
+
+    bool operator== (const FuturesSetProperties& rhs) const { return asTuple() == rhs.asTuple(); }
+};
 
 
 template<typename T>
@@ -439,6 +466,31 @@ template<typename T>
 [[nodiscard]] Promise<T> createPromise()
 {
     return Promise<T>();
+}
+
+template<template <typename T, typename... Args> class Container, typename T, typename... Args>
+FuturesSetProperties analyzeFuturesSet(const Container<T, Args...>& futures)
+{
+    if (std::distance(futures.begin(), futures.end()) == 0)
+        return {true, true, false, false, false, true, true, true};
+
+    auto properties = FuturesSetProperties::GetBoolFriendly();
+
+    for (const auto& x : futures) {
+        properties.allFinished &= x.isFinished();
+        properties.someFinished |= x.isFinished();
+
+        properties.allCanceled &= x.isCanceled();
+        properties.someCanceled |= x.isCanceled();
+
+        properties.someFinishedNotCanceled |= x.isFinished() && !x.isCanceled();
+    }
+
+    properties.noneFinished = !properties.someFinished;
+    properties.noneCanceled = !properties.someCanceled;
+    properties.allFinishedNotCanceled = properties.allFinished && properties.noneCanceled;
+
+    return properties;
 }
 
 } // namespace UtilsQt
