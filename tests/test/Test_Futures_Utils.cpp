@@ -3,9 +3,28 @@
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QTimer>
+#include <QVector>
 
 using namespace UtilsQt;
 
+namespace {
+
+struct DataPack_FuturesSetProperties
+{
+    QVector<QFuture<void>> futures;
+    UtilsQt::FuturesSetProperties properties;
+};
+
+class UtilsQt_Futures_Regex : public testing::TestWithParam<DataPack_FuturesSetProperties>
+{ };
+
+QFuture<void> createStarted() {
+    QFutureInterface<void> fi;
+    fi.reportStarted();
+    return fi.future();
+}
+
+} // namespace
 
 TEST(UtilsQt, Futures_Utils_createFinished)
 {
@@ -283,3 +302,33 @@ TEST(UtilsQt, Futures_Utils_reference)
         ASSERT_TRUE(f.isCanceled());
     }
 }
+
+TEST_P(UtilsQt_Futures_Regex, Test)
+{
+    auto dataPack = GetParam();
+    auto result = UtilsQt::analyzeFuturesSet(dataPack.futures);
+    ASSERT_EQ(result, dataPack.properties);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    UtilsQt_Futures_Regex,
+    testing::Values(
+            DataPack_FuturesSetProperties{{createStarted(), createStarted(), createStarted()},
+                                          {false, false, true, false, false, true, false, false}},
+            DataPack_FuturesSetProperties{{createStarted(), createStarted(), UtilsQt::createReadyFuture()},
+                                          {false, true, false, false, false, true, false, true}},
+            DataPack_FuturesSetProperties{{UtilsQt::createReadyFuture(), UtilsQt::createReadyFuture(), UtilsQt::createReadyFuture()},
+                                          {true, true, false, false, false, true, true, true}},
+
+            DataPack_FuturesSetProperties{{createStarted(), UtilsQt::createCanceledFuture<void>()},
+                                          {false, true, false, false, true, false, false, false}},
+            DataPack_FuturesSetProperties{{UtilsQt::createCanceledFuture<void>(), UtilsQt::createCanceledFuture<void>()},
+                                          {true, true, false, true, true, false, false, false}},
+            DataPack_FuturesSetProperties{{createReadyFuture(), UtilsQt::createCanceledFuture<void>()},
+                                          {true, true, false, false, true, false, false, true}},
+
+            DataPack_FuturesSetProperties{{},
+                                          {true, true, false, false, false, true, true, true}}
+    )
+);
