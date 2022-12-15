@@ -287,17 +287,13 @@ private:
 
 } // namespace FuturesMergeInternal
 
+
+// mergeFuturesAll
+
 template<typename... Ts>
 QFuture<void> mergeFuturesAll(QObject* context, const QFuture<Ts>&... futures)
 {
     auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, std::tie(futures...), All);
-    return ctx->targetFuture();
-}
-
-template<typename... Ts>
-QFuture<void> mergeFuturesAll(QObject* context, const std::tuple<QFuture<Ts>...>& futures)
-{
-    auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, futures, All);
     return ctx->targetFuture();
 }
 
@@ -308,17 +304,22 @@ QFuture<void> mergeFuturesAll(QObject* context, const Container<T, Args...>& fut
     return ctx->targetFuture();
 }
 
+#ifdef UTILS_QT_COMPILER_CLANG
+template<typename... Ts>
+QFuture<void> mergeFuturesAll(QObject* context, const std::tuple<QFuture<Ts>...>& futures)
+{
+    auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, futures, All);
+    return ctx->targetFuture();
+}
+#endif // UTILS_QT_COMPILER_CLANG
+
+
+// mergeFuturesAny
+
 template<typename... Ts>
 QFuture<void> mergeFuturesAny(QObject* context, const QFuture<Ts>&... futures)
 {
     auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, std::tie(futures...), Any);
-    return ctx->targetFuture();
-}
-
-template<typename... Ts>
-QFuture<void> mergeFuturesAny(QObject* context, const std::tuple<QFuture<Ts>...>& futures)
-{
-    auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, futures, Any);
     return ctx->targetFuture();
 }
 
@@ -328,5 +329,14 @@ QFuture<void> mergeFuturesAny(QObject* context, const Container<T, Args...>& fut
     auto ctx = new FuturesMergeInternal::Context<Container<T, Args...>>(context, futures, Any);
     return ctx->targetFuture();
 }
+
+#ifdef UTILS_QT_COMPILER_CLANG
+template<typename... Ts>
+QFuture<void> mergeFuturesAny(QObject* context, const std::tuple<QFuture<Ts>...>& futures)
+{
+    auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, futures, Any);
+    return ctx->targetFuture();
+}
+#endif // #ifdef UTILS_QT_COMPILER_CLANG
 
 } // namespace UtilsQt

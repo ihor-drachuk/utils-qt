@@ -33,30 +33,27 @@ endif()
 # --- System detection ---
 if (WIN32)
     set(UTILS_QT_OS_WIN TRUE)
+    target_compile_definitions(utils-qt PUBLIC UTILS_QT_OS_WIN=1)
 endif()
 
 if(UNIX AND NOT APPLE)
     set(UTILS_QT_OS_LINUX TRUE)
+    target_compile_definitions(utils-qt PUBLIC UTILS_QT_OS_LINUX=1)
 endif()
 
 if(APPLE)
     set(UTILS_QT_OS_MACOS TRUE)
+    target_compile_definitions(utils-qt PUBLIC UTILS_QT_OS_MACOS=1)
 endif()
 
 if (MSVC)
     set(UTILS_QT_COMPILER_MSVC TRUE)
+    target_compile_definitions(utils-qt PUBLIC UTILS_QT_COMPILER_MSVC=1)
 endif()
 
-if (UTILS_QT_OS_WIN)
-    target_compile_definitions(utils-qt PUBLIC UTILS_QT_OS_WIN=1)
-endif()
-
-if (UTILS_QT_OS_MACOS)
-    target_compile_definitions(utils-qt PUBLIC UTILS_QT_OS_MACOS=1)
-endif()
-
-if (UTILS_QT_OS_LINUX)
-    target_compile_definitions(utils-qt PUBLIC UTILS_QT_OS_LINUX=1)
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(UTILS_QT_COMPILER_CLANG TRUE)
+    target_compile_definitions(utils-qt PUBLIC UTILS_QT_COMPILER_CLANG=1)
 endif()
 # --- ---
 
