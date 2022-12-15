@@ -148,20 +148,46 @@ QSize QmlUtils::imageSize(const QString& fileName) const
 
 QColor QmlUtils::colorMakeAccent(const QColor& color, double factor) const
 {
-    const auto hsla = color.toHsl();
+    assert(factor >= 0.0 && factor <= 1.0);
 
-    if (hsla.lightnessF() > 0.3) {
-        const auto rgba = color.toRgb();
-        return QColor::fromRgbF(rgba.redF(), rgba.greenF(), rgba.blueF(), rgba.alphaF() * factor);
+    const auto hsva = color.toHsv();
+    const double alphaAccentRange = (1.0 - color.alphaF());
+    const double alpha2 = color.alphaF() + (alphaAccentRange * factor);
+
+    if (hsva.alphaF() <= 0.5) {
+        // Accent via less transparency
+        return colorChangeAlpha(color, color.alphaF() + 0.5 * factor);
+
+    } else if (hsva.valueF() <= 0.5) {
+        // Accent via value (lighter) + less transparency
+        return QColor::fromHsvF(hsva.hsvHueF(), hsva.hsvSaturationF(), hsva.valueF() + 0.5 * factor, alpha2);
+
+    } else if (hsva.hsvSaturationF() <= 0.5) {
+        // Accent via saturation + less transparency
+        return QColor::fromHsvF(hsva.hsvHueF(), hsva.hsvSaturationF() + 0.5 * factor, hsva.valueF(), alpha2);
+
     } else {
-        return QColor::fromHslF(hsla.hslHueF(), hsla.hslSaturationF(), hsla.lightnessF() + (factor - 1.0) / 1.5, hsla.alphaF());
+        // Accent via less saturation (could look lighter) + less transparency
+        return QColor::fromHsvF(hsva.hsvHueF(), hsva.hsvSaturationF() - 0.5 * factor, hsva.valueF(), alpha2);
     }
 }
 
 QColor QmlUtils::colorChangeAlpha(const QColor& color, double alpha) const
 {
-    const auto rgba = color.toRgb();
-    return QColor::fromRgbF(rgba.redF(), rgba.greenF(), rgba.blueF(), alpha);
+    assert(color.spec() != QColor::Spec::Invalid);
+
+    switch (color.spec()) {
+        case QColor::Spec::Invalid: assert(!"Color spec is 'invalid'!"); return {};
+        case QColor::Spec::Rgb:  return QColor::fromRgbF(color.redF(),    color.greenF(),         color.blueF(),      alpha);
+        case QColor::Spec::Hsv:  return QColor::fromHsvF(color.hsvHueF(), color.hsvSaturationF(), color.valueF(),     alpha);
+        case QColor::Spec::Cmyk: return QColor::fromCmykF(color.cyanF(),  color.magentaF(),       color.yellowF(),    color.blackF(), alpha);
+        case QColor::Spec::Hsl:  return QColor::fromHslF(color.hslHueF(), color.hslSaturationF(), color.lightnessF(), alpha);
+        case QColor::Spec::ExtendedRgb: {
+            auto c = color.rgba64();
+            c.setAlpha(std::numeric_limits<decltype(c.alpha())>::max() * alpha);
+            return QColor::fromRgba64(c);
+        }
+    }
 }
 
 QString QmlUtils::normalizePath(const QString& str) const
@@ -223,6 +249,11 @@ bool QmlUtils::isInteger(const QVariant& value) const
 bool QmlUtils::isNumber(const QVariant& value) const
 {
     return isFloat(value) || isInteger(value);
+}
+
+bool QmlUtils::doublesEqual(double a, double b, double accuracy) const
+{
+    return std::abs(a - b) <= accuracy;
 }
 
 bool QmlUtils::compare(const QVariant& value1, const QVariant& value2) const

@@ -59,6 +59,7 @@ public:
     Q_INVOKABLE bool isFloat(const QVariant& value) const;
     Q_INVOKABLE bool isInteger(const QVariant& value) const;
     Q_INVOKABLE bool isNumber(const QVariant& value) const;
+    Q_INVOKABLE bool doublesEqual(double a, double b, double accuracy) const;
 
     // Values
     Q_INVOKABLE bool isNull(const QVariant& value) const;

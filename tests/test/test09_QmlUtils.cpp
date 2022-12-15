@@ -1,8 +1,30 @@
 #include <gtest/gtest.h>
 
+#include <QVector>
 #include <UtilsQt/Qml-Cpp/QmlUtils.h>
 
 namespace {
+
+QVector<double> extractColorComponents(const QColor& color)
+{
+    switch (color.spec()) {
+        case QColor::Spec::Invalid: return {};
+        case QColor::Spec::Rgb:     return {color.redF(),    color.greenF(),         color.blueF(),      color.alphaF()};
+        case QColor::Spec::Hsv:     return {color.hsvHueF(), color.hsvSaturationF(), color.valueF(),     color.alphaF()};
+        case QColor::Spec::Cmyk:    return {color.cyanF(),   color.magentaF(),       color.yellowF(),    color.blackF(),   color.alphaF()};
+        case QColor::Spec::Hsl:     return {color.hslHueF(), color.hslSaturationF(), color.lightnessF(), color.alphaF()};
+        case QColor::Spec::ExtendedRgb: {
+            const auto rgb64 = color.rgba64();
+            const double ui16max = std::numeric_limits<decltype(rgb64.alpha())>::max();
+            return {
+                (double)rgb64.red()   / ui16max,
+                (double)rgb64.green() / ui16max,
+                (double)rgb64.blue()  / ui16max,
+                (double)rgb64.alpha() / ui16max,
+            };
+        }
+    }
+}
 
 struct DataPack_Regex
 {
@@ -19,21 +41,29 @@ struct DataPack_RegexGroups
     QStringList result;
 };
 
-struct DataPack_ColorAccent
+struct DataPack_ColorMakeAccent
 {
     QColor color;
     double factor {};
+};
+
+struct DataPack_ColorChangeAlpha
+{
+    QColor color;
+    double newAlpha {};
 };
 
 
 class QmlUtils_Regex : public testing::TestWithParam<DataPack_Regex>
 { };
 
-
 class QmlUtils_RegexGroups : public testing::TestWithParam<DataPack_RegexGroups>
 { };
 
-class QmlUtils_ColorAccent : public testing::TestWithParam<DataPack_ColorAccent>
+class QmlUtils_ColorMakeAccent : public testing::TestWithParam<DataPack_ColorMakeAccent>
+{ };
+
+class QmlUtils_ColorChangeAlpha : public testing::TestWithParam<DataPack_ColorChangeAlpha>
 { };
 
 
@@ -53,12 +83,27 @@ TEST_P(QmlUtils_RegexGroups, Test)
 }
 
 
-TEST_P(QmlUtils_ColorAccent, Test)
+TEST_P(QmlUtils_ColorMakeAccent, Test)
 {
     auto dataPack = GetParam();
     const auto color1 = dataPack.color;
     const auto color2 = QmlUtils::instance().colorMakeAccent(dataPack.color, dataPack.factor);
     ASSERT_NE(color1, color2);
+}
+
+TEST_P(QmlUtils_ColorChangeAlpha, Test)
+{
+    auto dataPack = GetParam();
+    const auto color1 = dataPack.color;
+    const auto color2 = QmlUtils::instance().colorChangeAlpha(dataPack.color, dataPack.newAlpha);
+    ASSERT_EQ(color1.spec(), color2.spec());
+    ASSERT_TRUE(QmlUtils::instance().doublesEqual(color2.alphaF(), dataPack.newAlpha, 0.0001));
+
+    auto colorComponents1 = extractColorComponents(color1);
+    auto colorComponents2 = extractColorComponents(color2);
+    colorComponents1.pop_back();
+    colorComponents2.pop_back();
+    ASSERT_EQ(colorComponents1, colorComponents2);
 }
 
 } // namespace
@@ -87,11 +132,23 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     Test,
-    QmlUtils_ColorAccent,
+    QmlUtils_ColorMakeAccent,
     testing::Values(
-        DataPack_ColorAccent{Qt::GlobalColor::red, 1.2},
-        DataPack_ColorAccent{QColor::fromRgbF(0.1, 1, 0.7, 0.5), 1.2},
-        DataPack_ColorAccent{QColor::fromRgbF(0.1, 0.1, 0.1, 0.5), 1.2},
-        DataPack_ColorAccent{QColor::fromRgbF(0.1, 0.1, 0.1, 0.1), 1.2}
+        DataPack_ColorMakeAccent{Qt::GlobalColor::red, 0.2},
+        DataPack_ColorMakeAccent{QColor::fromRgbF(0.1, 1.0, 0.7, 0.5), 0.5},
+        DataPack_ColorMakeAccent{QColor::fromRgbF(0.1, 0.1, 0.1, 0.5), 0.7},
+        DataPack_ColorMakeAccent{QColor::fromRgbF(0.1, 0.1, 0.1, 0.1), 1.0}
+    )
+);
+
+INSTANTIATE_TEST_SUITE_P(
+    Test,
+    QmlUtils_ColorChangeAlpha,
+    testing::Values(
+        DataPack_ColorChangeAlpha{Qt::GlobalColor::red, 0.2},
+        DataPack_ColorChangeAlpha{QColor::fromRgbF(0.1, 1.0, 0.7, 0.5), 0.11},
+        DataPack_ColorChangeAlpha{QColor::fromHsvF(0.1, 0.1, 0.1, 0.5), 0.12},
+        DataPack_ColorChangeAlpha{QColor::fromHslF(0.1, 0.1, 0.1, 0.1), 0.13},
+        DataPack_ColorChangeAlpha{QColor::fromCmykF(0.1, 0.2, 0.1, 0.1, 0.1), 0.14}
     )
 );
