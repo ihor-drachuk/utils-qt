@@ -1,0 +1,6 @@
+analyzer:
+  # Tests and gererated files need to be analysed
+  - --skip=.codechecker/skipcompile
+parse:
+  # Yet we don't want warnings that are in those files
+  - --skip=.codechecker/skipfile
