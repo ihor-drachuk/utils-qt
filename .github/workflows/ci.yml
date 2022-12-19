@@ -3,10 +3,7 @@ name: Build & test
 on:
   push:
     branches:
-      - master
-      - dev
-      - testing
-      - wip-testing
+      - '**'
   pull_request:
     types: [opened, edited, synchronize]
 
@@ -134,8 +131,19 @@ jobs:
        ctest --rerun-failed --output-on-failure --timeout 60 -C "${{matrix.build_type}}" --test-dir "${{github.workspace}}/build/tests"
 
   CodeChecker:
-    runs-on: [ubuntu-20.04]
+    runs-on: [ubuntu-22.04]
     steps:
+      - name: "Check out repository"
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Install Qt
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install qt*5-dev -y
+
       # Prepare a build
       - name: "Prepare build"
         run: |
