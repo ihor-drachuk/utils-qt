@@ -30,31 +30,32 @@ Geometry::~Geometry()
 {
 }
 
-QPolygonF Geometry::polygonScale(const QPolygonF& polygon, qreal factor) const
+QPolygonF Geometry::polygonScale(const QPolygonF& polygon, qreal xFactor, qreal yFactor) const
 {
     auto result = polygon;
-    polygonScaleRef(result, factor);
+    polygonScaleRef(result, xFactor, yFactor);
     return result;
 }
 
-QVector<QPolygonF> Geometry::polygonsScale(const QVector<QPolygonF>& polygons, qreal factor) const
+QVector<QPolygonF> Geometry::polygonsScale(const QVector<QPolygonF>& polygons, qreal xFactor, qreal yFactor) const
 {
     auto result = polygons;
-    polygonsScaleRef(result, factor);
+    polygonsScaleRef(result, xFactor, yFactor);
     return result;
 }
 
-void Geometry::polygonScaleRef(QPolygonF& polygon, qreal factor) const
+void Geometry::polygonScaleRef(QPolygonF& polygon, qreal xFactor, qreal yFactor) const
 {
-    for (auto& x : polygon)
-        x *= factor;
+    for (auto& p : polygon) {
+        p.rx() *= xFactor;
+        p.ry() *= yFactor;
+    }
 }
 
-void Geometry::polygonsScaleRef(QVector<QPolygonF>& polygons, qreal factor) const
+void Geometry::polygonsScaleRef(QVector<QPolygonF>& polygons, qreal xFactor, qreal yFactor) const
 {
     for (auto& polygon : polygons)
-        for (auto& x : polygon)
-            x *= factor;
+        polygonScaleRef(polygon, xFactor, yFactor);
 }
 
 bool Geometry::isPolygonRectangular(const QPolygonF& polygon) const
