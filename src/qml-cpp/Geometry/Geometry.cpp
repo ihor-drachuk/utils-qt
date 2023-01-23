@@ -21,6 +21,14 @@ void Geometry::registerTypes()
     });
 }
 
+Geometry::Geometry()
+{
+    createImpl();
+}
+
+Geometry::~Geometry()
+{
+}
 
 QPolygonF Geometry::polygonScale(const QPolygonF& polygon, qreal factor) const
 {
@@ -49,11 +57,15 @@ void Geometry::polygonsScaleRef(QVector<QPolygonF>& polygons, qreal factor) cons
             x *= factor;
 }
 
-Geometry::Geometry()
+bool Geometry::isPolygonRectangular(const QPolygonF& polygon) const
 {
-    createImpl();
-}
-
-Geometry::~Geometry()
-{
+    double area = 0.0;
+    int j = polygon.size() - 1;
+    for (int i = 0; i < polygon.size(); i++) {
+        area += (polygon[j].x() + polygon[i].x()) * (polygon[j].y() - polygon[i].y());
+        j = i;
+    }
+    auto polygonArea = abs(area / 2.0);
+    auto boundingRectArea = polygon.boundingRect().width() * polygon.boundingRect().height();
+    return qFuzzyCompare(polygonArea, boundingRectArea);
 }
