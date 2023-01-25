@@ -123,11 +123,6 @@ public:
           m_context(context),
           m_connectionType(connectionType)
     {
-        UtilsQt::onFinished(future, context, [ctx = getContext()](const std::optional<T>& result) {
-            if (!result) {
-                ctx->errorOccured_Internal();
-            }
-        }, connectionType);
     }
 
     FutureResult(const QFuture<T>& future, QObject* context, Qt::ConnectionType connectionType, const ContextPtr& internalContext)
@@ -154,15 +149,21 @@ public:
                    (const std::optional<T>& result) {
             auto interface2 = interface;
 
-            if (result) {
-                assert(!internalContext->errorFlag);
+            if (!internalContext->errorFlag) {
                 QFuture<RetFutureType> nextFuture;
 
                 try {
                     nextFuture = callable(result);
                 } catch (...) {
+                    // Just notify about error
+                    internalContext->errorFlag = true;
+
                     nextFuture = UtilsQt::createCanceledFuture<RetFutureType>();
                     internalContext->ex = std::current_exception();
+                    internalContext->errorOccured();
+                    interface2.reportCanceled();
+                    interface2.reportFinished();
+                    return;
                 }
 
                 UtilsQt::onFinished(nextFuture, m_context, [interface, internalContext](const std::optional<RetFutureType>& result) {
@@ -177,20 +178,6 @@ public:
                     }
                 }, m_connectionType);
             } else {
-                if (!internalContext->errorFlag) {
-                    // Just notify about error
-                    internalContext->errorFlag = true;
-                    try {
-                        auto r = callable(result);
-                        assert(r.isCanceled());
-                    } catch (...) {
-                        assert(!internalContext->ex);
-                        internalContext->ex = std::current_exception();
-                    }
-
-                    internalContext->errorOccured();
-                }
-
                 interface2.reportCanceled();
                 interface2.reportFinished();
             }
@@ -207,24 +194,11 @@ public:
         getContext()->needInternalHandler = false;
 
         UtilsQt::onFinished(m_future, m_context, [callable, internalContext = getContext()](const std::optional<T>& result) {
-            if (result) {
-                assert(!internalContext->errorFlag);
+            if (!internalContext->errorFlag) {
                 try {
                     callable(result);
                 } catch (...) {
                     internalContext->ex = std::current_exception();
-                    internalContext->errorOccured();
-                }
-            } else {
-                if (!internalContext->errorFlag) {
-                    // Just notify about error
-                    internalContext->errorFlag = true;
-                    try {
-                        callable(result);
-                    } catch (...) {
-                        internalContext->ex = std::current_exception();
-                    }
-
                     internalContext->errorOccured();
                 }
             }
