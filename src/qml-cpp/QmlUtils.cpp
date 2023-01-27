@@ -10,6 +10,7 @@
 #include <QRegularExpression>
 #include <QGuiApplication>
 #include <QUrl>
+#include <QClipboard>
 #ifdef UTILS_QT_OS_WIN
 #include <Windows.h>
 #endif
@@ -81,6 +82,18 @@ bool QmlUtils::eventFilter(QObject* /*watched*/, QEvent* event)
     }
 
     return false;
+}
+
+void QmlUtils::clipboardSetText(const QString& text) const
+{
+    assert(qApp);
+    qApp->clipboard()->setText(text);
+}
+
+QString QmlUtils::clipboardGetText() const
+{
+    assert(qApp);
+    return qApp->clipboard()->text();
 }
 
 PathDetails QmlUtils::analyzePath(const QString& str) const
