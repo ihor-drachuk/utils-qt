@@ -27,13 +27,17 @@ public:
     static QmlUtils& instance();
     static void registerTypes();
 
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
 #ifdef UTILS_QT_OS_WIN
     Q_PROPERTY(bool displayRequired READ displayRequired WRITE setDisplayRequired NOTIFY displayRequiredChanged)
     Q_PROPERTY(bool systemRequired READ systemRequired WRITE setSystemRequired NOTIFY systemRequiredChanged)
 #endif
     Q_PROPERTY(int keyModifiers READ keyModifiers /*WRITE setKeyModifiers*/ NOTIFY keyModifiersChanged)
 
-    bool eventFilter(QObject* watched, QEvent* event) override;
+    // Clipboard
+    Q_INVOKABLE void clipboardSetText(const QString& text) const;
+    Q_INVOKABLE QString clipboardGetText() const;
 
     // Path
     Q_INVOKABLE PathDetails analyzePath(const QString& str) const;
