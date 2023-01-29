@@ -9,6 +9,8 @@
 #include <utility>
 #include <memory>
 
+#include <utils-cpp/tuple_utils.h>
+
 namespace UtilsQt {
 
 enum CancellationBehavior
@@ -24,12 +26,6 @@ enum TriggerMode
 };
 
 namespace FuturesMergeInternal {
-
-template <typename Tuple1, typename Tuple2, typename F, std::size_t... I>
-void for_each_impl(const Tuple1& tuple1, Tuple2&& tuple2, F&& f, std::index_sequence<I...>)
-{
-    (f(std::get<I>(tuple1), std::get<I>(tuple2)), ...);
-}
 
 struct Status
 {
@@ -69,7 +65,7 @@ struct FunctionsT<std::tuple<QFuture<Ts>...>>
     template<typename Pred>
     static void setupWatchers(const C& c, Watchers& watchers, const Pred& pred)
     {
-        for_each_impl(c, watchers, pred, std::make_index_sequence<sizeof...(Ts)>());
+        for_each_pair(pred, c, watchers);
     }
 
     static void cancelSources(Watchers& watchers)
@@ -127,7 +123,7 @@ struct FunctionsC<Container<T, Args...>>
 
         for (const auto& x : c) {
             auto watcher = std::make_shared<QFutureWatcher<PT>>();
-            pred(x, *watcher);
+            pred(x, *watcher, nullptr);
             inserter++ = std::move(watcher);
         }
     }
@@ -196,7 +192,7 @@ public:
             return;
         }
 
-        auto setupItem = [this](const auto& future, auto& watcher){
+        auto setupItem = [this](const auto& future, auto& watcher, auto){
             QObject::connect(&watcher, &QFutureWatcherBase::started,  this, &Context<T>::onStarted);
             QObject::connect(&watcher, &QFutureWatcherBase::canceled, this, &Context<T>::onCanceled);
             QObject::connect(&watcher, &QFutureWatcherBase::finished, this, &Context<T>::onFinished);

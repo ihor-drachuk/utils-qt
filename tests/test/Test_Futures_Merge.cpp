@@ -12,6 +12,12 @@ TEST(UtilsQt, Futures_Merge)
 {
     {
         auto f1 = createReadyFuture<int>(10);
+        auto f2 = createReadyFuture();
+        mergeFuturesAll(nullptr, f1, f2);
+    }
+
+    {
+        auto f1 = createReadyFuture<int>(10);
         auto r = mergeFuturesAll<int>(nullptr, f1);
 
         ASSERT_TRUE(r.isStarted());
