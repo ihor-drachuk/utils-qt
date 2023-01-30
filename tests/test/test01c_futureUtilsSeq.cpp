@@ -64,12 +64,12 @@ TEST(UtilsQt, FutureUtilsSeqTest_cancel_getFuture)
     ASSERT_EQ(result1.result(), 170);
     ASSERT_EQ(result2.result(), "171");
 
-    ASSERT_TRUE(errorFlag);
+    ASSERT_FALSE(errorFlag);
 
     ASSERT_EQ(visited[0], true);
     ASSERT_EQ(visited[1], true);
     ASSERT_EQ(visited[2], true);
-    ASSERT_EQ(visited[3], true);
+    ASSERT_EQ(visited[3], false);
 
     ASSERT_EQ(valueProvided[0], true);
     ASSERT_EQ(valueProvided[1], true);
