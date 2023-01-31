@@ -354,11 +354,13 @@ TEST(UtilsQt, Futures_Convert_CancelSource)
 
 TEST(UtilsQt, Futures_Convert_NoHint)
 {
-    convertFuture(nullptr, QFuture<void>(), []() {
+    auto f1 = convertFuture(nullptr, QFuture<void>(), []() {
         return std::to_string(12);
     });
 
-    convertFuture(nullptr, QFuture<int>(), [](int i) {
+    auto f2 = convertFuture(nullptr, QFuture<int>(), [](int i) {
         return std::to_string(i);
     });
+
+    (void)f1, (void)f2;
 }

@@ -32,7 +32,6 @@ TEST(UtilsQt, FutureUtilsSeqTest_basic)
 TEST(UtilsQt, FutureUtilsSeqTest_cancel_getFuture)
 {
     QObject ctx;
-    float result = 0;
     bool errorFlag = false;
 
     bool visited[4] = {false};
@@ -50,7 +49,18 @@ TEST(UtilsQt, FutureUtilsSeqTest_cancel_getFuture)
          .then([&](const std::optional<std::string>& value) -> QFuture<float> { visited[1] = true; valueProvided[1] = value.has_value(); return createCanceledFuture<float>(); })
          .getFuture(result3)
          .then([&](const std::optional<float>& value) { visited[2] = true; valueProvided[2] = value.has_value(); })
-         .onError([&](std::exception_ptr) { visited[3] = true; errorFlag = true; })
+         .onError([&](std::exception_ptr ex)
+         {
+            visited[3] = true;
+            errorFlag = true;
+            try {
+                if (ex)
+                    std::rethrow_exception(ex);
+            } catch (const std::exception& e) {
+                std::cerr << "Caught exception: " << e.what() << std::endl;
+                std::cerr.flush();
+            }
+         })
          .readyPromise();
 
     waitForFuture<QEventLoop>(done);
