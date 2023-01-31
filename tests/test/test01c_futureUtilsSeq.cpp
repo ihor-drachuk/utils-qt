@@ -49,7 +49,7 @@ TEST(UtilsQt, FutureUtilsSeqTest_cancel_getFuture)
          .getFuture(result2)
          .then([&](const std::optional<std::string>& value) -> QFuture<float> { visited[1] = true; valueProvided[1] = value.has_value(); return createCanceledFuture<float>(); })
          .getFuture(result3)
-         .then([&](const std::optional<float>& value) { visited[2] = true; valueProvided[2] = value.has_value(); result = value.value(); })
+         .then([&](const std::optional<float>& value) { visited[2] = true; valueProvided[2] = value.has_value(); })
          .onError([&](std::exception_ptr) { visited[3] = true; errorFlag = true; })
          .readyPromise();
 
