@@ -186,10 +186,10 @@ private:
 
 } // namespace FutureConverterInternal
 
-template<typename Source, typename Target = nullptr_t, typename Converter,
+template<typename Source, typename Target = std::nullptr_t, typename Converter,
          typename FixedConverter = decltype (FutureConverterInternal::fixConverter(std::declval<Converter>())),
          typename SelectedTarget = std::conditional_t<
-             std::is_same_v<Target, nullptr_t>,
+             std::is_same_v<Target, std::nullptr_t>,
              typename FutureConverterInternal::TargetTypeExtractor<FixedConverter>::Type,
              Target>>
 QFuture<SelectedTarget> convertFuture(QObject* context,

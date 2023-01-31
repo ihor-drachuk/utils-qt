@@ -7,6 +7,49 @@
 
 using namespace UtilsQt;
 
+TEST(UtilsQt, Futures_Merge_TypesTest)
+{
+    QFuture<int> f1;
+    QFuture<void> f2;
+    QFuture<std::string> f3;
+    auto fAll = UtilsQt::mergeFuturesAll(nullptr, f1, f2, f3);
+    constexpr bool isValid1 = std::is_same_v<
+                              decltype (fAll),
+                              QFuture<std::tuple< std::optional<int>, bool, std::optional<std::string> >>>;
+    ASSERT_TRUE(isValid1);
+
+    auto fAny = UtilsQt::mergeFuturesAll(nullptr, f1, f2, f3);
+    constexpr bool isValid2 = std::is_same_v<
+                              decltype (fAll),
+                              QFuture<std::tuple< std::optional<int>, bool, std::optional<std::string> >>>;
+    ASSERT_TRUE(isValid2);
+
+    QList<QFuture<int>> futuresList;
+    auto fAllContainer = UtilsQt::mergeFuturesAll(nullptr, futuresList);
+    constexpr bool isValid3 = std::is_same_v<
+                              decltype (fAllContainer),
+                              QFuture< QList<std::optional<int>> >>;
+    ASSERT_TRUE(isValid3);
+
+    auto fAnyContainer = UtilsQt::mergeFuturesAny(nullptr, futuresList);
+    constexpr bool isValid4 = std::is_same_v<
+                              decltype (fAnyContainer),
+                              QFuture< QList<std::optional<int>> >>;
+    ASSERT_TRUE(isValid4);
+
+    QList<QFuture<void>> futuresListVoid;
+    auto fAllContainerVoid = UtilsQt::mergeFuturesAll(nullptr, futuresListVoid);
+    constexpr bool isValid5 = std::is_same_v<
+                              decltype (fAllContainerVoid),
+                              QFuture< QList<bool> >>;
+    ASSERT_TRUE(isValid5);
+
+    auto fAnyContainerVoid = UtilsQt::mergeFuturesAny(nullptr, futuresListVoid);
+    constexpr bool isValid6 = std::is_same_v<
+                              decltype (fAnyContainerVoid),
+                              QFuture< QList<bool> >>;
+    ASSERT_TRUE(isValid6);
+}
 
 TEST(UtilsQt, Futures_Merge)
 {
@@ -145,6 +188,7 @@ TEST(UtilsQt, Futures_Merge_TargetCancellation)
 
         result.cancel();
         QEventLoop().processEvents();
+        QEventLoop().processEvents();
 
         ASSERT_TRUE(f1.isCanceled());
         ASSERT_TRUE(f2.isCanceled());
@@ -164,9 +208,37 @@ TEST(UtilsQt, Futures_Merge_TargetCancellation)
 
         result.cancel();
         QEventLoop().processEvents();
+        QEventLoop().processEvents();
 
         ASSERT_TRUE(f1.isCanceled());
         ASSERT_TRUE(f2.isCanceled());
         ASSERT_TRUE(result.isCanceled());
+    }
+}
+
+
+TEST(UtilsQt, Futures_Merge_TestResults)
+{
+    {
+        auto f1 = createTimedFuture<int>(50, 123);
+        auto f2 = createTimedFuture<std::string>(100, "Test std::string");
+        auto f3 = createTimedCanceledFuture<float>(10);
+        auto f4 = createTimedFuture(50); // void
+        auto f5 = createReadyFuture(QString("Test QString"));
+        auto futureResult = UtilsQt::mergeFuturesAll(nullptr,
+                                                     CancellationBehavior::IgnoreSingleCancellation,
+                                                     std::make_tuple(f1, f2, f3, f4, f5));
+        UtilsQt::waitForFuture<QEventLoop>(futureResult);
+
+        ASSERT_TRUE(futureResult.isFinished());
+        ASSERT_FALSE(futureResult.isCanceled());
+        const auto correctResult = std::tuple<
+            std::optional<int>,
+            std::optional<std::string>,
+            std::optional<float>,
+            bool, // `void` replaced by `bool`
+            std::optional<QString>>{123, "Test std::string", std::optional<float>(), true, "Test QString"};
+
+        ASSERT_EQ(futureResult.result(), correctResult);
     }
 }
