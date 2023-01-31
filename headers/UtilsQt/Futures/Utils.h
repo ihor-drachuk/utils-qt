@@ -8,6 +8,8 @@
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QTimer>
+
+#include <utils-cpp/tuple_utils.h>
 #include <UtilsQt/invoke_method.h>
 
 /*
@@ -75,22 +77,21 @@ void callCanceled(const Callable& callable, const QFuture<void>&)
     const_cast<Callable&>(callable)();
 }
 
-template<size_t I = 0, typename... Args>
-void futuresToOptResultsTuple(const std::tuple<QFuture<Args>...>& futures, std::tuple<std::optional<Args>...>& results)
+template<typename T>
+struct ResultContentTypeImpl;
+
+template<typename T0, typename... Ts>
+struct ResultContentTypeImpl<std::tuple<T0, Ts...>>
 {
-    if constexpr (I < sizeof...(Args)) {
-        const auto& f = std::get<I>(futures);
-        auto& result = std::get<I>(results);
+    using CurrentType = std::conditional_t<std::is_same_v<T0, void>, bool, std::optional<T0>>;
+    using Type = typename tuple_cat_type<std::tuple<CurrentType>, typename ResultContentTypeImpl<std::tuple<Ts...>>::Type>::type;
+};
 
-        if (f.isFinished() && !f.isCanceled()) {
-            result = f.result();
-        } else {
-            result = {};
-        }
-
-        futuresToOptResultsTuple<I+1, Args...>(futures, results);
-    }
-}
+template<>
+struct ResultContentTypeImpl<std::tuple<>>
+{
+    using Type = std::tuple<>;
+};
 
 } // namespace FutureUtilsInternals
 
@@ -543,28 +544,47 @@ FuturesSetProperties analyzeFutures(const std::tuple<QFuture<Args>...>& futures)
     return properties;
 }
 
-template<typename... Args>
-std::tuple<std::optional<Args>...> futuresToOptResults(const std::tuple<QFuture<Args>...>& futures)
+template<typename... Ts>
+struct ResultContentType : FutureUtilsInternals::ResultContentTypeImpl<std::tuple<Ts...>> {};
+
+template<typename... Ts,
+         typename ResultContent = typename ResultContentType<Ts...>::Type>
+ResultContent futuresToOptResults(const std::tuple<QFuture<Ts>...>& futures)
 {
-    std::tuple<std::optional<Args>...> results;
-    FutureUtilsInternals::futuresToOptResultsTuple(futures, results);
-    return results;
+    ResultContent resultsTuple;
+
+    for_each_pair([](const auto& f, auto& r, const auto&){
+        using ResultBaseType = std::remove_cv_t<std::remove_reference_t<decltype (r)>>;
+        if constexpr (std::is_same_v<ResultBaseType, bool>) {
+            r = futureCompleted(f);
+        } else {
+            if (futureCompleted(f)) {
+                r = f.result();
+            }
+        }
+    }, futures, resultsTuple);
+
+    return resultsTuple;
 }
 
 template<template <typename T, typename... Args> class Container, typename T, typename... Args,
+         typename ItemType = std::conditional_t<std::is_same_v<T, void>, bool, std::optional<T>>,
          typename std::enable_if_t<!std::is_same_v<Container<QFuture<T>, Args...>, std::tuple<QFuture<T>, Args...>>>* = nullptr>
-Container<std::optional<T>, Args...> futuresToOptResults(const Container<QFuture<T>, Args...>& futures)
+Container<ItemType> futuresToOptResults(const Container<QFuture<T>, Args...>& futures)
 {
-    Container<std::optional<T>, Args...> result;
+    Container<ItemType> result;
     auto it = std::back_inserter(result);
 
-    for (const auto& x : futures) {
-        if (futureCompleted(x)) {
-            *it = x.result();
+    const auto resultGetter = [](const auto& f){
+        if constexpr (std::is_same_v<ItemType, bool>) {
+            return futureCompleted(f);
         } else {
-            *it = {};
+            return futureCompleted(f) ? f.result() : ItemType();
         }
-    }
+    };
+
+    for (const auto& x : futures)
+        *it = resultGetter(x);
 
     return result;
 }
