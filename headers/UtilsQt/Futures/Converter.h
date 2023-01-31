@@ -8,6 +8,7 @@
 #include <QFutureWatcher>
 #include <QPair>
 #include <utils-cpp/pimpl.h>
+#include <utils-cpp/function_traits.h>
 
 /*            Reminder
   -------------------------------
@@ -40,6 +41,40 @@
 namespace UtilsQt {
 namespace FutureConverterInternal {
 
+template<typename T>
+struct TargetTypeExtractor
+{
+    using Type = typename function_traits<T>::return_type::value_type;
+};
+
+template<typename>
+struct IsOptional : std::false_type {};
+
+template<typename T>
+struct IsOptional<std::optional<T>> : std::true_type {};
+
+template<typename T, typename R, typename... Args>
+auto fixConverterImpl(const T& func, std::function<R(Args...)>*)
+{
+    if constexpr (IsOptional<R>::value) {
+        return func;
+    } else {
+        return [func](Args... args){
+            if constexpr (sizeof...(Args)) {
+                return std::optional(func(std::forward<Args...>(args...)));
+            } else {
+                return std::optional(func());
+            }
+        };
+    }
+}
+
+template<typename T>
+auto fixConverter(const T& func)
+{
+    using StdFunc = decltype(std::function(func));
+    return fixConverterImpl(func, static_cast<StdFunc*>(nullptr));
+}
 
 template <typename SrcFutureType, typename Converter, typename DstFutureType>
 bool convert(const QFuture<SrcFutureType>& srcFuture, const Converter& converter, QFutureInterface<DstFutureType>& interface)
@@ -151,13 +186,17 @@ private:
 
 } // namespace FutureConverterInternal
 
-
-template<typename Source, typename Target, typename Converter>
-QFuture<Target> convertFuture(QObject* context,
+template<typename Source, typename Target = nullptr_t, typename Converter,
+         typename FixedConverter = decltype (FutureConverterInternal::fixConverter(std::declval<Converter>())),
+         typename SelectedTarget = std::conditional_t<
+             std::is_same_v<Target, nullptr_t>,
+             typename FutureConverterInternal::TargetTypeExtractor<FixedConverter>::Type,
+             Target>>
+QFuture<SelectedTarget> convertFuture(QObject* context,
                               const QFuture<Source>& srcFuture,
                               const Converter& converter)
 {
-    auto ctx = new FutureConverterInternal::Context<Source, Target>(context, srcFuture, converter);
+    auto ctx = new FutureConverterInternal::Context<Source, SelectedTarget>(context, srcFuture, FutureConverterInternal::fixConverter(converter));
     return ctx->targetFuture();
 }
 
