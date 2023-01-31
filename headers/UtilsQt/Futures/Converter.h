@@ -192,7 +192,7 @@ template<typename Source, typename Target = std::nullptr_t, typename Converter,
              std::is_same_v<Target, std::nullptr_t>,
              typename FutureConverterInternal::TargetTypeExtractor<FixedConverter>::Type,
              Target>>
-QFuture<SelectedTarget> convertFuture(QObject* context,
+[[nodiscard]] QFuture<SelectedTarget> convertFuture(QObject* context,
                               const QFuture<Source>& srcFuture,
                               const Converter& converter)
 {
