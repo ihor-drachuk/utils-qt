@@ -351,3 +351,14 @@ TEST(UtilsQt, Futures_Convert_CancelSource)
         ASSERT_TRUE(fi.isCanceled());
     }
 }
+
+TEST(UtilsQt, Futures_Convert_NoHint)
+{
+    convertFuture(nullptr, QFuture<void>(), []() {
+        return std::to_string(12);
+    });
+
+    convertFuture(nullptr, QFuture<int>(), [](int i) {
+        return std::to_string(i);
+    });
+}
