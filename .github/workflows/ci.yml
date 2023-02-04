@@ -116,6 +116,7 @@ jobs:
       if: ${{ matrix.use_qt == 'yes' && matrix.os == 'ubuntu-22.04' }}
       shell: bash
       run: |
+       sudo apt-get update
        sudo apt-get install qt*5-dev cmake -y
 
     - uses: actions/checkout@v2
