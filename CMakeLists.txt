@@ -11,8 +11,10 @@ if (NOT TARGET utils-cpp)
     add_subdirectory(3rd-party/utils-cpp)
 endif()
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Quick REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Quick)
+find_package(Qt6 COMPONENTS Core Quick QUIET)
+if (NOT Qt6_FOUND)
+    find_package(Qt5 5.15 REQUIRED COMPONENTS Core Quick)
+endif()
 
 FILE(GLOB_RECURSE SOURCES src/*.cpp src/*.qrc src/*.h headers/*.h)
 
@@ -62,7 +64,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 # --- ---
 
-target_link_libraries(utils-qt PUBLIC Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick utils-cpp)
+target_link_libraries(utils-qt PUBLIC Qt::Core Qt::Quick utils-cpp)
 target_include_directories(utils-qt PUBLIC headers)
 
 if (UTILS_QT_NO_GUI_TESTS)
