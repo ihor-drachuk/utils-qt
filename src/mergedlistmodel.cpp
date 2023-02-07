@@ -189,13 +189,13 @@ bool MergedListModel::setData(const QModelIndex& index, const QVariant& value, i
         return false;
 
     } else {
-        auto foundInModel1 = UtilsCpp::find_in_map(impl().models[0].roleRemapToSrc, role);
-        auto foundInModel2 = UtilsCpp::find_in_map(impl().models[1].roleRemapToSrc, role);
+        auto foundInModel1 = utils_cpp::find_in_map(impl().models[0].roleRemapToSrc, role);
+        auto foundInModel2 = utils_cpp::find_in_map(impl().models[1].roleRemapToSrc, role);
         assert(foundInModel1.has_value() ^ foundInModel2.has_value());
         auto modelIdx = foundInModel1 ? 0 : 1;
         auto& ctx = impl().models[modelIdx];
 
-        auto remappedIdx = UtilsCpp::find_in_map(ctx.indexRemapToSrc, idx);
+        auto remappedIdx = utils_cpp::find_in_map(ctx.indexRemapToSrc, idx);
         if (remappedIdx) {
             ctx.model->setData(ctx.model->index(*remappedIdx), value, ctx.roleRemapToSrc.at(role));
             return true;
@@ -354,7 +354,7 @@ void MergedListModel::selfCheckModel(int idx) const
 
     { // ctx
         for (int i = 0; i < ctxRowsCnt; i++) {
-            auto remapped = UtilsCpp::find_in_map(ctx.indexRemapFromSrc, i);
+            auto remapped = utils_cpp::find_in_map(ctx.indexRemapFromSrc, i);
             mlm_assert_rel(remapped.has_value());
         }
     }
@@ -383,8 +383,8 @@ void MergedListModel::selfCheck() const
 
     { // ctx
         for (int i = 0; i < rowsCnt; i++) {
-            auto hasRemap1 = UtilsCpp::find_in_map(impl().models[0].indexRemapToSrc, i);
-            auto hasRemap2 = UtilsCpp::find_in_map(impl().models[1].indexRemapToSrc, i);
+            auto hasRemap1 = utils_cpp::find_in_map(impl().models[0].indexRemapToSrc, i);
+            auto hasRemap2 = utils_cpp::find_in_map(impl().models[1].indexRemapToSrc, i);
             mlm_assert_rel(hasRemap1 || hasRemap2);
         }
     }
@@ -409,8 +409,8 @@ void MergedListModel::selfCheck() const
                 auto intValue = value.toInt();
                 mlm_assert_rel(intValue == 1 || intValue == 2 || intValue == 3);
 
-                auto remappedIndex1 = UtilsCpp::find_in_map(impl().models[0].indexRemapToSrc, i);
-                auto remappedIndex2 = UtilsCpp::find_in_map(impl().models[1].indexRemapToSrc, i);
+                auto remappedIndex1 = utils_cpp::find_in_map(impl().models[0].indexRemapToSrc, i);
+                auto remappedIndex2 = utils_cpp::find_in_map(impl().models[1].indexRemapToSrc, i);
 
                 switch (intValue) {
                     case 1: {
@@ -433,10 +433,10 @@ void MergedListModel::selfCheck() const
                 }
 
             } else {
-                auto remappedIndex1 = UtilsCpp::find_in_map(impl().models[0].indexRemapToSrc, i);
-                auto remappedIndex2 = UtilsCpp::find_in_map(impl().models[1].indexRemapToSrc, i);
-                auto remappedRole1 = UtilsCpp::find_in_map(impl().models[0].roleRemapToSrc, r);
-                auto remappedRole2 = UtilsCpp::find_in_map(impl().models[1].roleRemapToSrc, r);
+                auto remappedIndex1 = utils_cpp::find_in_map(impl().models[0].indexRemapToSrc, i);
+                auto remappedIndex2 = utils_cpp::find_in_map(impl().models[1].indexRemapToSrc, i);
+                auto remappedRole1 = utils_cpp::find_in_map(impl().models[0].roleRemapToSrc, r);
+                auto remappedRole2 = utils_cpp::find_in_map(impl().models[1].roleRemapToSrc, r);
 
                 mlm_assert_rel(remappedIndex1 || remappedIndex2);
                 mlm_assert_rel(remappedRole1 || remappedRole2);
@@ -452,7 +452,7 @@ void MergedListModel::selfCheck() const
                 }
 
                 if (r == impl().joinRole) {
-                    auto remappedJoinValue = UtilsCpp::find_in_map(impl().joinValueToIndex, value);
+                    auto remappedJoinValue = utils_cpp::find_in_map(impl().joinValueToIndex, value);
                     mlm_assert_rel(remappedJoinValue);
                     mlm_assert_rel(remappedJoinValue.value() == i);
                 }
@@ -591,7 +591,7 @@ void MergedListModel::init()
 
             // Add 'join' role to map (fast search: joinValue -> line index)
             if (r == impl().joinRole && !QmlUtils::instance().isNull(value)) {
-                assert(UtilsCpp::find_in_map(impl().joinValueToIndex, value).has_value() == false);
+                assert(utils_cpp::find_in_map(impl().joinValueToIndex, value).has_value() == false);
                 impl().joinValueToIndex.insert({value, impl().data.size()});
             }
         }
@@ -657,7 +657,7 @@ void MergedListModel::init()
 
                 // Add 'join' role to map (fast search: joinValue -> line index)
                 if (r == impl().joinRole && !QmlUtils::instance().isNull(value)) {
-                    assert(UtilsCpp::find_in_map(impl().joinValueToIndex, value).has_value() == false);
+                    assert(utils_cpp::find_in_map(impl().joinValueToIndex, value).has_value() == false);
                     impl().joinValueToIndex.insert({value, impl().data.size()});
                 }
             }
@@ -812,7 +812,7 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
                 lineExists = true;
             }
 
-            if (UtilsCpp::find_in_map(impl().joinValueToIndex, newJoinValue)) {
+            if (utils_cpp::find_in_map(impl().joinValueToIndex, newJoinValue)) {
                 // There is joinValue same like newJoinValue
 
                 if (lineExists) {
@@ -868,7 +868,7 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
                 }
 
                 // Attach line
-                auto newLine = UtilsCpp::find_in_map(impl().joinValueToIndex, newJoinValue).value();
+                auto newLine = utils_cpp::find_in_map(impl().joinValueToIndex, newJoinValue).value();
                 auto ctxRoles = ctx.model->roleNames().keys();
                 ctxRoles.removeOne(ctx.joinRole);
 
@@ -884,7 +884,7 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
                 impl().data[newLine][impl().srcRole] = 3;
                 changedRoles.append(impl().srcRole + Qt::UserRole);
 
-                assert(UtilsCpp::find_in_map(impl().joinValueToIndex, newJoinValue).has_value());
+                assert(utils_cpp::find_in_map(impl().joinValueToIndex, newJoinValue).has_value());
                 ctx.indexRemapFromSrc.insert({srcIndex, newLine});
                 ctx.indexRemapToSrc.insert({newLine, srcIndex});
 
@@ -942,7 +942,7 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
 
                         // Add 'join' role to map
                         if (r == impl().joinRole && !QmlUtils::instance().isNull(value)) {
-                            assert(UtilsCpp::find_in_map(impl().joinValueToIndex, value).has_value() == false);
+                            assert(utils_cpp::find_in_map(impl().joinValueToIndex, value).has_value() == false);
                             impl().joinValueToIndex.insert({value, newLocalIndex});
                         }
                     }
@@ -1043,7 +1043,7 @@ void MergedListModel::onAfterInserted(int idx, const QModelIndex& /*parent*/, in
         // There is new line
         // Decide: should we insert it or update existing
         auto joinValue = ctx.model->data(ctx.model->index(i), ctx.joinRole);
-        auto updatingLineIdx = UtilsCpp::find_in_map(impl().joinValueToIndex, joinValue);
+        auto updatingLineIdx = utils_cpp::find_in_map(impl().joinValueToIndex, joinValue);
         if (updatingLineIdx) {
             // Update existing
             QVector<int> updatedRoles;
@@ -1057,13 +1057,13 @@ void MergedListModel::onAfterInserted(int idx, const QModelIndex& /*parent*/, in
                     updatedRoles.append(r + Qt::UserRole);
 
                 } else if (r == impl().joinRole) {
-                    auto srcRole = UtilsCpp::find_in_map(ctx.roleRemapToSrc, r);
+                    auto srcRole = utils_cpp::find_in_map(ctx.roleRemapToSrc, r);
                     assert(srcRole.has_value());
                     auto newValue = ctx.model->data(ctx.model->index(i), *srcRole);
                     assert(currentValue == newValue);
 
                 } else {
-                    auto srcRole = UtilsCpp::find_in_map(ctx.roleRemapToSrc, r);
+                    auto srcRole = utils_cpp::find_in_map(ctx.roleRemapToSrc, r);
                     if (srcRole) {
                         auto newValue = ctx.model->data(ctx.model->index(i), *srcRole);
                         if (currentValue != newValue) {
@@ -1075,8 +1075,8 @@ void MergedListModel::onAfterInserted(int idx, const QModelIndex& /*parent*/, in
             }
 
             // Update indexes & append
-            assert(UtilsCpp::find_in_map(ctx.indexRemapToSrc, *updatingLineIdx).has_value() == false);
-            assert(UtilsCpp::find_in_map(ctx.indexRemapFromSrc, i).has_value() == false);
+            assert(utils_cpp::find_in_map(ctx.indexRemapToSrc, *updatingLineIdx).has_value() == false);
+            assert(utils_cpp::find_in_map(ctx.indexRemapFromSrc, i).has_value() == false);
             ctx.indexRemapFromSrc.insert({i, *updatingLineIdx});
             ctx.indexRemapToSrc.insert({*updatingLineIdx, i});
 
@@ -1094,7 +1094,7 @@ void MergedListModel::onAfterInserted(int idx, const QModelIndex& /*parent*/, in
                 if (r == impl().srcRole) {
                     currentValue = (idx == 0) ? 1 : 2;
                 } else {
-                    auto srcRole = UtilsCpp::find_in_map(ctx.roleRemapToSrc, r);
+                    auto srcRole = utils_cpp::find_in_map(ctx.roleRemapToSrc, r);
                     if (srcRole)
                         currentValue = ctx.model->data(ctx.model->index(i), *srcRole);
                 }
@@ -1108,9 +1108,9 @@ void MergedListModel::onAfterInserted(int idx, const QModelIndex& /*parent*/, in
             beginInsertRows({}, newIndex, newIndex);
 
             auto joinValue = line.at(impl().joinRole);
-            assert(UtilsCpp::find_in_map(impl().joinValueToIndex, joinValue).has_value() == false);
-            assert(UtilsCpp::find_in_map(ctx.indexRemapFromSrc, i).has_value() == false);
-            assert(UtilsCpp::find_in_map(ctx.indexRemapToSrc,   newIndex).has_value() == false);
+            assert(utils_cpp::find_in_map(impl().joinValueToIndex, joinValue).has_value() == false);
+            assert(utils_cpp::find_in_map(ctx.indexRemapFromSrc, i).has_value() == false);
+            assert(utils_cpp::find_in_map(ctx.indexRemapToSrc,   newIndex).has_value() == false);
             if (!QmlUtils::instance().isNull(joinValue))
                 impl().joinValueToIndex.insert({joinValue, newIndex});
             ctx.indexRemapFromSrc.insert({i, newIndex});
@@ -1165,7 +1165,7 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
                 } else if (r == impl().joinRole) {
                     // Nothing.
 
-                } else if (UtilsCpp::find_in_map(ctx.roleRemapToSrc, r)) {
+                } else if (utils_cpp::find_in_map(ctx.roleRemapToSrc, r)) {
                     impl().data[localIdx][r] = QVariant::fromValue(nullptr);
                     updatedRoles.append(r);
                 }

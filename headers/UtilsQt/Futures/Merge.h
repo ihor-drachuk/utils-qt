@@ -67,7 +67,7 @@ struct FunctionsT<std::tuple<QFuture<Ts>...>>
     template<typename Pred>
     static void setupWatchers(const C& c, Watchers& watchers, const Pred& pred)
     {
-        for_each_pair(pred, c, watchers);
+        for_each_tuple_pair(pred, c, watchers);
     }
 
     static void cancelSources(Watchers& watchers)

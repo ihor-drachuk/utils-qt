@@ -492,7 +492,7 @@ bool futureCompleted(const QFuture<T>& value)
     return value.isFinished() && !value.isCanceled();
 }
 
-template<template <typename T, typename... Args> class Container, typename T, typename... Args,
+template<template <typename, typename... Args> class Container, typename T, typename... Args,
          typename std::enable_if_t<!std::is_same_v<Container<QFuture<T>, Args...>, std::tuple<QFuture<T>, Args...>>>* = nullptr>
 FuturesSetProperties analyzeFutures(const Container<QFuture<T>, Args...>& futures)
 {
@@ -553,7 +553,7 @@ ResultContent futuresToOptResults(const std::tuple<QFuture<Ts>...>& futures)
 {
     ResultContent resultsTuple;
 
-    for_each_pair([](const auto& f, auto& r, const auto&){
+    for_each_tuple_pair([](const auto& f, auto& r, const auto&){
         using ResultBaseType = std::remove_cv_t<std::remove_reference_t<decltype (r)>>;
         if constexpr (std::is_same_v<ResultBaseType, bool>) {
             r = futureCompleted(f);
@@ -567,7 +567,7 @@ ResultContent futuresToOptResults(const std::tuple<QFuture<Ts>...>& futures)
     return resultsTuple;
 }
 
-template<template <typename T, typename... Args> class Container, typename T, typename... Args,
+template<template <typename, typename... Args> class Container, typename T, typename... Args,
          typename ItemType = std::conditional_t<std::is_same_v<T, void>, bool, std::optional<T>>,
          typename std::enable_if_t<!std::is_same_v<Container<QFuture<T>, Args...>, std::tuple<QFuture<T>, Args...>>>* = nullptr>
 Container<ItemType> futuresToOptResults(const Container<QFuture<T>, Args...>& futures)
