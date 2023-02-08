@@ -24,6 +24,8 @@ QVector<double> extractColorComponents(const QColor& color)
             };
         }
     }
+
+    assert(false);
 }
 
 struct DataPack_Regex

@@ -190,7 +190,7 @@ QColor QmlUtils::colorChangeAlpha(const QColor& color, double alpha) const
     assert(color.spec() != QColor::Spec::Invalid);
 
     switch (color.spec()) {
-        case QColor::Spec::Invalid: assert(!"Color spec is 'invalid'!"); return {};
+        case QColor::Spec::Invalid: assert(false && "Color spec is 'invalid'!"); return {};
         case QColor::Spec::Rgb:  return QColor::fromRgbF(color.redF(),    color.greenF(),         color.blueF(),      alpha);
         case QColor::Spec::Hsv:  return QColor::fromHsvF(color.hsvHueF(), color.hsvSaturationF(), color.valueF(),     alpha);
         case QColor::Spec::Cmyk: return QColor::fromCmykF(color.cyanF(),  color.magentaF(),       color.yellowF(),    color.blackF(), alpha);
@@ -201,6 +201,9 @@ QColor QmlUtils::colorChangeAlpha(const QColor& color, double alpha) const
             return QColor::fromRgba64(c);
         }
     }
+
+    assert(false && "Unhandled switch-case for color.spec()!");
+    return {};
 }
 
 QString QmlUtils::normalizePath(const QString& str) const
