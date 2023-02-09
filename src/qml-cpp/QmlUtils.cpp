@@ -351,6 +351,7 @@ void QmlUtils::showWindow(QObject* win)
     auto flags = window->windowStates();
     flags &= ~Qt::WindowState::WindowMinimized;
     window->setWindowStates(flags);
+    window->setVisible(true);
 
 #ifdef UTILS_QT_OS_WIN
     //auto status = AllowSetForegroundWindow(GetCurrentProcessId()); assert(status);
