@@ -354,6 +354,8 @@ TEST(UtilsQt, Futures_Convert_CancelSource)
 
 TEST(UtilsQt, Futures_Convert_NoHint)
 {
+    struct SomeData {SomeData(int){};};
+
     auto f1 = convertFuture(nullptr, QFuture<void>(), []() {
         return std::to_string(12);
     });
@@ -362,5 +364,9 @@ TEST(UtilsQt, Futures_Convert_NoHint)
         return std::to_string(i);
     });
 
-    (void)f1, (void)f2;
+    auto f3 = convertFuture(nullptr, QFuture<SomeData>(), [](const SomeData&) {
+        return 0;
+    });
+
+    (void)f1, (void)f2, (void)f3;
 }

@@ -108,7 +108,7 @@ void AugmentedModel::actualizeCache()
                          impl().srcModelRolesMap.value(std::get<QString>(x.roleId)) :
                          std::get<int>(x.roleId);
             impl().sourceRolesCache.insert(x.role);
-            impl().sourceRoleToCalculated.insertMulti(x.role, role);
+            impl().sourceRoleToCalculated.insert(x.role, role);
             assert(x.role >= 0);
         }
 

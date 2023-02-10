@@ -51,6 +51,11 @@ if (MSVC)
     target_compile_definitions(utils-qt PUBLIC UTILS_QT_COMPILER_MSVC=1)
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(UTILS_QT_COMPILER_GCC TRUE)
+    target_compile_definitions(utils-qt PUBLIC UTILS_QT_COMPILER_GCC=1)
+endif()
+
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(UTILS_QT_COMPILER_CLANG TRUE)
     target_compile_definitions(utils-qt PUBLIC UTILS_QT_COMPILER_CLANG=1)
