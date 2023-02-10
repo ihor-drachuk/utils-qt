@@ -6,6 +6,7 @@ on:
       - master
       - dev
       - testing
+      - wip-testing
   pull_request:
     types: [opened, edited, synchronize]
 

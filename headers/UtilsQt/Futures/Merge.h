@@ -327,7 +327,7 @@ auto mergeFuturesAll(QObject* context, const Container<T, Args...>& futures)
     return mergeFuturesAll(context, CancellationBehavior::CancelOnSingleCancellation, futures);
 }
 
-#ifdef UTILS_QT_COMPILER_CLANG
+#ifndef UTILS_QT_COMPILER_GCC
 template<typename... Ts>
 auto mergeFuturesAll(QObject* context, CancellationBehavior cancellationBehavior, const std::tuple<QFuture<Ts>...>& futures)
 {
@@ -339,7 +339,7 @@ auto mergeFuturesAll(QObject* context, const std::tuple<QFuture<Ts>...>& futures
 {
     return mergeFuturesAll<Ts...>(context, CancellationBehavior::CancelOnSingleCancellation, futures);
 }
-#endif // UTILS_QT_COMPILER_CLANG
+#endif // UTILS_QT_COMPILER_GCC
 
 
 // mergeFuturesAny
@@ -383,7 +383,7 @@ auto mergeFuturesAny(QObject* context, const Container<T, Args...>& futures)
     return mergeFuturesAny(context, CancellationBehavior::CancelOnSingleCancellation, futures);
 }
 
-#ifdef UTILS_QT_COMPILER_CLANG
+#ifndef UTILS_QT_COMPILER_GCC
 template<typename... Ts>
 auto mergeFuturesAny(QObject* context, CancellationBehavior cancellationBehavior, const std::tuple<QFuture<Ts>...>& futures)
 {
@@ -395,6 +395,6 @@ auto mergeFuturesAny(QObject* context, const std::tuple<QFuture<Ts>...>& futures
 {
     return mergeFuturesAny<Ts...>(context, CancellationBehavior::CancelOnSingleCancellation, futures);
 }
-#endif // #ifdef UTILS_QT_COMPILER_CLANG
+#endif // #ifndef UTILS_QT_COMPILER_GCC
 
 } // namespace UtilsQt
