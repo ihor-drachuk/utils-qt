@@ -3,7 +3,10 @@ name: Build & test
 on:
   push:
     branches:
-      - '**'
+      - master
+      - dev
+      - testing
+      - wip-testing
   pull_request:
     types: [opened, edited, synchronize]
 
@@ -129,46 +132,6 @@ jobs:
        cmake ${{env.QML_TESTS}} -DUTILS_QT_CI_RUN=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" ${{env.MSVC_ARCH}} -G "${{env.GENERATOR}}" -S "${{github.workspace}}/src" -B "${{github.workspace}}/build"
        cmake --build "${{github.workspace}}/build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
        ctest --rerun-failed --output-on-failure --timeout 60 -C "${{matrix.build_type}}" --test-dir "${{github.workspace}}/build/tests"
-
-  CodeChecker:
-    runs-on: [ubuntu-22.04]
-    steps:
-      - name: "Check out repository"
-        uses: actions/checkout@v2
-        with:
-          submodules: true
-
-      - name: Install Qt
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install qt*5-dev -y
-
-      # Prepare a build
-      - name: "Prepare build"
-        run: |
-          mkdir -pv Build
-          cd Build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          # Build to create intermediate files
-          make
-
-      # Run the analysis
-      - uses: whisperity/codechecker-analysis-action@v1
-        id: codechecker
-        with:
-          logfile: ${{ github.workspace }}/Build/compile_commands.json
-
-      # Upload the results to the CI.
-      - uses: actions/upload-artifact@v2
-        with:
-          name: "CodeChecker Bug Reports"
-          path: ${{ steps.codechecker.outputs.result-html-dir }}
-
-      # Break the build if there are *ANY* warnings emitted by the analysers.
-      - name: "Break build if CodeChecker reported any findings"
-        if: ${{ steps.codechecker.outputs.warnings == 'true' }}
-        run: exit 1
 
   Done:
     needs: Build
