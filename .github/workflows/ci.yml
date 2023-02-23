@@ -171,12 +171,11 @@ jobs:
         run: exit 1
 
   Done:
-    needs: Build
-    runs-on: [ubuntu-20.04]
-    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master'
-
+    needs: [Build, CodeChecker]
+    runs-on: [ubuntu-22.04]
     steps:
     - name: "Done"
       shell: bash
       run: |
        echo "Done"
+       exit 0
