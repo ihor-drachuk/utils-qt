@@ -2,9 +2,12 @@
 #include <QObject>
 #include <QColor>
 #include <QSize>
+#include <QPoint>
 #include <QList>
 #include <QStringList>
 #include <utils-cpp/pimpl.h>
+
+class QQuickItem;
 
 struct PathDetails
 {
@@ -80,6 +83,10 @@ public:
     // Window
     Q_INVOKABLE void showWindow(QObject* win);
     Q_INVOKABLE void minimizeWindow(QObject* win);
+
+    // Cursor
+    Q_INVOKABLE void setCustomCursor(QQuickItem* item, const QString& file, const QPoint& hotPoint);
+    Q_INVOKABLE void resetCursor(QQuickItem* item);
 
 signals:
     void keyPressed(Qt::Key key);
