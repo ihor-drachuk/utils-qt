@@ -7,6 +7,7 @@
 #include <QImageReader>
 #include <QFileInfo>
 #include <QQuickWindow>
+#include <QQuickItem>
 #include <QRegularExpression>
 #include <QGuiApplication>
 #include <QUrl>
@@ -376,6 +377,17 @@ void QmlUtils::minimizeWindow(QObject* win)
     auto flags = window->windowStates();
     flags |= Qt::WindowState::WindowMinimized;
     window->setWindowStates(flags);
+}
+
+void QmlUtils::setCustomCursor(QQuickItem* item, const QString& file, const QPoint& hotPoint)
+{
+    QCursor cursor = QCursor(QPixmap(file), hotPoint.x(), hotPoint.y());
+    item->setCursor(cursor);
+}
+
+void QmlUtils::resetCursor(QQuickItem* item)
+{
+    item->unsetCursor();
 }
 
 #ifdef UTILS_QT_OS_WIN
