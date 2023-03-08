@@ -1,6 +1,6 @@
 #include <UtilsQt/qml.h>
 
-#include <UtilsQt/Qml/qml-controls.h>
+#include <UtilsQt/Qml/QmlControls.h>
 #include <UtilsQt/Qml-Cpp/FileWatcher.h>
 #include <UtilsQt/Qml-Cpp/PathElider.h>
 #include <UtilsQt/Qml-Cpp/ListModelItemProxy.h>

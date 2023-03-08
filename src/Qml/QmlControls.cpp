@@ -1,21 +1,19 @@
-#include <UtilsQt/Qml/qml-controls.h>
+#include <UtilsQt/Qml/QmlControls.h>
 #include <UtilsQt/Qml-Cpp/ListModelItemProxy.h>
 #include <UtilsQt/Qml-Cpp/ListModelTools.h>
-#include <QDir>
 #include <QQmlEngine>
 
 inline void initResource() {
-    Q_INIT_RESOURCE(qml_controls);
+    Q_INIT_RESOURCE(QmlControls);
 }
 
 namespace QmlControls {
 
-
 void init(QQmlEngine& qmlEngine) {
     initResource();
 
-    qmlEngine.addImportPath(":/utils-qt");
-    qmlEngine.addImportPath("qrc:/utils-qt");
+    qmlEngine.addImportPath(":/UtilsQt");
+    qmlEngine.addImportPath("qrc:/UtilsQt");
 
     ListModelItemProxy::registerTypes();
     ListModelTools::registerTypes();
