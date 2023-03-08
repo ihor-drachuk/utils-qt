@@ -29,7 +29,7 @@ namespace {
     const char qrcPrefix[] = "qrc:/";
     constexpr int qrcPrefixLen = length(qrcPrefix);
     const char qrcPrefixReplacement[] = ":/";
-    constexpr int qrcPrefixReplacementLen = length(qrcPrefixReplacement);
+    //constexpr int qrcPrefixReplacementLen = length(qrcPrefixReplacement);
 }
 
 
@@ -79,7 +79,7 @@ bool QmlUtils::eventFilter(QObject* /*watched*/, QEvent* event)
     switch (event->type()) {
         case QEvent::KeyPress:   emit keyPressed(key);  break;
         case QEvent::KeyRelease: emit keyReleased(key); break;
-        default:                 assert(!"Unexpected event type!");
+        default:                 assert(false && "Unexpected event type!");
     }
 
     return false;
@@ -131,22 +131,18 @@ QString QmlUtils::toUrl(const QString& str) const
     switch (details.location) {
         case PathDetails::Unknown:
             return details.path;
-            break;
 
         case PathDetails::Windows:
             return "file:///" + details.path;
-            break;
 
         case PathDetails::NonWindows:
             return "file://" + details.path;
-            break;
 
         case PathDetails::Qrc:
             return qrcPrefix + details.path;
-            break;
     }
 
-    assert(!"Unexpected control flow!");
+    assert(false && "Unexpected control flow!");
     return {};
 }
 
@@ -247,8 +243,8 @@ bool QmlUtils::isNull(const QVariant& value) const
 bool QmlUtils::isFloat(const QVariant& value) const
 {
     return value.type() == QVariant::Type::Double ||
-           value.type() == (QVariant::Type)QMetaType::Type::Float ||
-           value.type() == (QVariant::Type)QMetaType::Type::QReal;
+           value.type() == static_cast<QVariant::Type>(QMetaType::Type::Float) ||
+           value.type() == static_cast<QVariant::Type>(QMetaType::Type::QReal);
 }
 
 bool QmlUtils::isInteger(const QVariant& value) const
@@ -257,10 +253,10 @@ bool QmlUtils::isInteger(const QVariant& value) const
            value.type() == QVariant::Type::UInt ||
            value.type() == QVariant::Type::LongLong ||
            value.type() == QVariant::Type::ULongLong ||
-           value.type() == (QVariant::Type)QMetaType::Type::Long ||
-           value.type() == (QVariant::Type)QMetaType::Type::ULong ||
-           value.type() == (QVariant::Type)QMetaType::Type::Short ||
-           value.type() == (QVariant::Type)QMetaType::Type::UShort;
+           value.type() == static_cast<QVariant::Type>(QMetaType::Type::Long) ||
+           value.type() == static_cast<QVariant::Type>(QMetaType::Type::ULong) ||
+           value.type() == static_cast<QVariant::Type>(QMetaType::Type::Short) ||
+           value.type() == static_cast<QVariant::Type>(QMetaType::Type::UShort);
 }
 
 bool QmlUtils::isNumber(const QVariant& value) const
@@ -321,7 +317,7 @@ QString QmlUtils::sizeConv(int size, int limit, int decimals) const
 
     const char* prefixes[] = {"bytes", "Kb", "Mb", "Gb", "Tb"};
     constexpr int prefixesLen = sizeof(prefixes) / sizeof(*prefixes);
-    float result = size;
+    double result = size;
     int i = 0;
 
     while (i < prefixesLen - 1 && result >= limit) {
