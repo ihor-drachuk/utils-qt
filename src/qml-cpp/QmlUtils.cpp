@@ -156,6 +156,16 @@ QSize QmlUtils::imageSize(const QString& fileName) const
     return QImageReader(realFileName(fileName)).size();
 }
 
+QSize QmlUtils::fitSize(const QSize& sourceSize, const QSize& limits) const
+{
+    return sourceSize.scaled(limits, Qt::AspectRatioMode::KeepAspectRatio);
+}
+
+QSize QmlUtils::scaleSize(const QSize& size, double scale) const
+{
+    return size * scale;
+}
+
 QColor QmlUtils::colorMakeAccent(const QColor& color, double factor) const
 {
     assert(factor >= 0.0 && factor <= 1.0);
