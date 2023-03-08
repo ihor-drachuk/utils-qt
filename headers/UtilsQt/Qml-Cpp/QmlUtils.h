@@ -57,6 +57,10 @@ public:
     Q_INVOKABLE bool isImage(const QString& fileName) const;
     Q_INVOKABLE QSize imageSize(const QString& fileName) const;
 
+    // Size
+    Q_INVOKABLE QSize fitSize(const QSize& sourceSize, const QSize& limits) const; // keep aspect ratio
+    Q_INVOKABLE QSize scaleSize(const QSize& size, double scale) const;
+
     // Colors
     Q_INVOKABLE QColor colorMakeAccent(const QColor& color, double factor) const;
     Q_INVOKABLE QColor colorChangeAlpha(const QColor& color, double alpha) const;
