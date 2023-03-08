@@ -1,4 +1,5 @@
 #include <UtilsQt/Qml/QmlControls.h>
+#include <UtilsQt/Qml/ImageProviderScaled.h>
 #include <UtilsQt/Qml-Cpp/ListModelItemProxy.h>
 #include <UtilsQt/Qml-Cpp/ListModelTools.h>
 #include <QQmlEngine>
@@ -17,6 +18,7 @@ void init(QQmlEngine& qmlEngine) {
 
     ListModelItemProxy::registerTypes();
     ListModelTools::registerTypes();
+    ImageProviderScaled::registerTypes(qmlEngine);
 }
 
 } // namespace QmlModules
