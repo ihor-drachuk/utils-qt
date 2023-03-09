@@ -138,7 +138,7 @@ public:
     template<typename Callable, typename Ret = typename std::invoke_result<Callable, std::optional<T>>::type,
              typename std::enable_if<IsQFuture<Ret>::value>::type* = nullptr,
              typename RetFutureType = typename ExpandQFuture<Ret>::value_type>
-    FutureResult<RetFutureType> then(const Callable& callable) {
+    FutureResult<RetFutureType> then(Callable&& callable) {
         getContext()->needInternalHandler = false;
 
         QFutureInterface<RetFutureType> interface;
@@ -146,7 +146,7 @@ public:
 
         UtilsQt::onFinished(m_future, m_context,
                    [interface, callable, internalContext = getContext(), m_context = m_context, m_connectionType = m_connectionType]
-                   (const std::optional<T>& result) {
+                   (const std::optional<T>& result) mutable {
             auto interface2 = interface;
 
             if (!internalContext->errorFlag) {
@@ -190,10 +190,10 @@ public:
     // QFuture<T> --> std::optional<T> --> void
     template<typename Callable, typename Ret = typename std::invoke_result<Callable, std::optional<T>>::type,
              typename std::enable_if<std::is_same<Ret, void>::value>::type* = nullptr>
-    FutureResultBase then(const Callable& callable) {
+    FutureResultBase then(Callable&& callable) {
         getContext()->needInternalHandler = false;
 
-        UtilsQt::onFinished(m_future, m_context, [callable, internalContext = getContext()](const std::optional<T>& result) {
+        UtilsQt::onFinished(m_future, m_context, [callable, internalContext = getContext()](const std::optional<T>& result) mutable {
             if (!internalContext->errorFlag) {
                 try {
                     callable(result);
