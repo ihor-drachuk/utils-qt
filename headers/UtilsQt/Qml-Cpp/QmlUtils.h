@@ -5,6 +5,7 @@
 #include <QPoint>
 #include <QList>
 #include <QStringList>
+#include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
 
 class QQuickItem;
@@ -26,6 +27,7 @@ struct PathDetails
 class QmlUtils : public QObject
 {
     Q_OBJECT
+    NO_COPY_MOVE(QmlUtils);
 public:
     static QmlUtils& instance();
     static void registerTypes();

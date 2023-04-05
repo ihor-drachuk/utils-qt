@@ -2,11 +2,13 @@
 #include <QObject>
 #include <QQmlPropertyMap>
 #include <QAbstractItemModel>
+#include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
 
 class ListModelItemProxy : public QObject
 {
     Q_OBJECT
+    NO_COPY_MOVE(ListModelItemProxy);
 public:
     Q_PROPERTY(QAbstractItemModel* model READ model WRITE setModel NOTIFY modelChanged)
     Q_PROPERTY(int count READ count /*WRITE setCount*/ NOTIFY countChanged)

@@ -4,6 +4,7 @@
 #include <QPolygonF>
 #include <QPointF>
 #include <QRectF>
+#include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
 
 class Polygon : public QObject
@@ -12,6 +13,7 @@ class Polygon : public QObject
     Q_PROPERTY(QVector<QPolygonF> polygons READ polygons WRITE setPolygons NOTIFY polygonsChanged)
     Q_PROPERTY(QPointF offset READ offset WRITE setOffset NOTIFY offsetChanged)
     Q_PROPERTY(bool negativeOffset READ negativeOffset WRITE setNegativeOffset NOTIFY negativeOffsetChanged)
+    NO_COPY_MOVE(Polygon);
 public:
     static void registerTypes();
 

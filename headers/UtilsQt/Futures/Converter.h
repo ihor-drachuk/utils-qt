@@ -9,6 +9,7 @@
 #include <QPair>
 #include <utils-cpp/pimpl.h>
 #include <utils-cpp/function_traits.h>
+#include <utils-cpp/copy_move.h>
 
 /*            Reminder
   -------------------------------
@@ -117,6 +118,7 @@ struct ConverterType<void, Target>
 template<typename Source, typename Target>
 class Context : public QObject
 {
+    NO_COPY_MOVE(Context);
 public:
     using SourceFuture = QFuture<Source>;
     using SourceWatcher = QFutureWatcher<Source>;

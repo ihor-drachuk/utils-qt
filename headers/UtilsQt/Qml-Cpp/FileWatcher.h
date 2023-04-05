@@ -2,12 +2,13 @@
 #include <QObject>
 #include <QString>
 #include <QUrl>
+#include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
 
 class FileWatcher : public QObject
 {
     Q_OBJECT
-
+    NO_COPY_MOVE(FileWatcher);
 public:
     Q_PROPERTY(QUrl fileName READ fileName WRITE setFileName NOTIFY fileNameChanged)
     Q_PROPERTY(QString localFileName READ localFileName WRITE setLocalFileName NOTIFY localFileNameChanged)
