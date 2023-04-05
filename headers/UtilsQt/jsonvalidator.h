@@ -9,6 +9,7 @@
 #include <vector>
 #include <memory>
 
+#include <utils-cpp/copy_move.h>
 #include <utils-cpp/variadic_tools.h>
 
 namespace UtilsQt {
@@ -16,7 +17,10 @@ namespace JsonValidator {
 
 class Logger
 {
+protected:
+    DEFAULT_COPY_MOVE(Logger);
 public:
+    Logger() = default;
     virtual ~Logger() = default;
     virtual void notifyError(const QString& path, const QString& error);
 
@@ -42,6 +46,9 @@ using ValidatorPtr = std::shared_ptr<Validator>;
 
 class Validator
 {
+protected:
+    DEFAULT_COPY_MOVE(Validator);
+
 public:
     Validator(const std::vector<ValidatorPtr>& validators = {})
         : m_validators(validators)

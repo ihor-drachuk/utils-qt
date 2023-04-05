@@ -3,11 +3,13 @@
 #include <QVariantList>
 #include <functional>
 #include <variant>
+#include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
 
 class AugmentedModel : public QAbstractItemModel
 {
     Q_OBJECT
+    NO_COPY_MOVE(AugmentedModel);
 public:
     using RoleUpdater = std::function<void(const QModelIndex&, const QModelIndex&)>;
     using Calculator = std::function<QVariant (const QVariantList&)>;

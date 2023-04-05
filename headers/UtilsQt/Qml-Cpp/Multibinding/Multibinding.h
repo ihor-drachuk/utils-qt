@@ -1,5 +1,6 @@
 #pragma once
 #include <QQuickItem>
+#include <utils-cpp/copy_move.h>
 
 class MultibindingItem;
 
@@ -10,6 +11,8 @@ class Multibinding : public QQuickItem
     Q_PROPERTY(QVariant value READ value WRITE setValue NOTIFY valueChanged)
     Q_PROPERTY(QList<QObject*> loopbackGuarded READ loopbackGuarded WRITE setLoopbackGuarded NOTIFY loopbackGuardedChanged)
     Q_PROPERTY(int loopbackGuardMs READ loopbackGuardMs WRITE setLoopbackGuardMs NOTIFY loopbackGuardMsChanged)
+
+    NO_COPY_MOVE(Multibinding);
 public:
     static void registerTypes();
 
