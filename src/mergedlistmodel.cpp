@@ -1239,8 +1239,6 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
             ctx2.indexRemapFromSrc = std::move(copyIndexRemapFromSrc2);
             ctx2.indexRemapToSrc = std::move(copyIndexRemapToSrc2);
         }
-
-        localIdx = -1; // Invalidate localIdx after removal
     }
 
     // Reset 'busy' flag
