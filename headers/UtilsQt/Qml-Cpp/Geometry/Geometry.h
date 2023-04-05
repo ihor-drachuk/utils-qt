@@ -2,11 +2,13 @@
 #include <QObject>
 #include <QPolygonF>
 #include <QVector>
+#include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
 
 class Geometry : public QObject
 {
     Q_OBJECT
+    NO_COPY_MOVE(Geometry);
 public:
     static Geometry& instance();
     static void registerTypes();

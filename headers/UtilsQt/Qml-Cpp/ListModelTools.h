@@ -4,11 +4,13 @@
 #include <QVector>
 #include <QVariantList>
 #include <QJSValue>
+#include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
 
 class ListModelTools : public QObject
 {
     Q_OBJECT
+    NO_COPY_MOVE(ListModelTools);
 public:
     Q_PROPERTY(QAbstractItemModel* model READ model WRITE setModel NOTIFY modelChanged)
     Q_PROPERTY(QStringList roles READ roles /*WRITE setRoles*/ NOTIFY rolesChanged)

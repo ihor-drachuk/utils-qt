@@ -1,5 +1,6 @@
 #pragma once
 #include <QAbstractListModel>
+#include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
 
 class MergedListModel : public QAbstractListModel
@@ -9,6 +10,8 @@ class MergedListModel : public QAbstractListModel
     Q_PROPERTY(QVariant joinRole2 READ joinRole2 WRITE setJoinRole2 NOTIFY joinRole2Changed) // int or string
     Q_PROPERTY(QAbstractListModel* model1 READ model1 WRITE setModel1 NOTIFY model1Changed)
     Q_PROPERTY(QAbstractListModel* model2 READ model2 WRITE setModel2 NOTIFY model2Changed)
+
+    NO_COPY_MOVE(MergedListModel);
 public:
     explicit MergedListModel(QObject* parent = nullptr);
     ~MergedListModel() override;

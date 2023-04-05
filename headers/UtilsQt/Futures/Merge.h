@@ -12,6 +12,7 @@
 
 #include <UtilsQt/Futures/Utils.h>
 #include <UtilsQt/Futures/Converter.h>
+#include <utils-cpp/copy_move.h>
 
 namespace UtilsQt {
 
@@ -152,6 +153,7 @@ struct Functions<Container<Args...>> :
 template<typename T>
 class Context : public QObject
 {
+    NO_COPY_MOVE(Context);
 public:
     Context(QObject* ctx, const T& futures, TriggerMode triggerMode, CancellationBehavior cancellationBehavior)
         : QObject(ctx),

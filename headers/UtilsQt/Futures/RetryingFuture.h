@@ -4,6 +4,7 @@
 #include <QFutureWatcher>
 #include <QTimer>
 #include <optional>
+#include <utils-cpp/copy_move.h>
 
 /*            Reminder
   -------------------------------
@@ -124,6 +125,7 @@ struct SmartValidator<bool>
 template<typename AsyncCall, typename ResultValidator, typename PayloadType>
 struct Context : public QObject
 {
+    NO_COPY_MOVE(Context);
     using This = Context<AsyncCall, ResultValidator, PayloadType>;
     using Helper = ContextHelper<PayloadType>;
 

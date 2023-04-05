@@ -8,7 +8,6 @@ public:
     static void registerTypes();
 
     NumericValidatorInt(QObject* parent = nullptr);
-    ~NumericValidatorInt() override;
 
     State validate(QString& str, int& pos) const override;
     void fixup(QString& str) const override;

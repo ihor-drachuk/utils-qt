@@ -1,8 +1,10 @@
 #pragma once
+#include <utils-cpp/copy_move.h>
 
 template<typename T, typename Signal>
 class LateSetter
 {
+    NO_COPY_MOVE(LateSetter);
 public:
     LateSetter(T& oldValue, const T& newValue, const Signal& signal, bool* changedFlag = nullptr)
         : m_value(oldValue),

@@ -5,6 +5,7 @@
 #include <tuple>
 #include <optional>
 #include <vector>
+#include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
 
 class QStringList;
@@ -36,6 +37,7 @@ public:
 class PathElider : public QObject
 {
     Q_OBJECT
+    NO_COPY_MOVE(PathElider);
 public:
     Q_PROPERTY(QString sourceText READ sourceText WRITE setSourceText NOTIFY sourceTextChanged)
     Q_PROPERTY(QFont font READ font WRITE setFont NOTIFY fontChanged)
