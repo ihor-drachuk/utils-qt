@@ -15,6 +15,7 @@ QVariant ScaleNum::readConverter(const QVariant& value) const
             return value;
 
         case QVariant::Type::Int:
+        // codechecker_intentional [clang-diagnostic-switch]
         case (QVariant::Type)QMetaType::Type::Float:
         case QVariant::Type::Double:
             if (m_roundOnRead) {
@@ -36,6 +37,7 @@ QVariant ScaleNum::writeConverter(const QVariant& newValue, const QVariant&) con
             return newValue;
 
         case QVariant::Type::Int:
+        // codechecker_intentional [clang-diagnostic-switch]
         case (QVariant::Type)QMetaType::Type::Float:
         case QVariant::Type::Double:
             if (m_roundOnWrite) {
