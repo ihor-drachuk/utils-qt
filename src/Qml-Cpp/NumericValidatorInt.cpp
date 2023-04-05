@@ -12,7 +12,7 @@ NumericValidatorInt::NumericValidatorInt(QObject* parent)
 {
 }
 
-QValidator::State NumericValidatorInt::validate(QString& str, int& pos) const
+QValidator::State NumericValidatorInt::validate(QString& str, [[maybe_unused]] int& pos) const
 {
     assert(bottom() < top());
 
