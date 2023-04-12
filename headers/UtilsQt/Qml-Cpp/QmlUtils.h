@@ -24,6 +24,8 @@ struct PathDetails
     bool isAbsolute {};
 };
 
+// codechecker_intentional [cppcoreguidelines-virtual-class-destructor]
+// This is a singleton instance
 class QmlUtils : public QObject
 {
     Q_OBJECT

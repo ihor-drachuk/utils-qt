@@ -5,6 +5,9 @@
 #include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
 
+
+// codechecker_intentional [cppcoreguidelines-virtual-class-destructor]
+// This is a singleton instance and should not be instanciated or deleted
 class Geometry : public QObject
 {
     Q_OBJECT
