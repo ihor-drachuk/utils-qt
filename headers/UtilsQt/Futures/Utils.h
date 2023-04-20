@@ -137,10 +137,10 @@ public:
     }
 
     Promise(const Promise<T>&) = default;
-    Promise(Promise<T>&&) = default;
+    Promise(Promise<T>&&) noexcept = default;
     ~Promise() = default;
     Promise<T>& operator= (const Promise<T>&) = default;
-    Promise<T>& operator= (Promise<T>&&) = default;
+    Promise<T> &operator=(Promise<T> &&) noexcept = default;
 
     // if [T == void]
     template<typename X = T>
