@@ -424,7 +424,7 @@ template<typename T>
     return interface.future();
 }
 
-[[nodiscard]] static QFuture<void> createTimedFuture(int time, QObject* ctx = nullptr)
+[[nodiscard]] static inline QFuture<void> createTimedFuture(int time, QObject* ctx = nullptr)
 {
     if (!time)
         return createReadyFuture();
