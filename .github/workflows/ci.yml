@@ -134,7 +134,7 @@ jobs:
     runs-on: [ubuntu-22.04]
     steps:
       - name: "Check out repository"
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: true
 
@@ -161,7 +161,7 @@ jobs:
           config: ${{ github.workspace }}/.codechecker/codechecker.yml
 
       # Upload the results to the CI.
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: "CodeChecker Bug Reports"
           path: ${{ steps.codechecker.outputs.result-html-dir }}
@@ -172,12 +172,11 @@ jobs:
         run: exit 1
 
   Done:
-    needs: Build
+    needs: [Build, CodeChecker]
     runs-on: [ubuntu-20.04]
-    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master'
-
     steps:
     - name: "Done"
       shell: bash
       run: |
        echo "Done"
+       exit 0
