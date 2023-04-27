@@ -1223,7 +1223,7 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
 
             impl().joinValueToIndex = std::move(copyJoinValueToIndex);
 
-            //...don't forget to update indexes in 'another' model
+            //...don't forget to update indexes in 'another' model context
             auto& ctx2 = impl().models[!idx];
             decltype(ctx2.indexRemapFromSrc)   copyIndexRemapFromSrc2;
             decltype(ctx2.indexRemapToSrc)     copyIndexRemapToSrc2;

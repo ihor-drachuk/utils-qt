@@ -7,12 +7,13 @@ class MultibindingItem;
 class Multibinding : public QQuickItem
 {
     Q_OBJECT
+    NO_COPY_MOVE(Multibinding);
+
     Q_PROPERTY(bool running READ running WRITE setRunning NOTIFY runningChanged)
     Q_PROPERTY(QVariant value READ value WRITE setValue NOTIFY valueChanged)
     Q_PROPERTY(QList<QObject*> loopbackGuarded READ loopbackGuarded WRITE setLoopbackGuarded NOTIFY loopbackGuardedChanged)
     Q_PROPERTY(int loopbackGuardMs READ loopbackGuardMs WRITE setLoopbackGuardMs NOTIFY loopbackGuardMsChanged)
 
-    NO_COPY_MOVE(Multibinding);
 public:
     static void registerTypes();
 

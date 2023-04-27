@@ -7,12 +7,12 @@
 class NumericalValidator : public QValidator
 {
     Q_OBJECT
+    NO_COPY_MOVE(NumericalValidator);
 
     Q_PROPERTY(QVariant step READ step WRITE setStep NOTIFY stepChanged)
     Q_PROPERTY(QVariant top READ top WRITE setTop NOTIFY topChanged)
     Q_PROPERTY(QVariant bottom READ bottom WRITE setBottom NOTIFY bottomChanged)
 
-    NO_COPY_MOVE(NumericalValidator);
 public:
     static void registerTypes();
 
