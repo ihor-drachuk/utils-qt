@@ -42,29 +42,29 @@ public:
 using ContextData = QVariantMap;
 
 class Validator;
-using ValidatorPtr = std::shared_ptr<Validator>;
+using ValidatorCPtr = std::shared_ptr<const Validator>;
 
 class Validator
 {
 public:
     DEFAULT_COPY_MOVE(Validator);
+    // ^ Notice! Only pointers are copied!
+    //   But it's ok, they're pointers-to-constant, no modifications expected.
 
-    Validator(const std::vector<ValidatorPtr>& validators = {})
+    Validator(const std::vector<ValidatorCPtr>& validators = {})
         : m_validators(validators)
     { }
 
     virtual ~Validator() = default;
-    virtual bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) = 0;
+    virtual bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const = 0;
 
 protected:
-    bool checkNested(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value);
-    const std::vector<ValidatorPtr>& nestedValidators() const { return m_validators; }
+    bool checkNested(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const;
+    const std::vector<ValidatorCPtr>& nestedValidators() const { return m_validators; }
 
 private:
-    std::vector<ValidatorPtr> m_validators;
+    std::vector<ValidatorCPtr> m_validators;
 };
-
-using ValidatorPtr = std::shared_ptr<Validator>;
 
 namespace Internal {
 
@@ -73,60 +73,60 @@ enum class _NonEmpty { NonEmpty };
 enum class _Hex { Hex };
 
 template<typename... Ts>
-std::vector<ValidatorPtr> convertValidators(const Ts&... validators)
+std::vector<ValidatorCPtr> convertValidators(const Ts&... validators)
 {
-    return variadic_to_container<std::vector, ValidatorPtr>(validators...);
+    return variadic_to_container<std::vector, ValidatorCPtr>(validators...);
 }
 
 class RootValidator : public Validator
 {
 public:
-    RootValidator(const std::vector<ValidatorPtr>& validators)
+    RootValidator(const std::vector<ValidatorCPtr>& validators)
         : Validator(validators)
     { }
 
-    bool check(Logger& logger, const QJsonValue& value);
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(Logger& logger, const QJsonValue& value) const;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 };
 
-using RootValidatorPtr = std::shared_ptr<RootValidator>;
+using RootValidatorCPtr = std::shared_ptr<RootValidator>;
 
 class Object : public Validator
 {
 public:
-    Object(const std::vector<ValidatorPtr>& validators)
+    Object(const std::vector<ValidatorCPtr>& validators)
         : Validator(validators)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 };
 
 class Array : public Validator
 {
 public:
-    Array(const std::vector<ValidatorPtr>& validators)
+    Array(const std::vector<ValidatorCPtr>& validators)
         : Validator(validators)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 };
 
 class Field : public Validator
 {
 public:
-    Field(const QString& key, _Optional, const std::vector<ValidatorPtr>& validators = {})
+    Field(const QString& key, _Optional, const std::vector<ValidatorCPtr>& validators = {})
         : Validator(validators),
           m_optional(true),
           m_key(key)
     {}
 
-    Field(const QString& key, const std::vector<ValidatorPtr>& validators = {})
+    Field(const QString& key, const std::vector<ValidatorCPtr>& validators = {})
         : Validator(validators),
           m_optional(false),
           m_key(key)
     {}
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     bool m_optional;
@@ -136,41 +136,41 @@ private:
 class Or : public Validator
 {
 public:
-    Or(const std::vector<ValidatorPtr>& validators)
+    Or(const std::vector<ValidatorCPtr>& validators)
         : Validator(validators)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 };
 
 class And : public Validator {
 public:
-    And(const std::vector<ValidatorPtr>& validators)
+    And(const std::vector<ValidatorCPtr>& validators)
         : Validator(validators)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 };
 
 class String : public Validator
 {
 public:
-    String(const std::vector<ValidatorPtr>& validators)
+    String(const std::vector<ValidatorCPtr>& validators)
         : Validator(validators)
     { }
 
-    String(_NonEmpty, const std::vector<ValidatorPtr>& validators)
+    String(_NonEmpty, const std::vector<ValidatorCPtr>& validators)
         : Validator(validators),
           m_nonEmpty(true)
     { }
 
-    String(_Hex, const std::vector<ValidatorPtr>& validators)
+    String(_Hex, const std::vector<ValidatorCPtr>& validators)
         : Validator(validators),
           m_nonEmpty(true),
           m_hex(true)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     bool m_nonEmpty { false };
@@ -180,21 +180,21 @@ private:
 class Bool : public Validator
 {
 public:
-    Bool(const std::vector<ValidatorPtr>& validators)
+    Bool(const std::vector<ValidatorCPtr>& validators)
         : Validator(validators)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 };
 
 class Number : public Validator
 {
 public:
-    Number(const std::vector<ValidatorPtr>& validators)
+    Number(const std::vector<ValidatorCPtr>& validators)
         : Validator(validators)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 };
 
 class Exclude : public Validator
@@ -206,7 +206,7 @@ public:
         : m_values(values)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     Values m_values;
@@ -221,7 +221,7 @@ public:
         : m_values(values)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     Values m_values;
@@ -234,7 +234,7 @@ public:
         : m_ctxField(ctxField)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     QString m_ctxField;
@@ -247,7 +247,7 @@ public:
         : m_ctxField(ctxField)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     QString m_ctxField;
@@ -260,7 +260,7 @@ public:
         : m_ctxField(ctxField)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     QString m_ctxField;
@@ -273,7 +273,7 @@ public:
         : m_ctxField(ctxField)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     QString m_ctxField;
@@ -286,7 +286,7 @@ public:
         : m_ctxField(ctxField)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     QString m_ctxField;
@@ -299,7 +299,7 @@ public:
         : m_ctxField(ctxField)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) override;
+    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     QString m_ctxField;
@@ -310,98 +310,98 @@ private:
 constexpr auto Optional = Internal::_Optional::Optional;
 constexpr auto NonEmpty = Internal::_NonEmpty::NonEmpty;
 constexpr auto Hex = Internal::_Hex::Hex;
-using RootValidatorPtr = Internal::RootValidatorPtr;
+using RootValidatorCPtr = Internal::RootValidatorCPtr;
 
 template<typename... Ts>
-RootValidatorPtr RootValidator(const Ts&... validators)
+RootValidatorCPtr RootValidator(const Ts&... validators)
 {
     return std::make_shared<Internal::RootValidator>(Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorPtr Object(const Ts&... validators)
+ValidatorCPtr Object(const Ts&... validators)
 {
     return std::make_shared<Internal::Object>(Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorPtr Array(const Ts&... validators)
+ValidatorCPtr Array(const Ts&... validators)
 {
     return std::make_shared<Internal::Array>(Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorPtr Field(const QString& key, Internal::_Optional opt, const Ts&... validators)
+ValidatorCPtr Field(const QString& key, Internal::_Optional opt, const Ts&... validators)
 {
     return std::make_shared<Internal::Field>(key, opt, Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorPtr Field(const QString& key, const Ts&... validators)
+ValidatorCPtr Field(const QString& key, const Ts&... validators)
 {
     return std::make_shared<Internal::Field>(key, Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorPtr Or(const Ts&... validators)
+ValidatorCPtr Or(const Ts&... validators)
 {
     return std::make_shared<Internal::Or>(Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorPtr And(const Ts&... validators)
+ValidatorCPtr And(const Ts&... validators)
 {
     return std::make_shared<Internal::And>(Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorPtr String(const Ts&... validators)
+ValidatorCPtr String(const Ts&... validators)
 {
     return std::make_shared<Internal::String>(Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorPtr String(Internal::_NonEmpty ne, const Ts&... validators)
+ValidatorCPtr String(Internal::_NonEmpty ne, const Ts&... validators)
 {
     return std::make_shared<Internal::String>(ne, Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorPtr String(Internal::_Hex hex, const Ts&... validators)
+ValidatorCPtr String(Internal::_Hex hex, const Ts&... validators)
 {
     return std::make_shared<Internal::String>(hex, Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorPtr Bool(const Ts&... validators)
+ValidatorCPtr Bool(const Ts&... validators)
 {
     return std::make_shared<Internal::Bool>(Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorPtr Number(const Ts&... validators)
+ValidatorCPtr Number(const Ts&... validators)
 {
     return std::make_shared<Internal::Number>(Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorPtr Exclude(const Ts&... values)
+ValidatorCPtr Exclude(const Ts&... values)
 {
     return std::make_shared<Internal::Exclude>(variadic_to_container<std::vector, QJsonValue>(values...));
 }
 
 template<typename... Ts>
-ValidatorPtr Include(const Ts&... values)
+ValidatorCPtr Include(const Ts&... values)
 {
     return std::make_shared<Internal::Include>(variadic_to_container<std::vector, QJsonValue>(values...));
 }
 
-ValidatorPtr CtxWriteArrayLength(const QString& ctxField);
-ValidatorPtr CtxCheckArrayLength(const QString& ctxField);
-ValidatorPtr CtxAppendToList(const QString& ctxField);
-ValidatorPtr CtxCheckInList(const QString& ctxField);
-ValidatorPtr CtxCheckNotInList(const QString& ctxField);
-ValidatorPtr CtxClearRecord(const QString& ctxField);
+ValidatorCPtr CtxWriteArrayLength(const QString& ctxField);
+ValidatorCPtr CtxCheckArrayLength(const QString& ctxField);
+ValidatorCPtr CtxAppendToList(const QString& ctxField);
+ValidatorCPtr CtxCheckInList(const QString& ctxField);
+ValidatorCPtr CtxCheckNotInList(const QString& ctxField);
+ValidatorCPtr CtxClearRecord(const QString& ctxField);
 
 } // namespace JsonValidator
 } // namespace UtilsQt
