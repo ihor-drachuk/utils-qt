@@ -97,6 +97,11 @@ QString QmlUtils::clipboardGetText() const
     return qApp->clipboard()->text();
 }
 
+QString QmlUtils::getEnvironentVariable(const QString& name) const
+{
+    return QString::fromLatin1(qgetenv(name.toLatin1().constData()));
+}
+
 PathDetails QmlUtils::analyzePath(const QString& str) const
 {
     if ((str.size() >= 2 && str[1] == ":")) {
