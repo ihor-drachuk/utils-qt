@@ -4,6 +4,7 @@
 #include <QEventLoop>
 #include <QTimer>
 #include <QVector>
+#include "internal/LifetimeTracker.h"
 
 using namespace UtilsQt;
 
@@ -326,6 +327,27 @@ TEST(UtilsQt, Futures_Utils_reference)
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
     }
+}
+
+TEST(UtilsQt, Futures_Utils_Lifetime)
+{
+    LifetimeTracker tracker;
+    const auto data = tracker.getData();
+    ASSERT_EQ(data.count(), 1);
+    ASSERT_EQ(data.count(), 1);
+
+    QObject context;
+    auto f = createTimedFuture(10, &context);
+
+    ASSERT_EQ(data.count(), 1);
+    onFinished(f, &context, [tracker](){ (void)tracker; });
+    ASSERT_EQ(data.count(), 2);
+
+    waitForFuture<QEventLoop>(f);
+    qApp->processEvents();
+    qApp->processEvents();
+
+    ASSERT_EQ(data.count(), 1);
 }
 
 TEST_P(UtilsQt_Futures_Utils_AnalyzeFutures, Test)
