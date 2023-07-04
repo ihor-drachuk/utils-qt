@@ -4,6 +4,9 @@
 #include <UtilsQt/Futures/Utils.h>
 #include <QTimer>
 #include <QEventLoop>
+#include <QCoreApplication>
+
+#include "internal/LifetimeTracker.h"
 
 using namespace UtilsQt;
 
@@ -204,4 +207,18 @@ TEST(UtilsQt, Futures_RetryingFuture_Context)
     waitForFuture<QEventLoop>(future);
 
     ASSERT_EQ(count, 2);
+}
+
+TEST(UtilsQt, Futures_RetryingFuture_Lifetime)
+{
+    LifetimeTracker tracker;
+
+    ASSERT_EQ(tracker.count(), 1);
+    auto f = createRetryingFuture(nullptr, [tracker](){ (void)tracker; return createTimedFuture(10); });
+    ASSERT_EQ(tracker.count(), 2);
+
+    waitForFuture<QEventLoop>(f);
+    qApp->processEvents();
+    qApp->processEvents();
+    ASSERT_EQ(tracker.count(), 1);
 }

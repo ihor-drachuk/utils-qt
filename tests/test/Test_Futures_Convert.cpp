@@ -1,7 +1,10 @@
 #include <gtest/gtest.h>
 #include <UtilsQt/Futures/Converter.h>
 #include <UtilsQt/Futures/Utils.h>
+#include <QCoreApplication>
 #include <QEventLoop>
+
+#include "internal/LifetimeTracker.h"
 
 using namespace UtilsQt;
 
@@ -369,4 +372,21 @@ TEST(UtilsQt, Futures_Convert_NoHint)
     });
 
     (void)f1, (void)f2, (void)f3;
+}
+
+TEST(UtilsQt, Futures_Convert_Lifetime)
+{
+    LifetimeTracker tracker;
+
+    ASSERT_EQ(tracker.count(), 1);
+    auto f = convertFuture(nullptr, createTimedFuture(10), [tracker]() {
+        (void)tracker;
+        return QString();
+    });
+    ASSERT_EQ(tracker.count(), 2);
+
+    waitForFuture<QEventLoop>(f);
+    qApp->processEvents();
+    qApp->processEvents();
+    ASSERT_EQ(tracker.count(), 1);
 }
