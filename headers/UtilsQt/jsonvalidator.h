@@ -68,6 +68,7 @@ private:
 
 namespace Internal {
 
+enum class _Exclusive { Exclusive };
 enum class _Optional { Optional };
 enum class _NonEmpty { NonEmpty };
 enum class _Hex { Hex };
@@ -136,11 +137,19 @@ private:
 class Or : public Validator
 {
 public:
+    Or(_Exclusive, const std::vector<ValidatorCPtr>& validators)
+        : Validator(validators),
+          m_exclusive(true)
+    { }
+
     Or(const std::vector<ValidatorCPtr>& validators)
         : Validator(validators)
     { }
 
     bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+
+private:
+    bool m_exclusive{false};
 };
 
 class And : public Validator {
@@ -307,6 +316,7 @@ private:
 
 } // namespace Internal
 
+constexpr auto Exclusive = Internal::_Exclusive::Exclusive;
 constexpr auto Optional = Internal::_Optional::Optional;
 constexpr auto NonEmpty = Internal::_NonEmpty::NonEmpty;
 constexpr auto Hex = Internal::_Hex::Hex;
@@ -340,6 +350,12 @@ template<typename... Ts>
 ValidatorCPtr Field(const QString& key, const Ts&... validators)
 {
     return std::make_shared<Internal::Field>(key, Internal::convertValidators(validators...));
+}
+
+template<typename... Ts>
+ValidatorCPtr Or(Internal::_Exclusive exclusive, const Ts&... validators)
+{
+    return std::make_shared<Internal::Or>(exclusive, Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>

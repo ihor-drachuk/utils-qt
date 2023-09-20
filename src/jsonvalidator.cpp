@@ -111,11 +111,35 @@ bool Or::check(ContextData& ctx, Logger& logger, const QString& path, const QJso
 {
     OrProxyLogger proxyLogger;
 
+    size_t matchingItemsCnt = 0;
+
     for (const auto& x : nestedValidators()) {
         proxyLogger.reset();
         auto ok = x->check(ctx, proxyLogger, path, value);
-        if (ok) return true;
+        if (ok) {
+            if (!m_exclusive) return true;
+            matchingItemsCnt++;
+        }
     }
+
+    // We get here only if 'exclusive' logic enabled or
+    // there is no matching items...
+
+    // Handle 'exclusive' logic
+    if (m_exclusive) {
+        if (matchingItemsCnt == 1) {
+            return true;
+
+        } else if (matchingItemsCnt > 1) {
+            logger.notifyError(proxyLogger.lastPath(), "Exclusive OR-condition expected, but several items are matching!");
+            return false;
+        }
+
+        // If matchingItemsCnt == 0, then fallthrough...
+    }
+
+    // We get here only in cases, when there is no matching items
+    // (independently of exclusive mode state)
 
     assert(proxyLogger.hasNotifiedError());
     logger.notifyError(proxyLogger.lastPath(), proxyLogger.lastError());

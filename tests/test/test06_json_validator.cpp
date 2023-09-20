@@ -4,6 +4,7 @@
 #include <QJsonValue>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QList>
 
 TEST(UtilsQt, JsonValidator_basic)
 {
@@ -124,6 +125,45 @@ TEST(UtilsQt, JsonValidator_or)
     rsl = validator->check(lg, test);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg.hasNotifiedError());
+}
+
+TEST(UtilsQt, JsonValidator_or_exclusive)
+{
+    using namespace UtilsQt::JsonValidator;
+
+    auto validator =
+            RootValidator(
+              Object(
+                Or(Exclusive,
+                  Field("one"),
+                  Field("two")
+                )
+              )
+            );
+
+    QList<QJsonObject> successCases {
+        QJsonObject({{"one", "1"}}),
+        QJsonObject({{"two", "2"}})
+    };
+
+    QList<QJsonObject> failCases {
+        QJsonObject({{"one", "1"}, {"two", "2"}}),
+        QJsonObject()
+    };
+
+    for (const auto& x : successCases) {
+        NullLogger lg;
+        auto rsl = validator->check(lg, x);
+        ASSERT_TRUE(rsl);
+        ASSERT_FALSE(lg.hasNotifiedError());
+    }
+
+    for (const auto& x : failCases) {
+        NullLogger lg;
+        auto rsl = validator->check(lg, x);
+        ASSERT_FALSE(rsl);
+        ASSERT_TRUE(lg.hasNotifiedError());
+    }
 }
 
 TEST(UtilsQt, JsonValidator_include)
