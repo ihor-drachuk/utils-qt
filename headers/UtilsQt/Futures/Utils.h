@@ -203,6 +203,7 @@ void onFinished(const QFuture<Type>& future,
     } else {
         // If not finished yet...
         auto watcherPtr = new QFutureWatcher<Type>();
+        QObject::connect(context, &QObject::destroyed, watcherPtr, &QObject::deleteLater, connectionType);
         QObject::connect(watcherPtr, &QFutureWatcherBase::finished, context, [watcherPtr, resultHandler]() {
             resultHandler();
             watcherPtr->deleteLater();
