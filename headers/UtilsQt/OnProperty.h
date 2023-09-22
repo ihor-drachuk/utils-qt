@@ -109,11 +109,11 @@ PropertyWatcher<T, Getter, CancelHandler>* createWatcher(const Getter& getter, c
 } // namespace OnPropertyInternal
 
 
-template<typename T, typename T2, typename Object, typename Handler, typename Handler2 = void (*)(UtilsQt::CancelReason),
+template<typename T, typename... SArgs, typename Object, typename Handler, typename Handler2 = void (*)(UtilsQt::CancelReason),
          typename std::enable_if<std::is_base_of<QObject, Object>::value>::type* = nullptr>
 void onProperty(Object* object,
                 T (Object::* getter)() const,
-                void (Object::* notifier)(T2),
+                void (Object::* notifier)(SArgs...),
                 const T& expectedValue,
                 UtilsQt::Comparison comparison,
                 bool once,
@@ -151,11 +151,11 @@ void onProperty(Object* object,
     UtilsQt::invokeMethod(watcher, [watcher](){ watcher->changed(); }, connectionType);
 }
 
-template<typename T, typename T2, typename Object,
+template<typename T, typename... SArgs, typename Object,
          typename std::enable_if<std::is_base_of<QObject, Object>::value>::type* = nullptr>
 QFuture<void> onPropertyFuture(Object* object,
                                T (Object::* getter)() const,
-                               void (Object::* notifier)(T2),
+                               void (Object::* notifier)(SArgs...),
                                const T& expectedValue,
                                UtilsQt::Comparison comparison,
                                QObject* context,

@@ -40,10 +40,14 @@ public slots:
 
         m_counter = counter;
         emit counterChanged(m_counter);
+        emit counterChanged2();
+        emit counterChanged3(m_counter, {});
     }
 
 signals:
     void counterChanged(const int& counter);
+    void counterChanged2();
+    void counterChanged3(int, float);
 
 private:
     int m_counter { 0 };
@@ -243,6 +247,8 @@ TEST(UtilsQt, onProperty_future)
 
         ASSERT_TRUE(f.isFinished());
         ASSERT_FALSE(f.isCanceled());
+
+        ASSERT_EQ(testObject.counter(), 3);
     }
 
     {
@@ -262,6 +268,30 @@ TEST(UtilsQt, onProperty_future)
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
     }
+}
+
+TEST(UtilsQt, onProperty_flexible_signal)
+{
+    QObject context;
+    TestObject testObject;
+    constexpr int expected = 3;
+
+    auto f1 = onPropertyFuture(&testObject, &TestObject::counter, &TestObject::counterChanged,  expected, UtilsQt::Comparison::Equal, &context);
+    auto f2 = onPropertyFuture(&testObject, &TestObject::counter, &TestObject::counterChanged2, expected, UtilsQt::Comparison::Equal, &context);
+    auto f3 = onPropertyFuture(&testObject, &TestObject::counter, &TestObject::counterChanged3, expected, UtilsQt::Comparison::Equal, &context);
+
+    waitForFuture<QEventLoop>(f1);
+    waitForFuture<QEventLoop>(f2);
+    waitForFuture<QEventLoop>(f3);
+
+    ASSERT_TRUE(f1.isFinished());
+    ASSERT_TRUE(f2.isFinished());
+    ASSERT_TRUE(f3.isFinished());
+    ASSERT_FALSE(f1.isCanceled());
+    ASSERT_FALSE(f2.isCanceled());
+    ASSERT_FALSE(f3.isCanceled());
+
+    ASSERT_EQ(testObject.counter(), expected);
 }
 
 #include "test03_onProperty.moc"
