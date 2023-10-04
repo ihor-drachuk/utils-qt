@@ -396,6 +396,11 @@ void QmlUtils::setCustomCursor(QQuickItem* item, const QString& file, const QPoi
     item->setCursor(cursor);
 }
 
+void QmlUtils::setDefaultCursor(QQuickItem* item, Qt::CursorShape cursorShape)
+{
+    item->setCursor(cursorShape);
+}
+
 void QmlUtils::resetCursor(QQuickItem* item)
 {
     item->unsetCursor();
