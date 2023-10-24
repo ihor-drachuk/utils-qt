@@ -1152,6 +1152,7 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
         auto foundInBoth = (srcRoleValue == 3);
         bool removedLocal = false;
         std::optional<scoped_guard<std::function<void()>>> endRemoveRowsLater;
+        std::optional<scoped_guard<std::function<void()>>> dataChangedLater;
 
         if (foundInBoth) {
             // Update line
@@ -1176,7 +1177,8 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
                 for (auto& x : updatedRoles)
                     x += Qt::UserRole;
 
-                emit dataChanged(index(localIdx), index(localIdx), updatedRoles);
+                // emit dataChanged(index(localIdx), index(localIdx), updatedRoles);
+                dataChangedLater = scoped_guard<std::function<void()>>([this, localIdx, updatedRoles](){ emit dataChanged(index(localIdx), index(localIdx), updatedRoles); });
             }
 
         } else {
