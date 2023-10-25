@@ -39,6 +39,9 @@ std::optional<QString> getString(const QVariant& value)
         case QVariant::Type::String:
             return value.toString();
 
+        case QVariant::Type::ByteArray:
+            return QString::fromLatin1(value.toByteArray());
+
         default:
             return {};
     }
@@ -99,6 +102,7 @@ struct MergedListModel::impl_t
     QVariant joinRole1;
     QVariant joinRole2;
 
+    // Cache
     ModelContext models[2];
 
     QList<QByteArray> roles;
@@ -107,9 +111,11 @@ struct MergedListModel::impl_t
     QList<QVariantList> data;
     std::unordered_map<QVariant, int> joinValueToIndex;
 
+    // Flags
     bool isInitialized { false };
     bool resetting { false };
 
+    //
     void reset() {
         isInitialized = false;
         resetting = false;
