@@ -747,7 +747,6 @@ void MergedListModel::deinit()
 
 void MergedListModel::resetValue(int index, int role)
 {
-    auto newValue = QVariant::fromValue(nullptr);
     std::optional<Converter> resetConverter;
 
     if (auto resetConv = utils_cpp::find_in_map_cref(impl().resetters, role)) {
@@ -756,8 +755,9 @@ void MergedListModel::resetValue(int index, int role)
         resetConverter = *globalResetConv;
     }
 
-    if (resetConverter)
-        newValue = resetConverter.value()(role, QLatin1String(impl().roles.at(role)), index, impl().data[index][role]);
+    QVariant newValue = resetConverter ?
+                            resetConverter.value()(role, QLatin1String(impl().roles.at(role)), index, impl().data[index][role]) :
+                            QVariant::fromValue(nullptr);
 
     impl().data[index][role] = newValue;
 }
@@ -777,7 +777,7 @@ void MergedListModel::addResetterToCache(Iter it)
         }
 
     } else if (const auto strRole = getString(providedRole)) {
-        const auto matchedRole = utils_cpp::find(impl().roles, strRole->toLatin1());
+        const auto matchedRole = utils_cpp::find_cref(impl().roles, strRole->toLatin1());
         assert(matchedRole.has_value() && "Failed to find resetter's role! (wrong name)");
         role = static_cast<int>(matchedRole.index());
 
