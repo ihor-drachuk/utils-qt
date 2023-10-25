@@ -7,5 +7,6 @@
         <file>tst_4_repeater2.qml</file>
         <file>tst_5_mergedlistmodel.qml</file>
         <file>tst_6_mergedlistmodel_2.qml</file>
+        <file>tst_7_mergedlistmodel_3_resetter.qml</file>
     </qresource>
 </RCC>
