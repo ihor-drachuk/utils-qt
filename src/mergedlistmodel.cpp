@@ -101,6 +101,7 @@ struct MergedListModel::impl_t
 {
     QVariant joinRole1;
     QVariant joinRole2;
+    QMap<QVariant, Converter> providedResetters;
 
     // Cache
     ModelContext models[2];
@@ -110,6 +111,8 @@ struct MergedListModel::impl_t
     int srcRole {-1};
     QList<QVariantList> data;
     std::unordered_map<QVariant, int> joinValueToIndex;
+
+    std::unordered_map<int, Converter> resetters;
 
     // Flags
     bool isInitialized { false };
@@ -125,6 +128,7 @@ struct MergedListModel::impl_t
         srcRole = -1;
         data.clear();
         joinValueToIndex.clear();
+        resetters.clear();
 
         models[0].reset();
         models[1].reset();
@@ -228,6 +232,20 @@ QHash<int, QByteArray> MergedListModel::roleNames() const
 void MergedListModel::checkConsistency() const
 {
     selfCheck();
+}
+
+void MergedListModel::registerCustomResetter(const QVariant& role, const Converter& converter)
+{
+    assert(utils_cpp::find_in_map(impl().providedResetters, role).has_value() == false);
+    auto it = impl().providedResetters.insert(role, converter);
+
+    if (impl().isInitialized)
+        addResetterToCache(it);
+}
+
+void MergedListModel::registerCustomResetter(const Converter& converter)
+{
+    registerCustomResetter(-1, converter);
 }
 
 QAbstractListModel* MergedListModel::model1() const
@@ -705,6 +723,10 @@ void MergedListModel::init()
         }
     }
 
+    // Load resetters
+    for (auto it = impl().providedResetters.cbegin(); it != impl().providedResetters.cend(); it++)
+        addResetterToCache(it);
+
     impl().isInitialized = true;
 }
 
@@ -721,6 +743,50 @@ void MergedListModel::deinit()
     impl().reset();
 
     endResetModel();
+}
+
+void MergedListModel::resetValue(int index, int role)
+{
+    auto newValue = QVariant::fromValue(nullptr);
+    std::optional<Converter> resetConverter;
+
+    if (auto resetConv = utils_cpp::find_in_map_cref(impl().resetters, role)) {
+        resetConverter = *resetConv;
+    } else if (auto globalResetConv = utils_cpp::find_in_map_cref(impl().resetters, -1)) {
+        resetConverter = *globalResetConv;
+    }
+
+    if (resetConverter)
+        newValue = resetConverter.value()(role, QLatin1String(impl().roles.at(role)), index, impl().data[index][role]);
+
+    impl().data[index][role] = newValue;
+}
+
+template<typename Iter>
+void MergedListModel::addResetterToCache(Iter it)
+{
+    const auto providedRole = it.key();
+    int role;
+
+    if (const auto intRole = getInt(providedRole)) {
+        if (*intRole == -1) {
+            role = -1;
+        } else {
+            role = *intRole - Qt::UserRole;
+            assert(role >= 0 && role < impl().roles.size() && "Failed to find resetter's role! (out-of-range)");
+        }
+
+    } else if (const auto strRole = getString(providedRole)) {
+        const auto matchedRole = utils_cpp::find(impl().roles, strRole->toLatin1());
+        assert(matchedRole.has_value() && "Failed to find resetter's role! (wrong name)");
+        role = static_cast<int>(matchedRole.index());
+
+    } else {
+        assert(false && "Wrong resetter's role type! It should be int or string!");
+    }
+
+    assert(utils_cpp::find_in_map_cref(impl().resetters, role).has_value() == false && "Same resetter's role added twice!");
+    impl().resetters.insert({role, it.value()});
 }
 
 void MergedListModel::connectModel(int idx)
@@ -798,7 +864,7 @@ void MergedListModel::onDataChanged(int idx, const QModelIndex& topLeft, const Q
 
                 for (auto r : ctxRoles) {
                     auto localRole = ctx.roleRemapFromSrc.at(r);
-                    impl().data[localIdx][localRole] = QVariant::fromValue(nullptr);
+                    resetValue(localIdx, localRole);
                     changedRoles.append(localRole + Qt::UserRole);
                 }
 
@@ -1173,7 +1239,7 @@ void MergedListModel::onAfterRemoved(int idx, const QModelIndex& /*parent*/, int
                     // Nothing.
 
                 } else if (utils_cpp::find_in_map(ctx.roleRemapToSrc, r)) {
-                    impl().data[localIdx][r] = QVariant::fromValue(nullptr);
+                    resetValue(localIdx, r);
                     updatedRoles.append(r);
                 }
             }

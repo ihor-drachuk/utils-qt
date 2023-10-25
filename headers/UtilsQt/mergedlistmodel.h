@@ -1,7 +1,9 @@
 #pragma once
+#include <QLatin1String>
 #include <QAbstractListModel>
 #include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
+#include <functional>
 
 /* MergedListModel is used for combining two models into one.
  *
@@ -32,12 +34,24 @@
  *     1 - Current row consists of model-1 data only
  *     2 - Current row consists of model-2 data only
  *     3 - It's joined row, consists of both models data
+ *
+ * Custom resetters
+ *   When origin model removes row, which is part of joined MLM row,
+ *   MLM need to reset relevant values (which belong to those's model row)
+ *   to null. By default, they're set to QVariant(nullptr).
+ *   But developer can override this behavior using registerCustomResetter.
+ *
+ *   Notice: custom resetter is ignored during new row construction when
+ *   join-role's value is changed.
  */
 
 class MergedListModel : public QAbstractListModel
 {
     Q_OBJECT
     NO_COPY_MOVE(MergedListModel);
+
+public:
+    using Converter = std::function<QVariant(int role, const QLatin1String& roleStr, int row, const QVariant& prevValue)>;
 
 public:
     Q_PROPERTY(QVariant joinRole1 READ joinRole1 WRITE setJoinRole1 NOTIFY joinRole1Changed) // int or string
@@ -56,6 +70,8 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE void checkConsistency() const;
+    void registerCustomResetter(const QVariant& role, const Converter& converter); // role = int or string
+    void registerCustomResetter(const Converter& converter); // for all roles
 
 // --- Properties support ---
 public:
@@ -83,6 +99,8 @@ private:
     bool initable() const;
     void init();
     void deinit();
+    template<typename Iter> void addResetterToCache(Iter it);
+    void resetValue(int index, int role);
 
     void connectModel(int idx);
 
