@@ -6,6 +6,7 @@
 #include <QSGRendererInterface>
 #include <cassert>
 #include <UtilsQt/qml.h>
+#include "MLMResetter.h"
 
 
 // 'Registrator' is created for compatibility with Qt 5.9
@@ -33,6 +34,7 @@ public:
         assert(engine);
 
         UtilsQt::Qml::registerAll(*engine);
+        MLMResetter::registerTypes();
     }
 };
 

@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 COMPONENTS QuickTest REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS QuickTest)
 
-add_executable(test-utils-qt-4 main4.cpp main4.qrc)
+add_executable(test-utils-qt-4 main4.cpp MLMResetter.h main4.qrc)
 set_property(TARGET test-utils-qt-4 PROPERTY CXX_STANDARD 17)
 set_property(TARGET test-utils-qt-4 PROPERTY AUTOMOC ON)
 set_property(TARGET test-utils-qt-4 PROPERTY AUTORCC ON)
