@@ -252,11 +252,14 @@ void onResult(const QFuture<Type>& future,
 }
 
 
-template<typename Type, typename Obj,
-         typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
+template<typename Type, typename Context, typename Obj, typename SArg,
+         typename std::enable_if<std::is_base_of<QObject, Context>::value &&
+                                 std::is_base_of<QObject, Obj>::value &&
+                                 (std::is_same_v<Context, Obj> || std::is_base_of_v<Obj, Context>),
+                                 int>::type = 0>
 void onResult(const QFuture<Type>& future,
-              Obj* object,
-              void (Obj::* member)(const Type&),
+              Context* object,
+              void (Obj::* member)(SArg),
               Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
     Q_ASSERT(object);
