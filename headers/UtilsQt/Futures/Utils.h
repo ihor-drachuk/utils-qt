@@ -6,6 +6,7 @@
 #include <memory>
 #include <QObject>
 #include <QFuture>
+#include <QFutureInterface>
 #include <QFutureWatcher>
 #include <QTimer>
 
@@ -175,7 +176,7 @@ public:
     bool isFinished() const { return m_interface.isFinished(); }
 
     QFuture<T> future() { return m_interface.future(); }
-    QFutureInterface<T> interface() { return m_interface; };
+    QFutureInterface<T> futureInterface() { return m_interface; };
 
 private:
     QFutureInterface<T> m_interface;
@@ -341,30 +342,30 @@ void waitForFuture(const QFuture<T>& future, const std::optional<unsigned>& time
 template<typename T>
 [[nodiscard]] QFuture<T> createReadyFuture(const T& value)
 {
-    QFutureInterface<T> interface;
-    interface.reportStarted();
-    interface.reportResult(value);
-    interface.reportFinished();
-    return interface.future();
+    QFutureInterface<T> futureInterface;
+    futureInterface.reportStarted();
+    futureInterface.reportResult(value);
+    futureInterface.reportFinished();
+    return futureInterface.future();
 }
 
 [[nodiscard]] static QFuture<void> createReadyFuture()
 {
-    QFutureInterface<void> interface;
-    interface.reportStarted();
-    interface.reportFinished();
-    return interface.future();
+    QFutureInterface<void> futureInterface;
+    futureInterface.reportStarted();
+    futureInterface.reportFinished();
+    return futureInterface.future();
 }
 
 
 template<typename T>
 [[nodiscard]] QFuture<T> createCanceledFuture()
 {
-    QFutureInterface<T> interface;
-    interface.reportStarted();
-    interface.reportCanceled();
-    interface.reportFinished();
-    return interface.future();
+    QFutureInterface<T> futureInterface;
+    futureInterface.reportStarted();
+    futureInterface.reportCanceled();
+    futureInterface.reportFinished();
+    return futureInterface.future();
 }
 
 
@@ -374,28 +375,28 @@ template<typename T>
     if (!time)
         return createReadyFuture(value);
 
-    QFutureInterface<T> interface;
-    interface.reportStarted();
+    QFutureInterface<T> futureInterface;
+    futureInterface.reportStarted();
 
     auto timer = new QTimer();
-    QObject::connect(timer, &QTimer::timeout, [timer, interface, value]() mutable {
-        interface.reportResult(value);
-        interface.reportFinished();
+    QObject::connect(timer, &QTimer::timeout, [timer, futureInterface, value]() mutable {
+        futureInterface.reportResult(value);
+        futureInterface.reportFinished();
         timer->deleteLater();
     });
     timer->setSingleShot(true);
     timer->start(time);
 
     if (ctx) {
-        QObject::connect(ctx, &QObject::destroyed, timer, [timer, interface]() mutable {
+        QObject::connect(ctx, &QObject::destroyed, timer, [timer, futureInterface]() mutable {
             timer->stop();
-            interface.reportCanceled();
-            interface.reportFinished();
+            futureInterface.reportCanceled();
+            futureInterface.reportFinished();
             timer->deleteLater();
         });
     }
 
-    return interface.future();
+    return futureInterface.future();
 }
 
 template<typename T>
@@ -406,26 +407,26 @@ template<typename T>
     if (!time)
         return createReadyFuture(value);
 
-    QFutureInterface<T> interface;
-    interface.reportStarted();
+    QFutureInterface<T> futureInterface;
+    futureInterface.reportStarted();
 
     auto timer = new QTimer();
-    QObject::connect(timer, &QTimer::timeout, [timer, interface, &value]() mutable {
-        interface.reportResult(value);
-        interface.reportFinished();
+    QObject::connect(timer, &QTimer::timeout, [timer, futureInterface, &value]() mutable {
+        futureInterface.reportResult(value);
+        futureInterface.reportFinished();
         timer->deleteLater();
     });
     timer->setSingleShot(true);
     timer->start(time);
 
-    QObject::connect(ctx, &QObject::destroyed, timer, [timer, interface]() mutable {
+    QObject::connect(ctx, &QObject::destroyed, timer, [timer, futureInterface]() mutable {
         timer->stop();
-        interface.reportCanceled();
-        interface.reportFinished();
+        futureInterface.reportCanceled();
+        futureInterface.reportFinished();
         timer->deleteLater();
     });
 
-    return interface.future();
+    return futureInterface.future();
 }
 
 [[nodiscard]] static inline QFuture<void> createTimedFuture(int time, QObject* ctx = nullptr)
@@ -433,27 +434,27 @@ template<typename T>
     if (!time)
         return createReadyFuture();
 
-    QFutureInterface<void> interface;
-    interface.reportStarted();
+    QFutureInterface<void> futureInterface;
+    futureInterface.reportStarted();
 
     auto timer = new QTimer();
-    QObject::connect(timer, &QTimer::timeout, [timer, interface]() mutable {
-        interface.reportFinished();
+    QObject::connect(timer, &QTimer::timeout, [timer, futureInterface]() mutable {
+        futureInterface.reportFinished();
         timer->deleteLater();
     });
     timer->setSingleShot(true);
     timer->start(time);
 
     if (ctx) {
-        QObject::connect(ctx, &QObject::destroyed, timer, [timer, interface]() mutable {
+        QObject::connect(ctx, &QObject::destroyed, timer, [timer, futureInterface]() mutable {
             timer->stop();
-            interface.reportCanceled();
-            interface.reportFinished();
+            futureInterface.reportCanceled();
+            futureInterface.reportFinished();
             timer->deleteLater();
         });
     }
 
-    return interface.future();
+    return futureInterface.future();
 }
 
 
@@ -463,14 +464,14 @@ template<typename T>
     if (!time)
         return createCanceledFuture<T>();
 
-    QFutureInterface<T> interface;
-    interface.reportStarted();
+    QFutureInterface<T> futureInterface;
+    futureInterface.reportStarted();
 
     auto timer = new QTimer();
-    auto handler = [timer, interface]() mutable {
+    auto handler = [timer, futureInterface]() mutable {
         timer->stop();
-        interface.reportCanceled();
-        interface.reportFinished();
+        futureInterface.reportCanceled();
+        futureInterface.reportFinished();
         timer->deleteLater();
     };
 
@@ -481,7 +482,7 @@ template<typename T>
     if (ctx)
         QObject::connect(ctx, &QObject::destroyed, timer, handler);
 
-    return interface.future();
+    return futureInterface.future();
 }
 
 template<typename T>

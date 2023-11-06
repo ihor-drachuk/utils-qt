@@ -78,26 +78,26 @@ auto fixConverter(const T& func)
 }
 
 template <typename SrcFutureType, typename Converter, typename DstFutureType>
-bool convert(const QFuture<SrcFutureType>& srcFuture, const Converter& converter, QFutureInterface<DstFutureType>& interface)
+bool convert(const QFuture<SrcFutureType>& srcFuture, const Converter& converter, QFutureInterface<DstFutureType>& futureInterface)
 {
     const auto result = converter(srcFuture.result());
 
     if (result) {
-        interface.reportResult(*result);
-        interface.reportFinished();
+        futureInterface.reportResult(*result);
+        futureInterface.reportFinished();
     }
 
     return result.has_value();
 }
 
 template <typename Converter, typename DstFutureType>
-bool convert(const QFuture<void>& /*srcFuture*/, const Converter& converter, QFutureInterface<DstFutureType>& interface)
+bool convert(const QFuture<void>& /*srcFuture*/, const Converter& converter, QFutureInterface<DstFutureType>& futureInterface)
 {
     const auto result = converter();
 
     if (result) {
-        interface.reportResult(*result);
-        interface.reportFinished();
+        futureInterface.reportResult(*result);
+        futureInterface.reportFinished();
     }
 
     return result.has_value();

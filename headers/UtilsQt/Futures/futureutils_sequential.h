@@ -141,13 +141,13 @@ public:
     FutureResult<RetFutureType> then(Callable&& callable) {
         getContext()->needInternalHandler = false;
 
-        QFutureInterface<RetFutureType> interface;
-        interface.reportStarted();
+        QFutureInterface<RetFutureType> futureInterface;
+        futureInterface.reportStarted();
 
         UtilsQt::onFinished(m_future, m_context,
-                   [interface, callable, internalContext = getContext(), m_context = m_context, m_connectionType = m_connectionType]
+                   [futureInterface, callable, internalContext = getContext(), m_context = m_context, m_connectionType = m_connectionType]
                    (const std::optional<T>& result) mutable {
-            auto interface2 = interface;
+            auto interface2 = futureInterface;
 
             if (!internalContext->errorFlag) {
                 QFuture<RetFutureType> nextFuture;
@@ -166,8 +166,8 @@ public:
                     return;
                 }
 
-                UtilsQt::onFinished(nextFuture, m_context, [interface, internalContext](const std::optional<RetFutureType>& result) {
-                    auto interface2 = interface;
+                UtilsQt::onFinished(nextFuture, m_context, [futureInterface, internalContext](const std::optional<RetFutureType>& result) {
+                    auto interface2 = futureInterface;
 
                     if (result) {
                         interface2.reportResult(result.value());
@@ -184,7 +184,7 @@ public:
 
         }, m_connectionType);
 
-        return FutureResult<RetFutureType>(interface.future(), m_context, m_connectionType, getContext());
+        return FutureResult<RetFutureType>(futureInterface.future(), m_context, m_connectionType, getContext());
     }
 
     // QFuture<T> --> std::optional<T> --> void
