@@ -40,6 +40,7 @@
 */
 
 namespace UtilsQt {
+
 namespace FutureConverterInternal {
 
 template<typename T>

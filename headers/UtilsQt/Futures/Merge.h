@@ -93,7 +93,7 @@ struct PayloadType<QFuture<void>>
     using Type = void;
 };
 
-template<template <typename T, typename... Args> class Container, typename T, typename... Args>
+template<template <typename, typename...> class Container, typename T, typename... Args>
 struct FunctionsC<Container<T, Args...>>
 {
     using C = Container<T, Args...>;
@@ -141,7 +141,7 @@ struct FunctionsC<Container<T, Args...>>
 template<typename S>
 struct Functions;
 
-template<template <typename... Args> class Container, typename... Args>
+template<template <typename...> class Container, typename... Args>
 struct Functions<Container<Args...>> :
         std::conditional_t<
             std::is_same_v<Container<Args...>, std::tuple<Args...>>,
@@ -312,7 +312,7 @@ auto mergeFuturesAll(QObject* context, const QFuture<Ts>&... futures)
 
 // Return type: QFuture<Container<std::optional<T>>>.
 // Also notice: `std::optional<void>` is replaced by `bool`.
-template<template <typename T, typename... Args> class Container, typename T, typename... Args>
+template<template <typename, typename...> class Container, typename T, typename... Args>
 auto mergeFuturesAll(QObject* context, CancellationBehavior cancellationBehavior, const Container<T, Args...>& futures)
 {
     auto ctx = new FuturesMergeInternal::Context<Container<T, Args...>>(context, futures, All, cancellationBehavior);
@@ -323,7 +323,7 @@ auto mergeFuturesAll(QObject* context, CancellationBehavior cancellationBehavior
     return resultFuture;
 }
 
-template<template <typename T, typename... Args> class Container, typename T, typename... Args>
+template<template <typename, typename...> class Container, typename T, typename... Args>
 auto mergeFuturesAll(QObject* context, const Container<T, Args...>& futures)
 {
     return mergeFuturesAll(context, CancellationBehavior::CancelOnSingleCancellation, futures);
@@ -368,7 +368,7 @@ auto mergeFuturesAny(QObject* context, const QFuture<Ts>&... futures)
 
 // Return type: QFuture<Container<std::optional<T>>>.
 // Also notice: `std::optional<void>` is replaced by `bool`.
-template<template <typename T, typename... Args> class Container, typename T, typename... Args>
+template<template <typename, typename...> class Container, typename T, typename... Args>
 auto mergeFuturesAny(QObject* context, CancellationBehavior cancellationBehavior, const Container<T, Args...>& futures)
 {
     auto ctx = new FuturesMergeInternal::Context<Container<T, Args...>>(context, futures, Any, cancellationBehavior);
@@ -379,7 +379,7 @@ auto mergeFuturesAny(QObject* context, CancellationBehavior cancellationBehavior
     return resultFuture;
 }
 
-template<template <typename T, typename... Args> class Container, typename T, typename... Args>
+template<template <typename, typename...> class Container, typename T, typename... Args>
 auto mergeFuturesAny(QObject* context, const Container<T, Args...>& futures)
 {
     return mergeFuturesAny(context, CancellationBehavior::CancelOnSingleCancellation, futures);
