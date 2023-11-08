@@ -226,7 +226,7 @@ TEST(UtilsQt, Futures_Merge_TestResults)
         auto f4 = createTimedFuture(50); // void
         auto f5 = createReadyFuture(QString("Test QString"));
         auto futureResult = UtilsQt::mergeFuturesAll(nullptr,
-                                                     CancellationBehavior::IgnoreSingleCancellation,
+                                                     MergeFlags::IgnoreSomeCancellation,
                                                      std::make_tuple(f1, f2, f3, f4, f5));
         UtilsQt::waitForFuture<QEventLoop>(futureResult);
 

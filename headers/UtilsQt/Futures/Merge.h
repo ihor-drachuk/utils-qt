@@ -16,11 +16,26 @@
 
 namespace UtilsQt {
 
-enum CancellationBehavior
+enum class MergeFlags
 {
-    CancelOnSingleCancellation,
-    IgnoreSingleCancellation
+    IgnoreSomeCancellation = 1, // Cancel if all source futures are canceled,
+                                // othwerwise cancel on first cancellation (default)
+
 };
+
+} // namespace UtilsQt
+
+inline UtilsQt::MergeFlags operator| (UtilsQt::MergeFlags a, UtilsQt::MergeFlags b)
+{
+    return static_cast<UtilsQt::MergeFlags>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+inline int operator& (UtilsQt::MergeFlags a, UtilsQt::MergeFlags b)
+{
+    return static_cast<int>(a) & static_cast<int>(b);
+}
+
+namespace UtilsQt {
 
 enum TriggerMode
 {
@@ -155,10 +170,10 @@ class Context : public QObject
 {
     NO_COPY_MOVE(Context);
 public:
-    Context(QObject* ctx, const T& futures, TriggerMode triggerMode, CancellationBehavior cancellationBehavior)
+    Context(QObject* ctx, const T& futures, TriggerMode triggerMode, MergeFlags mergeFlags)
         : QObject(ctx),
           m_triggerMode(triggerMode),
-          m_cancellationBehavior(cancellationBehavior)
+          m_mergeFlags(mergeFlags)
     {
         m_totalCnt = Functions<T>::size(futures);
 
@@ -177,17 +192,13 @@ public:
             return;
         }
 
-        switch (m_cancellationBehavior) {
-            case CancelOnSingleCancellation:
-                if (status.anyCanceled) {
-                    m_outFutureInterface.reportCanceled();
-                    m_outFutureInterface.reportFinished();
-                    deleteLater();
-                    return;
-                }
-
-            case IgnoreSingleCancellation:
-                break;
+        if (!(m_mergeFlags & MergeFlags::IgnoreSomeCancellation)) {
+            if (status.anyCanceled) {
+                m_outFutureInterface.reportCanceled();
+                m_outFutureInterface.reportFinished();
+                deleteLater();
+                return;
+            }
         }
 
         if (status.allFinished || (status.anyWellFinished && m_triggerMode == Any)) {
@@ -242,21 +253,12 @@ private:
 
         m_canceledCnt++;
 
-        switch (m_cancellationBehavior) {
-            case CancelOnSingleCancellation:
-                m_outFutureInterface.reportCanceled();
-                m_outFutureInterface.reportFinished();
-                deleteLater();
-                return;
-
-            case IgnoreSingleCancellation:
-                const bool allCanceled = (m_canceledCnt == m_totalCnt);
-                if (allCanceled) {
-                    m_outFutureInterface.reportCanceled();
-                    m_outFutureInterface.reportFinished();
-                    deleteLater();
-                }
-                break;
+        const bool allCanceled = (m_canceledCnt == m_totalCnt);
+        const bool cancelOnSingle = !(m_mergeFlags & MergeFlags::IgnoreSomeCancellation);
+        if (allCanceled || cancelOnSingle) {
+            m_outFutureInterface.reportCanceled();
+            m_outFutureInterface.reportFinished();
+            deleteLater();
         }
     }
 
@@ -276,7 +278,7 @@ private:
 
 private:
     TriggerMode m_triggerMode;
-    CancellationBehavior m_cancellationBehavior;
+    MergeFlags m_mergeFlags;
     typename Functions<T>::Watchers m_inWatchers;
     QFutureInterface<void> m_outFutureInterface;
     QFutureWatcher<void> m_outFutureWatcher;
@@ -294,9 +296,9 @@ private:
 // Also notice: `std::optional<void>` is replaced by `bool`.
 template<typename... Ts,
          typename ResultContent = typename ResultContentType<Ts...>::Type> // Hint (just for example)
-QFuture<ResultContent> mergeFuturesAll(QObject* context, CancellationBehavior cancellationBehavior, const QFuture<Ts>&... futures)
+QFuture<ResultContent> mergeFuturesAll(QObject* context, MergeFlags mergeFlags, const QFuture<Ts>&... futures)
 {
-    auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, std::tie(futures...), All, cancellationBehavior);
+    auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, std::tie(futures...), All, mergeFlags);
     auto f = ctx->targetFuture();
     auto resultFuture = convertFuture<void, ResultContent>(context, f, ConverterFlags::IgnoreNullContext, [futures...]() -> std::optional<ResultContent> {
         return futuresToOptResults(std::make_tuple(futures...));
@@ -307,15 +309,15 @@ QFuture<ResultContent> mergeFuturesAll(QObject* context, CancellationBehavior ca
 template<typename... Ts>
 auto mergeFuturesAll(QObject* context, const QFuture<Ts>&... futures)
 {
-    return mergeFuturesAll<Ts...>(context, CancellationBehavior::CancelOnSingleCancellation, futures...);
+    return mergeFuturesAll<Ts...>(context, {}, futures...);
 }
 
 // Return type: QFuture<Container<std::optional<T>>>.
 // Also notice: `std::optional<void>` is replaced by `bool`.
 template<template <typename, typename...> class Container, typename T, typename... Args>
-auto mergeFuturesAll(QObject* context, CancellationBehavior cancellationBehavior, const Container<T, Args...>& futures)
+auto mergeFuturesAll(QObject* context, MergeFlags mergeFlags, const Container<T, Args...>& futures)
 {
-    auto ctx = new FuturesMergeInternal::Context<Container<T, Args...>>(context, futures, All, cancellationBehavior);
+    auto ctx = new FuturesMergeInternal::Context<Container<T, Args...>>(context, futures, All, mergeFlags);
     auto f = ctx->targetFuture();
     auto resultFuture = convertFuture(context, f, ConverterFlags::IgnoreNullContext, [futures]() { // No hint
         return futuresToOptResults(futures);
@@ -326,20 +328,20 @@ auto mergeFuturesAll(QObject* context, CancellationBehavior cancellationBehavior
 template<template <typename, typename...> class Container, typename T, typename... Args>
 auto mergeFuturesAll(QObject* context, const Container<T, Args...>& futures)
 {
-    return mergeFuturesAll(context, CancellationBehavior::CancelOnSingleCancellation, futures);
+    return mergeFuturesAll(context, {}, futures);
 }
 
 #ifndef UTILS_QT_COMPILER_GCC
 template<typename... Ts>
-auto mergeFuturesAll(QObject* context, CancellationBehavior cancellationBehavior, const std::tuple<QFuture<Ts>...>& futures)
+auto mergeFuturesAll(QObject* context, MergeFlags mergeFlags, const std::tuple<QFuture<Ts>...>& futures)
 {
-    return std::apply([context, cancellationBehavior](auto&&... xs){ return mergeFuturesAll<Ts...>(context, cancellationBehavior, xs...); }, futures);
+    return std::apply([context, mergeFlags](auto&&... xs){ return mergeFuturesAll<Ts...>(context, mergeFlags, xs...); }, futures);
 }
 
 template<typename... Ts>
 auto mergeFuturesAll(QObject* context, const std::tuple<QFuture<Ts>...>& futures)
 {
-    return mergeFuturesAll<Ts...>(context, CancellationBehavior::CancelOnSingleCancellation, futures);
+    return mergeFuturesAll<Ts...>(context, {}, futures);
 }
 #endif // UTILS_QT_COMPILER_GCC
 
@@ -350,9 +352,9 @@ auto mergeFuturesAll(QObject* context, const std::tuple<QFuture<Ts>...>& futures
 // Also notice: `std::optional<void>` is replaced by `bool`.
 template<typename... Ts,
          typename ResultContent = typename ResultContentType<Ts...>::Type>
-QFuture<ResultContent> mergeFuturesAny(QObject* context, CancellationBehavior cancellationBehavior, const QFuture<Ts>&... futures)
+QFuture<ResultContent> mergeFuturesAny(QObject* context, MergeFlags mergeFlags, const QFuture<Ts>&... futures)
 {
-    auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, std::tie(futures...), Any, cancellationBehavior);
+    auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, std::tie(futures...), Any, mergeFlags);
     auto f = ctx->targetFuture();
     auto resultFuture = convertFuture<void, ResultContent>(context, f, ConverterFlags::IgnoreNullContext, [futures...]() -> std::optional<ResultContent> {
         return futuresToOptResults(std::make_tuple(futures...));
@@ -363,15 +365,15 @@ QFuture<ResultContent> mergeFuturesAny(QObject* context, CancellationBehavior ca
 template<typename... Ts>
 auto mergeFuturesAny(QObject* context, const QFuture<Ts>&... futures)
 {
-    return mergeFuturesAny<Ts...>(context, CancellationBehavior::CancelOnSingleCancellation, futures...);
+    return mergeFuturesAny<Ts...>(context, {}, futures...);
 }
 
 // Return type: QFuture<Container<std::optional<T>>>.
 // Also notice: `std::optional<void>` is replaced by `bool`.
 template<template <typename, typename...> class Container, typename T, typename... Args>
-auto mergeFuturesAny(QObject* context, CancellationBehavior cancellationBehavior, const Container<T, Args...>& futures)
+auto mergeFuturesAny(QObject* context, MergeFlags mergeFlags, const Container<T, Args...>& futures)
 {
-    auto ctx = new FuturesMergeInternal::Context<Container<T, Args...>>(context, futures, Any, cancellationBehavior);
+    auto ctx = new FuturesMergeInternal::Context<Container<T, Args...>>(context, futures, Any, mergeFlags);
     auto f = ctx->targetFuture();
     auto resultFuture = convertFuture(context, f, ConverterFlags::IgnoreNullContext, [futures]() {
         return futuresToOptResults(futures);
@@ -382,20 +384,20 @@ auto mergeFuturesAny(QObject* context, CancellationBehavior cancellationBehavior
 template<template <typename, typename...> class Container, typename T, typename... Args>
 auto mergeFuturesAny(QObject* context, const Container<T, Args...>& futures)
 {
-    return mergeFuturesAny(context, CancellationBehavior::CancelOnSingleCancellation, futures);
+    return mergeFuturesAny(context, {}, futures);
 }
 
 #ifndef UTILS_QT_COMPILER_GCC
 template<typename... Ts>
-auto mergeFuturesAny(QObject* context, CancellationBehavior cancellationBehavior, const std::tuple<QFuture<Ts>...>& futures)
+auto mergeFuturesAny(QObject* context, MergeFlags mergeFlags, const std::tuple<QFuture<Ts>...>& futures)
 {
-    return std::apply([context, cancellationBehavior](auto&&... xs){ return mergeFuturesAny<Ts...>(context, cancellationBehavior, xs...); }, futures);
+    return std::apply([context, mergeFlags](auto&&... xs){ return mergeFuturesAny<Ts...>(context, mergeFlags, xs...); }, futures);
 }
 
 template<typename... Ts>
 auto mergeFuturesAny(QObject* context, const std::tuple<QFuture<Ts>...>& futures)
 {
-    return mergeFuturesAny<Ts...>(context, CancellationBehavior::CancelOnSingleCancellation, futures);
+    return mergeFuturesAny<Ts...>(context, {}, futures);
 }
 #endif // #ifndef UTILS_QT_COMPILER_GCC
 
