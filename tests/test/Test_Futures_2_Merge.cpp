@@ -242,3 +242,13 @@ TEST(UtilsQt, Futures_Merge_TestResults)
         ASSERT_EQ(futureResult.result(), correctResult);
     }
 }
+
+TEST(UtilsQt, Futures_Merge_NonIgnoredNullContext)
+{
+    auto f1 = createTimedFuture<int>(50, 123);
+    auto f2 = createTimedFuture<std::string>(100, "Test std::string");
+    auto futureResult = UtilsQt::mergeFuturesAll(nullptr, f1, f2);
+
+    ASSERT_TRUE(futureResult.isCanceled());
+    ASSERT_TRUE(futureResult.isFinished());
+}
