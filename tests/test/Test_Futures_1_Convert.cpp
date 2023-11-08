@@ -17,7 +17,7 @@ TEST(UtilsQt, Futures_Convert)
         int input = -1;
         const char* const result = "Test";
 
-        auto conv = convertFuture<int, const char*>(nullptr, f, [&](int value) -> std::optional<const char*> { input = value; return result; });
+        auto conv = convertFuture<int, const char*>(nullptr, f, ConverterFlags::IgnoreNullContext, [&](int value) -> std::optional<const char*> { input = value; return result; });
         ASSERT_TRUE(conv.isFinished());
         ASSERT_FALSE(conv.isCanceled());
         ASSERT_EQ(input, 170);
@@ -29,7 +29,7 @@ TEST(UtilsQt, Futures_Convert)
 
         int input = -1;
 
-        auto conv = convertFuture<int, const char*>(nullptr, f, [&](int value) -> std::optional<const char*> { input = value; return {}; });
+        auto conv = convertFuture<int, const char*>(nullptr, f, ConverterFlags::IgnoreNullContext, [&](int value) -> std::optional<const char*> { input = value; return {}; });
         ASSERT_TRUE(conv.isFinished());
         ASSERT_TRUE(conv.isCanceled());
         ASSERT_EQ(input, 170);
@@ -41,7 +41,7 @@ TEST(UtilsQt, Futures_Convert)
         bool ok = false;
         const char* const result = "Test";
 
-        auto conv = convertFuture<void, const char*>(nullptr, f, [&]() -> std::optional<const char*> { ok = true; return result; });
+        auto conv = convertFuture<void, const char*>(nullptr, f, ConverterFlags::IgnoreNullContext, [&]() -> std::optional<const char*> { ok = true; return result; });
         ASSERT_FALSE(conv.isCanceled());
         ASSERT_TRUE(conv.isFinished());
         ASSERT_TRUE(ok);
@@ -53,7 +53,7 @@ TEST(UtilsQt, Futures_Convert)
 
         bool ok = false;
 
-        auto conv = convertFuture<void, const char*>(nullptr, f, [&]() -> std::optional<const char*> { ok = true; return {}; });
+        auto conv = convertFuture<void, const char*>(nullptr, f, ConverterFlags::IgnoreNullContext, [&]() -> std::optional<const char*> { ok = true; return {}; });
         ASSERT_TRUE(conv.isCanceled());
         ASSERT_TRUE(conv.isFinished());
         ASSERT_TRUE(ok);
@@ -64,7 +64,7 @@ TEST(UtilsQt, Futures_Convert)
 
         bool ok = false;
 
-        auto conv = convertFuture<int, const char*>(nullptr, f, [&](int) -> std::optional<const char*> { ok = true; return {}; });
+        auto conv = convertFuture<int, const char*>(nullptr, f, ConverterFlags::IgnoreNullContext, [&](int) -> std::optional<const char*> { ok = true; return {}; });
         ASSERT_TRUE(conv.isCanceled());
         ASSERT_TRUE(conv.isFinished());
         ASSERT_FALSE(ok);
@@ -75,7 +75,7 @@ TEST(UtilsQt, Futures_Convert)
 
         bool ok = false;
 
-        auto conv = convertFuture<void, const char*>(nullptr, f, [&]() -> std::optional<const char*> { ok = true; return {}; });
+        auto conv = convertFuture<void, const char*>(nullptr, f, ConverterFlags::IgnoreNullContext, [&]() -> std::optional<const char*> { ok = true; return {}; });
         ASSERT_TRUE(conv.isCanceled());
         ASSERT_TRUE(conv.isFinished());
         ASSERT_FALSE(ok);
@@ -90,7 +90,7 @@ TEST(UtilsQt, Futures_Convert_Timed)
         int input = -1;
         const char* const result = "Test";
 
-        auto conv = convertFuture<int, const char*>(nullptr, f, [&](int value) -> std::optional<const char*> { input = value; return result; });
+        auto conv = convertFuture<int, const char*>(nullptr, f, ConverterFlags::IgnoreNullContext, [&](int value) -> std::optional<const char*> { input = value; return result; });
         ASSERT_FALSE(conv.isFinished());
         waitForFuture<QEventLoop>(conv);
         ASSERT_TRUE(conv.isFinished());
@@ -104,7 +104,7 @@ TEST(UtilsQt, Futures_Convert_Timed)
 
         int input = -1;
 
-        auto conv = convertFuture<int, const char*>(nullptr, f, [&](int value) -> std::optional<const char*> { input = value; return {}; });
+        auto conv = convertFuture<int, const char*>(nullptr, f, ConverterFlags::IgnoreNullContext, [&](int value) -> std::optional<const char*> { input = value; return {}; });
         ASSERT_FALSE(conv.isFinished());
         waitForFuture<QEventLoop>(conv);
         ASSERT_TRUE(conv.isFinished());
@@ -118,7 +118,7 @@ TEST(UtilsQt, Futures_Convert_Timed)
         bool ok = false;
         const char* const result = "Test";
 
-        auto conv = convertFuture<void, const char*>(nullptr, f, [&]() -> std::optional<const char*> { ok = true; return result; });
+        auto conv = convertFuture<void, const char*>(nullptr, f, ConverterFlags::IgnoreNullContext, [&]() -> std::optional<const char*> { ok = true; return result; });
         ASSERT_FALSE(conv.isFinished());
         waitForFuture<QEventLoop>(conv);
         ASSERT_FALSE(conv.isCanceled());
@@ -132,7 +132,7 @@ TEST(UtilsQt, Futures_Convert_Timed)
 
         bool ok = false;
 
-        auto conv = convertFuture<void, const char*>(nullptr, f, [&]() -> std::optional<const char*> { ok = true; return {}; });
+        auto conv = convertFuture<void, const char*>(nullptr, f, ConverterFlags::IgnoreNullContext, [&]() -> std::optional<const char*> { ok = true; return {}; });
         ASSERT_FALSE(conv.isFinished());
         waitForFuture<QEventLoop>(conv);
         ASSERT_TRUE(conv.isCanceled());
@@ -145,7 +145,7 @@ TEST(UtilsQt, Futures_Convert_Timed)
 
         bool ok = false;
 
-        auto conv = convertFuture<int, const char*>(nullptr, f, [&](int) -> std::optional<const char*> { ok = true; return {}; });
+        auto conv = convertFuture<int, const char*>(nullptr, f, ConverterFlags::IgnoreNullContext, [&](int) -> std::optional<const char*> { ok = true; return {}; });
         ASSERT_FALSE(conv.isFinished());
         waitForFuture<QEventLoop>(conv);
         ASSERT_TRUE(conv.isCanceled());
@@ -158,7 +158,7 @@ TEST(UtilsQt, Futures_Convert_Timed)
 
         bool ok = false;
 
-        auto conv = convertFuture<void, const char*>(nullptr, f, [&]() -> std::optional<const char*> { ok = true; return {}; });
+        auto conv = convertFuture<void, const char*>(nullptr, f, ConverterFlags::IgnoreNullContext, [&]() -> std::optional<const char*> { ok = true; return {}; });
         ASSERT_FALSE(conv.isFinished());
         waitForFuture<QEventLoop>(conv);
         ASSERT_TRUE(conv.isCanceled());
@@ -212,7 +212,7 @@ TEST(UtilsQt, Futures_Convert_StepByStep)
     {
         auto f = createTimedFuture(50, 1234);
 
-        auto conv = convertFuture<int, std::string>(nullptr, f, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
+        auto conv = convertFuture<int, std::string>(nullptr, f, ConverterFlags::IgnoreNullContext, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
 
         ASSERT_TRUE(conv.isStarted());
         ASSERT_FALSE(conv.isCanceled());
@@ -229,7 +229,7 @@ TEST(UtilsQt, Futures_Convert_StepByStep)
         QFutureInterface<int> fi;
 
         auto f = fi.future();
-        auto conv = convertFuture<int, std::string>(nullptr, f, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
+        auto conv = convertFuture<int, std::string>(nullptr, f, ConverterFlags::IgnoreNullContext, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
 
         ASSERT_FALSE(conv.isStarted());
         ASSERT_FALSE(conv.isCanceled());
@@ -240,7 +240,7 @@ TEST(UtilsQt, Futures_Convert_StepByStep)
         QFutureInterface<int> fi;
 
         auto f = fi.future();
-        auto conv = convertFuture<int, std::string>(nullptr, f, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
+        auto conv = convertFuture<int, std::string>(nullptr, f, ConverterFlags::IgnoreNullContext, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
 
         ASSERT_FALSE(conv.isStarted());
         ASSERT_FALSE(conv.isCanceled());
@@ -275,7 +275,7 @@ TEST(UtilsQt, Futures_Convert_StepByStep)
         QFutureInterface<int> fi;
 
         auto f = fi.future();
-        auto conv = convertFuture<int, std::string>(nullptr, f, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
+        auto conv = convertFuture<int, std::string>(nullptr, f, ConverterFlags::IgnoreNullContext, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
 
         ASSERT_FALSE(conv.isStarted());
         ASSERT_FALSE(conv.isCanceled());
@@ -314,7 +314,7 @@ TEST(UtilsQt, Futures_Convert_CancelTarget)
         QFutureInterface<int> fi;
 
         auto f = fi.future();
-        auto conv = convertFuture<int, std::string>(nullptr, f, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
+        auto conv = convertFuture<int, std::string>(nullptr, f, ConverterFlags::IgnoreNullContext, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
 
         ASSERT_FALSE(fi.isStarted());
         ASSERT_FALSE(fi.isCanceled());
@@ -379,7 +379,7 @@ TEST(UtilsQt, Futures_Convert_Lifetime)
     LifetimeTracker tracker;
 
     ASSERT_EQ(tracker.count(), 1);
-    auto f = convertFuture(nullptr, createTimedFuture(10), [tracker]() {
+    auto f = convertFuture(nullptr, createTimedFuture(10), ConverterFlags::IgnoreNullContext, [tracker]() {
         (void)tracker;
         return QString();
     });
