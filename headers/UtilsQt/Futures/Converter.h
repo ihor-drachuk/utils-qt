@@ -11,32 +11,58 @@
 #include <utils-cpp/function_traits.h>
 #include <utils-cpp/copy_move.h>
 
-/*            Reminder
+/*
+            Description
   -------------------------------
 
-  // Example: we have QFuture<int> and want to get QFuture<std::string>.
+  There is single function:
+    QFuture convertFuture(context, future, flags, converter);
 
-  auto f = QFuture<int>();
+  Is used to convert QFuture<T1> to QFuture<T2>. For example: one async operation returns raw buffer,
+  while intermediate module should return QFuture of parsed data based on the raw buffer.
 
-  auto f2 = convertFuture<int, std::string>(this, f, [](int value) -> std::optional<std::string>
-  {
-      return std::to_string(value);
-  });
+  'flags' can be omitted.
 
-  -------------------------------
+  'context' controls lifetime. If 'context' is gone, resulting future will be canceled.
+  If 'context' is nullptr, then resulting future will be canceled immediately.
+  This behavior can be overridden by flag IgnoreNullContext.
 
-  Converted future will be canceled if/when:
+  If QFuture<T1> should be converted to QFuture<T2>, then handler's declaration should look
+  like this:
+  /
+  |  [](const T1& input) -> std::optional<T2> {
+  |     //...
+  |  }
+  \
+  Returning nullopt will cancel resulting future.
+
+
+  Another example: we have QFuture<int> and want to get QFuture<std::string>.
+  /
+  |  auto f = QFuture<int>();
+  |
+  |  auto f2 = convertFuture<int, std::string>(this, f, [](int value) -> std::optional<std::string>
+  |  {
+  |      return std::to_string(value);
+  |  });
+  \
+
+  So, converted future will be canceled if/when:
    - Source future canceled
    - Converter returned nothing / nullopt
    - Context destroyed (it controls converter lifetime)
+   - Context is nullptr and flag IgnoreNullContext isn't set
 
   Converted future will return result:
    - IF/WHEN  Source future has result
    - THEN     Converter returned new result
-   - WHILE    Context still alive
+   - WHILE    Context still alive (or it's nullptr + IgnoreNullContext set)
 
-  You can cancel source future by cancelling target future.
-  The same is done if context destroyed.
+  Source futures will be canceled, if target future is canceled and vice-versa.
+  So futures cancellation is transitive and bi-directional.
+
+  Possible 'flags' values:
+   - IgnoreNullContext      - don't cancel resulting future if nullptr is passed as a context.
 */
 
 namespace UtilsQt {

@@ -14,26 +14,26 @@
 #include <UtilsQt/invoke_method.h>
 
 /*
-          Content
---------------------------
+          Description
+------------------------------
 
- * QFuture<Type>  -->  std::optional<Type>
+ * onFinished(QFuture<T>, context, handler);
 
-   onFinished(QFuture<T>, context, handler);
-
-
- * QFuture<Type>  -->  Type  (only on success)
-
-   onResult(QFuture<T>, context, handler);
+   QFuture<Type> is converted to std::optional<Type> and passed to
+   handler, when future is finished.
 
 
- * QFuture<Type>  -->  void  (only on cancel)
+ * onResult(QFuture<T>, context, handler);
 
-   onCanceled(QFuture<T>, context, handler);
+   QFuture<Type>  -->  Type  (only on success)
+
+
+ * onCanceled(QFuture<T>, context, handler);
+
+   QFuture<Type>  -->  void  (only on cancellation)
 
 
  * waitForFuture<QEventLoop>(future);
-
 
  * QFuture<T> createReadyFuture<T = void>();
  * QFuture<T> createReadyFuture<T>(T value);
@@ -43,7 +43,7 @@
  * QFuture<T> createTimedFuture<void>(int time);
  * QFuture<T> createTimedCanceledFuture<T>();
 
- * QFutureWrapper<T> createPromise<T>();
+ * Promise<T> createPromise<T>();
      -> finish(T);
      -> cancel();
      -> isFinished();
