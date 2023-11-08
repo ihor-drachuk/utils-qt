@@ -14,6 +14,63 @@
 #include <UtilsQt/Futures/Converter.h>
 #include <utils-cpp/copy_move.h>
 
+/*
+      Description
+-----------------------
+
+ - QFuture mergeFuturesAll(context, flags, futures...);
+ - QFuture mergeFuturesAll(context, flags, Container<Future>);
+ - QFuture mergeFuturesAll(context, flags, std::tuple<Future>);
+ Return future which is finished when all source futures are finished.
+
+ - QFuture mergeFuturesAny(context, flags, futures...);
+ - QFuture mergeFuturesAny(context, flags, Container<Future>);
+ - QFuture mergeFuturesAny(context, flags, std::tuple<Future>);
+ Return future which is finished when any of source futures is finished.
+
+ 'flags' can be omitted.
+
+ Here are rules how return type is determined, based on source futures:
+  -  QFuture<T1>, QFuture<T2>...  =>  QFuture<std::tuple<std::optional<T1>, std::optional<T2>, ...>>
+  -  Container<QFuture<T>>        =>  QFuture<Container<std::optional<T>>>
+
+ In other words:
+  - QFuture is replaced by std::optional and returned in same container.
+  - This container is wrapped by QFuture.
+
+ Example:
+ /
+ |  auto f1 = createTimedFuture<std::string>(100, "str");
+ |  auto f2 = createTimedFuture<double>     (110, 123.83);
+ |  auto f = mergeFuturesAll(this, f1, f2);
+ \
+
+ In this example, f's type is
+ /
+ |  QFuture<
+ |    std::tuple<
+ |      std::optional<std::string>,    <-- it's nullopt if relevant source future is canceled
+ |      std::optional<double>              and IgnoreSomeCancellation flag provided.
+ |    >
+ |  >
+ \
+
+ 'context' controls lifetime. If 'context' is gone, resulting future will be canceled.
+ If 'context' is nullptr, then resulting future will be canceled immediately.
+ This behavior can be overridden by flag IgnoreNullContext.
+
+ If any of source futures is canceled, then resulting future will be canceled as well.
+ This behavior can be overridden by flag IgnoreSomeCancellation.
+
+ If resulting(!) future is canceled, source futures will be canceled automatically as well.
+ So futures cancellation is transitive and bi-directional.
+
+ Possible 'flags' values:
+  - IgnoreSomeCancellation - cancel resulting future only when ALL source futures are/become canceled.
+  - IgnoreNullContext      - don't cancel resulting future if nullptr is passed as a context.
+*/
+
+
 namespace UtilsQt {
 
 enum class MergeFlags
