@@ -298,7 +298,7 @@ QFuture<ResultContent> mergeFuturesAll(QObject* context, CancellationBehavior ca
 {
     auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, std::tie(futures...), All, cancellationBehavior);
     auto f = ctx->targetFuture();
-    auto resultFuture = convertFuture<void, ResultContent>(context, f, [futures...]() -> std::optional<ResultContent> {
+    auto resultFuture = convertFuture<void, ResultContent>(context, f, ConverterFlags::IgnoreNullContext, [futures...]() -> std::optional<ResultContent> {
         return futuresToOptResults(std::make_tuple(futures...));
     });
     return resultFuture;
@@ -317,7 +317,7 @@ auto mergeFuturesAll(QObject* context, CancellationBehavior cancellationBehavior
 {
     auto ctx = new FuturesMergeInternal::Context<Container<T, Args...>>(context, futures, All, cancellationBehavior);
     auto f = ctx->targetFuture();
-    auto resultFuture = convertFuture(context, f, [futures]() { // No hint
+    auto resultFuture = convertFuture(context, f, ConverterFlags::IgnoreNullContext, [futures]() { // No hint
         return futuresToOptResults(futures);
     });
     return resultFuture;
@@ -354,7 +354,7 @@ QFuture<ResultContent> mergeFuturesAny(QObject* context, CancellationBehavior ca
 {
     auto ctx = new FuturesMergeInternal::Context<std::tuple<QFuture<Ts>...>>(context, std::tie(futures...), Any, cancellationBehavior);
     auto f = ctx->targetFuture();
-    auto resultFuture = convertFuture<void, ResultContent>(context, f, [futures...]() -> std::optional<ResultContent> {
+    auto resultFuture = convertFuture<void, ResultContent>(context, f, ConverterFlags::IgnoreNullContext, [futures...]() -> std::optional<ResultContent> {
         return futuresToOptResults(std::make_tuple(futures...));
     });
     return resultFuture;
@@ -373,7 +373,7 @@ auto mergeFuturesAny(QObject* context, CancellationBehavior cancellationBehavior
 {
     auto ctx = new FuturesMergeInternal::Context<Container<T, Args...>>(context, futures, Any, cancellationBehavior);
     auto f = ctx->targetFuture();
-    auto resultFuture = convertFuture(context, f, [futures]() {
+    auto resultFuture = convertFuture(context, f, ConverterFlags::IgnoreNullContext, [futures]() {
         return futuresToOptResults(futures);
     });
     return resultFuture;

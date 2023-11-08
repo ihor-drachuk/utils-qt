@@ -13,7 +13,7 @@ using namespace UtilsQt;
 TEST(UtilsQt, Futures_CancellationChain_Convert)
 {
     auto promise = createPromise<int>();
-    auto f = UtilsQt::convertFuture<int, int>(nullptr, promise.future(), [](int value) -> std::optional<int> {
+    auto f = UtilsQt::convertFuture<int, int>(nullptr, promise.future(), ConverterFlags::IgnoreNullContext, [](int value) -> std::optional<int> {
         return value + 1;
     });
 

@@ -40,7 +40,23 @@
 */
 
 namespace UtilsQt {
+enum class ConverterFlags
+{
+    IgnoreNullContext = 1 // Otherwise cancel on null context
+};
+} // namespace UtilsQt
 
+inline UtilsQt::ConverterFlags operator| (UtilsQt::ConverterFlags a, UtilsQt::ConverterFlags b)
+{
+    return static_cast<UtilsQt::ConverterFlags>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+inline int operator& (UtilsQt::ConverterFlags a, UtilsQt::ConverterFlags b)
+{
+    return static_cast<int>(a) & static_cast<int>(b);
+}
+
+namespace UtilsQt {
 namespace FutureConverterInternal {
 
 template<typename T>
@@ -197,10 +213,31 @@ template<typename Source, typename Target = std::nullptr_t, typename Converter,
              Target>>
 [[nodiscard]] QFuture<SelectedTarget> convertFuture(QObject* context,
                               const QFuture<Source>& srcFuture,
+                              ConverterFlags flags,
                               const Converter& converter)
 {
+    if (!context && !(flags & ConverterFlags::IgnoreNullContext)) {
+        QFutureInterface<SelectedTarget> result;
+        result.reportCanceled();
+        result.reportFinished();
+        return result.future();
+    }
+
     auto ctx = new FutureConverterInternal::Context<Source, SelectedTarget>(context, srcFuture, FutureConverterInternal::fixConverter(converter));
     return ctx->targetFuture();
+}
+
+template<typename Source, typename Target = std::nullptr_t, typename Converter,
+         typename FixedConverter = decltype (FutureConverterInternal::fixConverter(std::declval<Converter>())),
+         typename SelectedTarget = std::conditional_t<
+             std::is_same_v<Target, std::nullptr_t>,
+             typename FutureConverterInternal::TargetTypeExtractor<FixedConverter>::Type,
+             Target>>
+[[nodiscard]] QFuture<SelectedTarget> convertFuture(QObject* context,
+                              const QFuture<Source>& srcFuture,
+                              const Converter& converter)
+{
+    return convertFuture<Source, Target>(context, srcFuture, {}, converter);
 }
 
 } // namespace UtilsQt
