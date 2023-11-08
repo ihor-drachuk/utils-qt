@@ -21,6 +21,9 @@ enum class MergeFlags
     IgnoreSomeCancellation = 1, // Cancel if all source futures are canceled,
                                 // othwerwise cancel on first cancellation (default)
 
+    IgnoreNullContext = 2       // Allows to pass nullptr as a context and keep mergeFutures
+                                // depend only on source QFutures lifetime.
+                                // Otherwise, cancel on null context (default)
 };
 
 } // namespace UtilsQt
@@ -185,7 +188,8 @@ public:
         if (status.anyStarted)
             onStarted();
 
-        if (status.allCanceled) {
+        const auto cancelByContext = (!ctx && !(mergeFlags & MergeFlags::IgnoreNullContext));
+        if (status.allCanceled || cancelByContext) {
             m_outFutureInterface.reportCanceled();
             m_outFutureInterface.reportFinished();
             deleteLater();
