@@ -301,13 +301,13 @@ template<typename Type, typename Obj,
          typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
 void onCanceled(const QFuture<Type>& future,
                 Obj* object,
-                void (Obj::* member)(const std::optional<Type>&),
+                void (Obj::* member)(),
                 Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
     Q_ASSERT(object);
     Q_ASSERT(member);
 
-    auto callable = [object, member](const std::optional<Type>& param){ (object->*member)(param); };
+    auto callable = [object, member](){ (object->*member)(); };
 
     onCanceled(future, object, callable, connectionType);
 }
