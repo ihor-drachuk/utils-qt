@@ -2,10 +2,7 @@
  * Source:   https://github.com/ihor-drachuk/utils-qt
  * Contact:  ihor-drachuk-libs@pm.me  */
 
-#pragma once
-#include <QObject>
-#include <initializer_list>
-#include <cassert>
+#include <UtilsQt/Multicontext.h>
 
 namespace UtilsQt {
 
