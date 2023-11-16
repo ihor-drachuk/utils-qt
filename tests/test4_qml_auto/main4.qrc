@@ -1,12 +1,12 @@
 <RCC>
     <qresource prefix="/UtilsQt/QmlTests">
-        <file>tst_0_init.qml</file>
-        <file>tst_1_list_model_item_proxy.qml</file>
-        <file>tst_2_list_model_tools.qml</file>
-        <file>tst_3_multibinding.qml</file>
-        <file>tst_4_repeater2.qml</file>
-        <file>tst_5_mergedlistmodel.qml</file>
-        <file>tst_6_mergedlistmodel_2.qml</file>
-        <file>tst_7_mergedlistmodel_3_resetter.qml</file>
+        <file>tst_00_Init.qml</file>
+        <file>tst_01_ListModelItemProxy.qml</file>
+        <file>tst_02_ListModelTools.qml</file>
+        <file>tst_03_Multibinding.qml</file>
+        <file>tst_04_Repeater2.qml</file>
+        <file>tst_05_MergedListModel.qml</file>
+        <file>tst_06_MergedListModel_2.qml</file>
+        <file>tst_07_MergedListModel_3_Resetter.qml</file>
     </qresource>
 </RCC>
