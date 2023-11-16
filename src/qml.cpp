@@ -20,6 +20,7 @@
 #include <UtilsQt/Qml-Cpp/Geometry/Geometry.h>
 #include <UtilsQt/Qml-Cpp/Geometry/Polygon.h>
 #include <UtilsQt/MergedListModel.h>
+#include <UtilsQt/PlusOneProxyModel.h>
 
 #include <QQmlEngine>
 #include <QGuiApplication>
@@ -46,6 +47,7 @@ void registerAll(QQmlEngine& engine)
     Geometry::registerTypes();
     Polygon::registerTypes();
     MergedListModel::registerTypes();
+    PlusOneProxyModel::registerTypes();
 }
 
 } // namespace Qml
