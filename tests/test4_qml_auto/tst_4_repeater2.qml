@@ -1,3 +1,7 @@
+/* License:  MIT
+ * Source:   https://github.com/ihor-drachuk/utils-qt
+ * Contact:  ihor-drachuk-libs@pm.me  */
+
 import QtQuick 2.9
 import QtTest 1.1
 import UtilsQt 1.0
