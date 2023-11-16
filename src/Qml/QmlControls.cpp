@@ -1,3 +1,7 @@
+/* License:  MIT
+ * Source:   https://github.com/ihor-drachuk/utils-qt
+ * Contact:  ihor-drachuk-libs@pm.me  */
+
 #include <UtilsQt/Qml/QmlControls.h>
 #include <UtilsQt/Qml/ImageProviderScaled.h>
 #include <UtilsQt/Qml-Cpp/ListModelItemProxy.h>
