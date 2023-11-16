@@ -19,7 +19,7 @@
 #include <UtilsQt/Qml-Cpp/QmlUtils.h>
 #include <UtilsQt/Qml-Cpp/Geometry/Geometry.h>
 #include <UtilsQt/Qml-Cpp/Geometry/Polygon.h>
-#include <UtilsQt/mergedlistmodel.h>
+#include <UtilsQt/MergedListModel.h>
 
 #include <QQmlEngine>
 #include <QGuiApplication>

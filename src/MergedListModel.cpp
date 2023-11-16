@@ -2,7 +2,7 @@
  * Source:   https://github.com/ihor-drachuk/utils-qt
  * Contact:  ihor-drachuk-libs@pm.me  */
 
-#include <UtilsQt/mergedlistmodel.h>
+#include <UtilsQt/MergedListModel.h>
 
 #include <QRegularExpression>
 #include <QDataStream>
