@@ -8,5 +8,6 @@
         <file>tst_05_MergedListModel.qml</file>
         <file>tst_06_MergedListModel_2.qml</file>
         <file>tst_07_MergedListModel_3_Resetter.qml</file>
+        <file>tst_08_PlusOneProxyModel.qml</file>
     </qresource>
 </RCC>
