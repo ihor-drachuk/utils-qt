@@ -128,6 +128,8 @@ Item {
 
         // Test 'mode' switch
         function test_03_mode() {
+            var sRowsMoved = createSpy("rowsMoved");
+
             proxyModel.mode = PlusOneProxyModel.Prepend;
             var x = internal.dumpModelVar();
             compare(x, [
@@ -137,6 +139,14 @@ Item {
                         {"someId": 3,    "someValue": "25875",       "isArtificial": false, "artificialValue": null},
                     ]);
 
+            const count = proxyModel.rowCount();
+
+            compare(sRowsMoved.count, 1);
+            compare(sRowsMoved.signalArguments[0][1], count - 1);
+            compare(sRowsMoved.signalArguments[0][2], count - 1);
+            compare(sRowsMoved.signalArguments[0][4], 0);
+            sRowsMoved.clear();
+
             proxyModel.mode = PlusOneProxyModel.Append;
             x = internal.dumpModelVar();
             compare(x, [
@@ -145,6 +155,13 @@ Item {
                         {"someId": 3,    "someValue": "25875",       "isArtificial": false, "artificialValue": null},
                         {"someId": null, "someValue": null,          "isArtificial": true,  "artificialValue": null},
                     ]);
+
+            compare(sRowsMoved.count, 1);
+            compare(sRowsMoved.signalArguments[0][1], 0);
+            compare(sRowsMoved.signalArguments[0][2], 0);
+            compare(sRowsMoved.signalArguments[0][4], count - 1);
+
+            deleteSpy(sRowsMoved);
         }
 
         // Test combined cases
@@ -313,10 +330,10 @@ Item {
                         {"someId": 3,    "someValue": "25875",       "isArtificial": false, "artificialValue": null},
                         {"someId": null, "someValue": null,          "isArtificial": true,  "artificialValue": null},
                     ]);
-            srcMoveSpy.clear();
-            proxyMoveSpy.clear();
 
             proxyModel.mode = PlusOneProxyModel.Prepend;
+            srcMoveSpy.clear();
+            proxyMoveSpy.clear();
 
             x = internal.dumpModelVar();
             compare(x, [

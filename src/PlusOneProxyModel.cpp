@@ -32,6 +32,7 @@ struct PlusOneProxyModel::impl_t
         isInitialized = false;
         roleIsArtificial = -1;
         roleArtificialValue = -1;
+        cascaded = false;
 
         for (auto& x : modelConnections)
             QObject::disconnect(x);
@@ -164,15 +165,12 @@ void PlusOneProxyModel::setMode(PlusOneProxyModel::Mode value)
         return;
 
     if (auto aIdx = augmentedIndex()) {
-        beginRemoveRows({}, *aIdx, *aIdx);
-        endRemoveRows();
-
+        const auto newIdx = impl().mode == Mode::Prepend ? impl().sourceModel->rowCount({}) : 0; // vice versa!
+        beginMoveRows({}, *aIdx, *aIdx, {}, newIdx);
         impl().mode = value;
-
         aIdx = augmentedIndex();
-        assert(aIdx);
-        beginInsertRows({}, *aIdx, *aIdx);
-        endInsertRows();
+        assert(aIdx && *aIdx == newIdx);
+        endMoveRows();
 
     } else {
         impl().mode = value;
@@ -259,10 +257,9 @@ void PlusOneProxyModel::init()
         impl().roleArtificialValue = maxUsedRole + 2;
     }
 
+    beginResetModel();
     connectModel();
     impl().isInitialized = true;
-
-    beginResetModel();
     endResetModel();
 }
 
