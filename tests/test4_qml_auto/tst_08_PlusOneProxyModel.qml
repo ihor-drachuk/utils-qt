@@ -264,35 +264,35 @@ Item {
         function test_06_rowInsertion() {
             proxyModel.mode = PlusOneProxyModel.Prepend;
 
-            var insertionSpy = createSpy("rowsInserted");
+            var sRowsInserted = createSpy("rowsInserted");
 
             listModel.append({"someId": 4, "someValue": "NewElement"});
-            compare(insertionSpy.count, 1);
+            compare(sRowsInserted.count, 1);
             compare(proxyModel.rowCount(), listModel.count + 1);
 
-            var arguments = insertionSpy.signalArguments[0];
+            var arguments = sRowsInserted.signalArguments[0];
             compare(arguments[1], listModel.count);
             compare(arguments[2], listModel.count);
-            deleteSpy(insertionSpy);
+            deleteSpy(sRowsInserted);
 
-            var deletionSpy = createSpy("rowsRemoved");
+            var sRowsRemoved = createSpy("rowsRemoved");
 
             listModel.remove(listModel.count-1);
-            compare(deletionSpy.count, 1);
+            compare(sRowsRemoved.count, 1);
             compare(proxyModel.rowCount(), listModel.count + 1);
 
-            arguments = insertionSpy.signalArguments[0];
+            arguments = sRowsInserted.signalArguments[0];
             compare(arguments[1], listModel.count+1);
             compare(arguments[2], listModel.count+1);
 
             proxyModel.mode = PlusOneProxyModel.Append;
-            deleteSpy(deletionSpy);
+            deleteSpy(sRowsRemoved);
         }
 
         // Test row movement
         function test_07_rowMovement() {
-            var srcMoveSpy = createSpy("rowsMoved", listModel);
-            var proxyMoveSpy = createSpy("rowsMoved");
+            var sRowsMovedSource = createSpy("rowsMoved", listModel);
+            var sRowsMovedProxy = createSpy("rowsMoved");
 
             var x = internal.dumpModelVar();
             compare(x, [
@@ -312,15 +312,15 @@ Item {
                         {"someId": null, "someValue": null,          "isArtificial": true,  "artificialValue": null},
                     ]);
 
-            compare(srcMoveSpy.count, 1);
+            compare(sRowsMovedSource.count, 1);
 
-            compare(srcMoveSpy.signalArguments[0][1], 0);
-            compare(srcMoveSpy.signalArguments[0][2], 1);
-            compare(srcMoveSpy.signalArguments[0][4], 3);
+            compare(sRowsMovedSource.signalArguments[0][1], 0);
+            compare(sRowsMovedSource.signalArguments[0][2], 1);
+            compare(sRowsMovedSource.signalArguments[0][4], 3);
 
-            compare(proxyMoveSpy.signalArguments[0][1], 0);
-            compare(proxyMoveSpy.signalArguments[0][2], 1);
-            compare(proxyMoveSpy.signalArguments[0][4], 3);
+            compare(sRowsMovedProxy.signalArguments[0][1], 0);
+            compare(sRowsMovedProxy.signalArguments[0][2], 1);
+            compare(sRowsMovedProxy.signalArguments[0][4], 3);
 
             listModel.move(listModel.count - 2, 0, 2);
             x = internal.dumpModelVar();
@@ -332,8 +332,8 @@ Item {
                     ]);
 
             proxyModel.mode = PlusOneProxyModel.Prepend;
-            srcMoveSpy.clear();
-            proxyMoveSpy.clear();
+            sRowsMovedSource.clear();
+            sRowsMovedProxy.clear();
 
             x = internal.dumpModelVar();
             compare(x, [
@@ -353,15 +353,16 @@ Item {
                         {"someId": 2,    "someValue": "Monocerotis", "isArtificial": false, "artificialValue": null},
                     ]);
 
-            compare(srcMoveSpy.count, 1);
+            compare(sRowsMovedSource.count, 1);
+            compare(sRowsMovedProxy.count, 1);
 
-            compare(srcMoveSpy.signalArguments[0][1], 0);
-            compare(srcMoveSpy.signalArguments[0][2], 1);
-            compare(srcMoveSpy.signalArguments[0][4], 3);
+            compare(sRowsMovedSource.signalArguments[0][1], 0);
+            compare(sRowsMovedSource.signalArguments[0][2], 1);
+            compare(sRowsMovedSource.signalArguments[0][4], 3);
 
-            compare(proxyMoveSpy.signalArguments[0][1], 1);
-            compare(proxyMoveSpy.signalArguments[0][2], 2);
-            compare(proxyMoveSpy.signalArguments[0][4], 4);
+            compare(sRowsMovedProxy.signalArguments[0][1], 1);
+            compare(sRowsMovedProxy.signalArguments[0][2], 2);
+            compare(sRowsMovedProxy.signalArguments[0][4], 4);
 
             listModel.move(listModel.count - 2, 0, 2);
             proxyModel.mode = PlusOneProxyModel.Append;
@@ -373,8 +374,8 @@ Item {
                         {"someId": null, "someValue": null,          "isArtificial": true,  "artificialValue": null},
                     ]);
 
-            deleteSpy(proxyMoveSpy);
-            deleteSpy(srcMoveSpy);
+            deleteSpy(sRowsMovedProxy);
+            deleteSpy(sRowsMovedSource);
         }
 
         // Test cascaded mode
