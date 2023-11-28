@@ -3,7 +3,7 @@
  * Contact:  ihor-drachuk-libs@pm.me  */
 
 #include <gtest/gtest.h>
-#include <UtilsQt/jsonvalidator.h>
+#include <UtilsQt/JsonValidator.h>
 
 #include <QJsonValue>
 #include <QJsonObject>

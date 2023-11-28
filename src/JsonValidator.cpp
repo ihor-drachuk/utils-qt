@@ -2,7 +2,7 @@
  * Source:   https://github.com/ihor-drachuk/utils-qt
  * Contact:  ihor-drachuk-libs@pm.me  */
 
-#include <UtilsQt/jsonvalidator.h>
+#include <UtilsQt/JsonValidator.h>
 
 #include <QJsonDocument>
 #include <QMap>
@@ -202,6 +202,25 @@ bool Number::check(ContextData& ctx, Logger& logger, const QString& path, const 
 
     if (!ok) {
         logger.notifyError(path, "Expected value of \"Number\" type, but it's of type \"" + jsonTypeToString.value(value.type()) + "\"");
+        return false;
+    }
+
+    if (m_isIntegerExpected) {
+        const auto v1 = value.toDouble();
+        const auto v2 = value.toInt();
+        if (!qFuzzyCompare(v1, v2)) {
+            logger.notifyError(path, QStringLiteral("Expected integer value, but it is not (%1)").arg(v1));
+            return false;
+        }
+    }
+
+    if (!m_validator->check(value)) {
+        logger.notifyError(path,
+                           QStringLiteral("Range validation failed. Min: %1, max: %2, actual: %3")
+                             .arg(m_validator->getMin())
+                             .arg(m_validator->getMax())
+                             .arg(value.toDouble())
+                           );
         return false;
     }
 
