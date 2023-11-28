@@ -14,6 +14,8 @@ namespace JsonValidator {
 
 namespace Internal {
 
+namespace {
+
 class OrProxyLogger : public Logger
 {
 public:
@@ -43,7 +45,7 @@ const QMap<QJsonValue::Type, QString> jsonTypeToString = {
     {QJsonValue::Type::Undefined, "Undefined"}
 };
 
-static QString valueToString(const QJsonValue& value)
+QString valueToString(const QJsonValue& value)
 {
     QJsonDocument doc;
 
@@ -59,6 +61,8 @@ static QString valueToString(const QJsonValue& value)
 
     return QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
 }
+
+} // namespace
 
 bool Object::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
 {
@@ -168,14 +172,14 @@ bool String::check(ContextData& ctx, Logger& logger, const QString& path, const 
     if (m_hex) {
         auto str = value.toString();
 
-        bool ok = false;
+        bool hexOk = false;
 
         if (str.left(2) == "0x") {
             str = str.mid(2);
-            str.toLongLong(&ok, 16);
+            str.toLongLong(&hexOk, 16);
         }
 
-        if (!ok) {
+        if (!hexOk) {
             logger.notifyError(path, "Expected HEX-number string, but isn't");
             return false;
         }

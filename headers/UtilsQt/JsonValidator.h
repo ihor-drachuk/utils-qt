@@ -80,6 +80,8 @@ enum class _Hex { Hex };
 enum class _Integer { Integer };
 
 struct MinMaxValidator {
+    DEFAULT_COPY_MOVE(MinMaxValidator);
+    MinMaxValidator() = default;
     virtual ~MinMaxValidator() = default;
     virtual bool check(const QJsonValue&) const { return true; }
     virtual QString getMin() const { return "<not set>"; }
