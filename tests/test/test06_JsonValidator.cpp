@@ -53,6 +53,60 @@ TEST(UtilsQt, JsonValidator_basic)
     ASSERT_TRUE(lg3.hasNotifiedError());
 }
 
+TEST(UtilsQt, JsonValidator_number)
+{
+    using namespace UtilsQt::JsonValidator;
+
+    auto validator =
+          RootValidator(
+            Object(
+              Field("field_double", Number()),
+              Field("field_int", Number(Integer)),
+              Field("field_double_1_11__6_15", Number({1.11}, {6.15})),
+              Field("field_int_2__7", Number(Integer, {2}, {7}))
+            )
+          );
+
+    NullLogger lg;
+    QJsonObject test;
+    test["field_double"] = 1.1;
+    test["field_int"] = 2;
+    test["field_double_1_11__6_15"] = 2.51;
+    test["field_int_2__7"] = 3;
+    ASSERT_TRUE(validator->check(lg, test));
+
+    test["field_double_1_11__6_15"] = 1.11;
+    test["field_int_2__7"] = 2;
+    ASSERT_TRUE(validator->check(lg, test));
+
+    test["field_double_1_11__6_15"] = 6.15;
+    test["field_int_2__7"] = 7;
+    ASSERT_TRUE(validator->check(lg, test));
+
+    test["field_double"] = 1;
+    ASSERT_TRUE(validator->check(lg, test));
+
+    ASSERT_TRUE(validator->check(lg, test));
+    test["field_int"] = 2.1;
+    ASSERT_FALSE(validator->check(lg, test));
+    test["field_int"] = 2;
+
+    ASSERT_TRUE(validator->check(lg, test));
+    test["field_double_1_11__6_15"] = 1.10;
+    ASSERT_FALSE(validator->check(lg, test));
+    test["field_double_1_11__6_15"] = 2.51;
+
+    ASSERT_TRUE(validator->check(lg, test));
+    test["field_int_2__7"] = 1;
+    ASSERT_FALSE(validator->check(lg, test));
+    test["field_int_2__7"] = 3;
+
+    ASSERT_TRUE(validator->check(lg, test));
+    test["field_int_2__7"] = 3.5;
+    ASSERT_FALSE(validator->check(lg, test));
+    test["field_int_2__7"] = 3;
+}
+
 TEST(UtilsQt, JsonValidator_array)
 {
     using namespace UtilsQt::JsonValidator;
