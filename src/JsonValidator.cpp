@@ -43,7 +43,7 @@ const QMap<QJsonValue::Type, QString> jsonTypeToString = {
     {QJsonValue::Type::Undefined, "Undefined"}
 };
 
-QString valueToString(const QJsonValue& value)
+static QString valueToString(const QJsonValue& value)
 {
     QJsonDocument doc;
 

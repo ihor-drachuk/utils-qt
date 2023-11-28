@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <memory>
+#include <optional>
 
 #include <utils-cpp/copy_move.h>
 #include <utils-cpp/variadic_tools.h>
@@ -76,6 +77,76 @@ enum class _Exclusive { Exclusive };
 enum class _Optional { Optional };
 enum class _NonEmpty { NonEmpty };
 enum class _Hex { Hex };
+enum class _Integer { Integer };
+
+struct MinMaxValidator {
+    virtual ~MinMaxValidator() = default;
+    virtual bool check(const QJsonValue&) const { return true; }
+    virtual QString getMin() const { return "<not set>"; }
+    virtual QString getMax() const { return "<not set>"; }
+};
+
+struct MinMaxValidatorInt : public MinMaxValidator {
+    std::optional<int64_t> min {};
+    std::optional<int64_t> max {};
+
+    MinMaxValidatorInt(const std::optional<int64_t>& min, const std::optional<int64_t>& max)
+        : min(min),
+          max(max)
+    { }
+
+    bool check(const QJsonValue& v) const override {
+        if (!v.isDouble())
+            return false;
+
+        const auto value = v.toInt();
+
+        if (min && value < *min)
+            return false;
+
+        if (max && value > *max)
+            return false;
+
+        return true;
+    }
+
+    QString getMin() const override { return min ? QString::number(*min) : MinMaxValidator::getMin(); }
+    QString getMax() const override { return max ? QString::number(*max) : MinMaxValidator::getMax(); }
+};
+
+struct MinMaxValidatorDouble : public MinMaxValidator {
+    std::optional<double> min {};
+    std::optional<double> max {};
+
+    MinMaxValidatorDouble(const std::optional<double>& min, const std::optional<double>& max)
+        : min(min),
+          max(max)
+    { }
+
+    bool check(const QJsonValue& v) const override {
+        if (!v.isDouble())
+            return false;
+
+        const auto value = v.toDouble();
+
+        if (min && qFuzzyCompare(value, *min))
+            return true;
+
+        if (max && qFuzzyCompare(value, *max))
+            return true;
+
+        if (min && value < *min)
+            return false;
+
+        if (max && value > *max)
+            return false;
+
+        return true;
+    }
+
+    QString getMin() const override { return min ? QString::number(*min) : MinMaxValidator::getMin(); }
+    QString getMax() const override { return max ? QString::number(*max) : MinMaxValidator::getMax(); }
+};
 
 template<typename... Ts>
 std::vector<ValidatorCPtr> convertValidators(const Ts&... validators)
@@ -207,7 +278,27 @@ public:
         : Validator(validators)
     { }
 
+    Number(_Integer, const std::vector<ValidatorCPtr>& validators)
+        : Validator(validators),
+          m_isIntegerExpected(true)
+    { }
+
+    Number(const std::optional<double>& min, const std::optional<double>& max, const std::vector<ValidatorCPtr>& validators)
+        : Validator(validators),
+          m_validator(std::make_unique<MinMaxValidatorDouble>(min, max))
+    { }
+
+    Number(_Integer, const std::optional<int64_t>& min, const std::optional<int64_t>& max, const std::vector<ValidatorCPtr>& validators)
+        : Validator(validators),
+          m_isIntegerExpected(true),
+          m_validator(std::make_unique<MinMaxValidatorInt>(min, max))
+    { }
+
     bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+
+private:
+    bool m_isIntegerExpected {};
+    std::unique_ptr<MinMaxValidator> m_validator {std::make_unique<MinMaxValidator>()};
 };
 
 class Exclude : public Validator
@@ -324,6 +415,7 @@ constexpr auto Exclusive = Internal::_Exclusive::Exclusive;
 constexpr auto Optional = Internal::_Optional::Optional;
 constexpr auto NonEmpty = Internal::_NonEmpty::NonEmpty;
 constexpr auto Hex = Internal::_Hex::Hex;
+constexpr auto Integer = Internal::_Integer::Integer;
 using RootValidatorCPtr = Internal::RootValidatorCPtr;
 
 template<typename... Ts>
@@ -402,6 +494,24 @@ template<typename... Ts>
 ValidatorCPtr Number(const Ts&... validators)
 {
     return std::make_shared<Internal::Number>(Internal::convertValidators(validators...));
+}
+
+template<typename... Ts>
+ValidatorCPtr Number(Internal::_Integer integer, const Ts&... validators)
+{
+    return std::make_shared<Internal::Number>(integer, Internal::convertValidators(validators...));
+}
+
+template<typename... Ts>
+ValidatorCPtr Number(const std::optional<double>& min, const std::optional<double>& max, const Ts&... validators)
+{
+    return std::make_shared<Internal::Number>(min, max, Internal::convertValidators(validators...));
+}
+
+template<typename... Ts>
+ValidatorCPtr Number(Internal::_Integer integer, const std::optional<int64_t>& min, const std::optional<int64_t>& max, const Ts&... validators)
+{
+    return std::make_shared<Internal::Number>(integer, min, max, Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
