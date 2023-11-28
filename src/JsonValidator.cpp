@@ -14,6 +14,42 @@ namespace JsonValidator {
 
 namespace Internal {
 
+bool MinMaxValidatorInt::check(const QJsonValue& v) const {
+    if (!v.isDouble())
+        return false;
+
+    const auto value = v.toInt();
+
+    if (min && value < *min)
+        return false;
+
+    if (max && value > *max)
+        return false;
+
+    return true;
+}
+
+bool MinMaxValidatorDouble::check(const QJsonValue& v) const {
+    if (!v.isDouble())
+        return false;
+
+    const auto value = v.toDouble();
+
+    if (min && qFuzzyCompare(value, *min))
+        return true;
+
+    if (max && qFuzzyCompare(value, *max))
+        return true;
+
+    if (min && value < *min)
+        return false;
+
+    if (max && value > *max)
+        return false;
+
+    return true;
+}
+
 namespace {
 
 class OrProxyLogger : public Logger
