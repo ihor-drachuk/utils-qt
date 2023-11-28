@@ -92,26 +92,8 @@ struct MinMaxValidatorInt : public MinMaxValidator {
     std::optional<int64_t> min {};
     std::optional<int64_t> max {};
 
-    MinMaxValidatorInt(const std::optional<int64_t>& min, const std::optional<int64_t>& max)
-        : min(min),
-          max(max)
-    { }
-
-    bool check(const QJsonValue& v) const override {
-        if (!v.isDouble())
-            return false;
-
-        const auto value = v.toInt();
-
-        if (min && value < *min)
-            return false;
-
-        if (max && value > *max)
-            return false;
-
-        return true;
-    }
-
+    MinMaxValidatorInt(const std::optional<int64_t>& min, const std::optional<int64_t>& max): min(min), max(max) { }
+    bool check(const QJsonValue& v) const override;
     QString getMin() const override { return min ? QString::number(*min) : MinMaxValidator::getMin(); }
     QString getMax() const override { return max ? QString::number(*max) : MinMaxValidator::getMax(); }
 };
@@ -120,32 +102,8 @@ struct MinMaxValidatorDouble : public MinMaxValidator {
     std::optional<double> min {};
     std::optional<double> max {};
 
-    MinMaxValidatorDouble(const std::optional<double>& min, const std::optional<double>& max)
-        : min(min),
-          max(max)
-    { }
-
-    bool check(const QJsonValue& v) const override {
-        if (!v.isDouble())
-            return false;
-
-        const auto value = v.toDouble();
-
-        if (min && qFuzzyCompare(value, *min))
-            return true;
-
-        if (max && qFuzzyCompare(value, *max))
-            return true;
-
-        if (min && value < *min)
-            return false;
-
-        if (max && value > *max)
-            return false;
-
-        return true;
-    }
-
+    MinMaxValidatorDouble(const std::optional<double>& min, const std::optional<double>& max): min(min), max(max) { }
+    bool check(const QJsonValue& v) const override;
     QString getMin() const override { return min ? QString::number(*min) : MinMaxValidator::getMin(); }
     QString getMax() const override { return max ? QString::number(*max) : MinMaxValidator::getMax(); }
 };
