@@ -281,6 +281,9 @@ void MultibindingItem::setDelayMsR(int value)
 
     m_delayMsR = value;
     emit delayMsRChanged(m_delayMsR);
+
+    if (!m_delayMsR && m_delayMsRTimer->isActive())
+        m_delayMsRTimer->start(0);
 }
 
 void MultibindingItem::setDelayMsW(int value)
@@ -292,6 +295,9 @@ void MultibindingItem::setDelayMsW(int value)
 
     m_delayMsW = value;
     emit delayMsWChanged(m_delayMsW);
+
+    if (!m_delayMsW && m_delayMsWTimer->isActive())
+        m_delayMsWTimer->start(0);
 }
 
 void MultibindingItem::setDelayBehR(MultibindingItem::DelayBehvior value)
