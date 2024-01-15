@@ -67,6 +67,11 @@ bool QmlUtils::eventFilter(QObject* /*watched*/, QEvent* event)
     switch (event->type()) {
         case QEvent::KeyPress:
         case QEvent::KeyRelease:
+        case QEvent::WindowActivate:
+        case QEvent::Enter:
+        case QEvent::HoverEnter:
+        case QEvent::HoverLeave:
+        case QEvent::HoverMove:
             break;
 
         default:
@@ -75,6 +80,10 @@ bool QmlUtils::eventFilter(QObject* /*watched*/, QEvent* event)
 
     const auto km = QGuiApplication::queryKeyboardModifiers();
     setKeyModifiers(static_cast<int>(km));
+
+    // Other event types are only needed to update the current keyboard modifier
+    if (event->type() != QEvent::KeyPress && event->type() != QEvent::KeyRelease)
+        return false;
 
     assert(dynamic_cast<QKeyEvent*>(event));
     auto keyEvent = static_cast<QKeyEvent*>(event);
