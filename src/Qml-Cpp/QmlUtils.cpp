@@ -64,6 +64,7 @@ void QmlUtils::registerTypes()
 
 bool QmlUtils::eventFilter(QObject* /*watched*/, QEvent* event)
 {
+    // codechecker_intentional [clang-diagnostic-switch-enum]
     switch (event->type()) {
         case QEvent::KeyPress:
         case QEvent::KeyRelease:
@@ -89,6 +90,7 @@ bool QmlUtils::eventFilter(QObject* /*watched*/, QEvent* event)
     auto keyEvent = static_cast<QKeyEvent*>(event);
     auto key = static_cast<Qt::Key>(keyEvent->key());
 
+    // codechecker_intentional [clang-diagnostic-switch-enum]
     switch (event->type()) {
         case QEvent::KeyPress:   emit keyPressed(key);  break;
         case QEvent::KeyRelease: emit keyReleased(key); break;
@@ -222,7 +224,8 @@ QColor QmlUtils::colorChangeAlpha(const QColor& color, double alpha) const
         case QColor::Spec::Hsl:  return QColor::fromHslF(color.hslHueF(), color.hslSaturationF(), color.lightnessF(), alpha);
         case QColor::Spec::ExtendedRgb: {
             auto c = color.rgba64();
-            c.setAlpha(std::numeric_limits<decltype(c.alpha())>::max() * alpha);
+            using AlphaType = decltype(c.alpha());
+            c.setAlpha(static_cast<AlphaType>(qRound(std::numeric_limits<AlphaType>::max() * alpha)));
             return QColor::fromRgba64(c);
         }
     }

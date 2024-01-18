@@ -21,6 +21,7 @@ namespace {
 
 std::optional<int> getInt(const QVariant& value)
 {
+    // codechecker_intentional [clang-diagnostic-switch-enum]
     switch (value.type()) {
         case QVariant::Type::Int:
         case QVariant::Type::UInt:
@@ -39,6 +40,7 @@ std::optional<int> getInt(const QVariant& value)
 
 std::optional<QString> getString(const QVariant& value)
 {
+    // codechecker_intentional [clang-diagnostic-switch-enum]
     switch (value.type()) {
         case QVariant::Type::String:
             return value.toString();

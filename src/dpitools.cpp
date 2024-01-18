@@ -40,7 +40,7 @@ void DpiTools::setAutoScreenScale(bool value)
     qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", value ? "1" : "0");
 }
 
-void DpiTools::setScaleFactor(float value)
+void DpiTools::setScaleFactor(double value)
 {
     qputenv("QT_SCALE_FACTOR", QString::number(value, 'f', 2).toLatin1());
 }

@@ -16,6 +16,6 @@ class DpiTools
 {
 public:
     static void setAutoScreenScale(bool value);
-    static void setScaleFactor(float value);
+    static void setScaleFactor(double value);
     static void ignoreSystemAutoResize(QCoreApplication& app);
 };
