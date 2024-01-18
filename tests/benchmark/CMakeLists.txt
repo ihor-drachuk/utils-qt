@@ -5,7 +5,9 @@ foreach( testsourcefile ${SOURCES} )
 
     add_executable( benchmark-${testname} ${testsourcefile} )
     set_property(TARGET benchmark-${testname} PROPERTY CXX_STANDARD 17)
-    target_link_libraries(benchmark-${testname} gtest benchmark utils-qt)
+
+    find_package(Threads REQUIRED)
+    target_link_libraries(benchmark-${testname} gtest benchmark Threads::Threads ${PROJECT_NAME})
 
     add_test(NAME benchmark-${testname}-runner COMMAND benchmark-${testname})
 

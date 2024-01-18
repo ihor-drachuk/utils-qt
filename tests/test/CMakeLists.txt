@@ -9,7 +9,8 @@ add_executable(${PROJECT_TEST_NAME} ${SOURCES})
 set_property(TARGET ${PROJECT_TEST_NAME} PROPERTY CXX_STANDARD 17)
 set_property(TARGET ${PROJECT_TEST_NAME} PROPERTY AUTOMOC ON)
 
-target_link_libraries(${PROJECT_TEST_NAME} gtest gmock_main ${PROJECT_NAME} Qt${QT_VERSION_MAJOR}::Test)
+find_package(Threads REQUIRED)
+target_link_libraries(${PROJECT_TEST_NAME} gtest gmock_main Threads::Threads Qt${QT_VERSION_MAJOR}::Test ${PROJECT_NAME})
 
 add_test(NAME ${PROJECT_TEST_NAME}-runner COMMAND ${PROJECT_TEST_NAME})
 
