@@ -12,3 +12,11 @@ set_property(TARGET ${PROJECT_TEST_NAME} PROPERTY AUTOMOC ON)
 target_link_libraries(${PROJECT_TEST_NAME} gtest gmock_main ${PROJECT_NAME} Qt${QT_VERSION_MAJOR}::Test)
 
 add_test(NAME ${PROJECT_TEST_NAME}-runner COMMAND ${PROJECT_TEST_NAME})
+
+if(MSVC)
+    target_link_options(${PROJECT_TEST_NAME} PRIVATE "/ignore:4221")
+    set_target_properties(${PROJECT_TEST_NAME} PROPERTIES STATIC_LIBRARY_OPTIONS "/ignore:4221")
+    target_compile_options(${PROJECT_TEST_NAME} PRIVATE "/WX")
+else()
+    target_compile_options(${PROJECT_TEST_NAME} PRIVATE "-Werror")
+endif()
