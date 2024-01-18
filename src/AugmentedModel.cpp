@@ -298,7 +298,7 @@ QVariant AugmentedModel::data(const QModelIndex& index, int role) const
             srcValues.append(xValue);
         }
 
-        const auto result = impl().calculatedRoles.at(crIndex)->calculator(srcValues);
+        auto result = impl().calculatedRoles.at(crIndex)->calculator(srcValues);
         return result;
     } else {
         return impl().srcModel->data(index, role);

@@ -263,7 +263,7 @@ std::optional<QVariant> ListModelTools::findValueByValues(const QAbstractItemMod
                 result.insert(QString::fromLatin1(it.value()), model.data(idx, it.key()));
             }
 
-            return result;
+            return {result};
 
         } else {
             return model.data(idx, rolesMap.value(neededRole));

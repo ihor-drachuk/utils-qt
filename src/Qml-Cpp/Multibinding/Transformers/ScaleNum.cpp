@@ -14,12 +14,11 @@ void ScaleNum::registerTypes()
 
 QVariant ScaleNum::readConverter(const QVariant& value) const
 {
-    switch (value.type()) {
+    switch (static_cast<int>(value.type())) {
         case QVariant::Type::Invalid:
             return value;
 
         case QVariant::Type::Int:
-        // codechecker_intentional [clang-diagnostic-switch]
         case (QVariant::Type)QMetaType::Type::Float:
         case QVariant::Type::Double:
             if (m_roundOnRead) {
@@ -36,12 +35,11 @@ QVariant ScaleNum::readConverter(const QVariant& value) const
 
 QVariant ScaleNum::writeConverter(const QVariant& newValue, const QVariant&) const
 {
-    switch (newValue.type()) {
+    switch (static_cast<int>(newValue.type())) {
         case QVariant::Type::Invalid:
             return newValue;
 
         case QVariant::Type::Int:
-        // codechecker_intentional [clang-diagnostic-switch]
         case (QVariant::Type)QMetaType::Type::Float:
         case QVariant::Type::Double:
             if (m_roundOnWrite) {

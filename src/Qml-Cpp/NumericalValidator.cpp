@@ -278,7 +278,7 @@ bool NumericalValidator::validateFixup(QString& input, const QChar decimalPoint)
                         if (fractionNumber >= std::pow(10, impl().decimals)) {
                             QString integerNumberStr(QString::number(comlectFractionNumber.at(0).toInt()+1));
                             fractionNumber--;
-                            fractionNumber /= std::pow(10, impl().decimals);
+                            fractionNumber /= lround(std::pow(10, impl().decimals));
                             input = integerNumberStr;
                         } else {
                             input = comlectFractionNumber.at(0);
