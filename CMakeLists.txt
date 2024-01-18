@@ -30,6 +30,9 @@ set_property(TARGET utils-qt PROPERTY AUTORCC ON)
 if(MSVC)
     target_link_options(utils-qt PRIVATE "/ignore:4221")
     set_target_properties(utils-qt PROPERTIES STATIC_LIBRARY_OPTIONS "/ignore:4221")
+    target_compile_options(utils-qt PRIVATE "/WX")
+else()
+    target_compile_options(utils-qt PRIVATE "-Werror")
 endif()
 
 # --- System detection ---
