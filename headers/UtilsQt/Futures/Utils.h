@@ -534,17 +534,17 @@ FuturesSetProperties analyzeFutures(const std::tuple<QFuture<Args>...>& futures)
         return {true, true, false, false, false, true, true, true};
 
     auto properties = FuturesSetProperties::GetBoolFriendly();
+    const auto lambda = [&](const auto& x){
+        properties.allFinished &= x.isFinished();
+        properties.someFinished |= x.isFinished();
 
-    std::apply([&](const auto&... xs){ ([&](const auto& x){
-            properties.allFinished &= x.isFinished();
-            properties.someFinished |= x.isFinished();
+        properties.allCanceled &= x.isCanceled();
+        properties.someCanceled |= x.isCanceled();
 
-            properties.allCanceled &= x.isCanceled();
-            properties.someCanceled |= x.isCanceled();
+        properties.someCompleted |= futureCompleted(x);
+    };
 
-            properties.someCompleted |= futureCompleted(x);
-        } (xs), ...);
-    }, futures);
+    std::apply([&](const auto&... xs){ (lambda (xs), ...); }, futures);
 
     properties.noneFinished = !properties.someFinished;
     properties.noneCanceled = !properties.someCanceled;
