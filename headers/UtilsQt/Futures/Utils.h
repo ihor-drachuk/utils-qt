@@ -130,9 +130,11 @@ template<typename T>
 class Promise
 {
 public:
-    Promise()
+    Promise(bool autoStartFuture = true)
     {
-        m_interface.reportStarted();
+        if (autoStartFuture)
+            m_interface.reportStarted();
+
         m_contextTracker = std::shared_ptr<void>(reinterpret_cast<void*>(1), [f = m_interface](void*) mutable {
             if (!f.isFinished()) {
                 f.reportCanceled();
@@ -147,11 +149,18 @@ public:
     Promise<T>& operator= (const Promise<T>&) = default;
     Promise<T>& operator= (Promise<T>&&) noexcept = default;
 
+    void start()
+    {
+        assert(!isStarted());
+        m_interface.reportStarted();
+    }
+
     // if [T == void]
     template<typename X = T>
     typename std::enable_if<std::is_same<X, void>::value && std::is_same<X, T>::value>::type
     finish()
     {
+        assert(isStarted());
         assert(!isFinished());
 
         m_interface.reportFinished();
@@ -162,6 +171,7 @@ public:
     typename std::enable_if<!std::is_same<X, void>::value && std::is_same<X, T>::value>::type
     finish(const X& result)
     {
+        assert(isStarted());
         assert(!isFinished());
 
         m_interface.reportResult(result);
@@ -176,6 +186,7 @@ public:
         m_interface.reportFinished();
     }
 
+    bool isStarted() const { return m_interface.isStarted(); }
     bool isCanceled() const { return m_interface.isCanceled(); }
     bool isFinished() const { return m_interface.isFinished(); }
 
@@ -490,9 +501,9 @@ template<typename T>
 }
 
 template<typename T>
-[[nodiscard]] Promise<T> createPromise()
+[[nodiscard]] Promise<T> createPromise(bool autoStartFuture = true)
 {
-    return Promise<T>();
+    return Promise<T>(autoStartFuture);
 }
 
 template<typename T>
