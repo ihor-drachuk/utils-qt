@@ -65,7 +65,7 @@ jobs:
             qt: 5.15.2
             build_type: Debug
 
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     if: "!contains(github.event.head_commit.message, 'Skip build')"
     timeout-minutes: 30
@@ -103,7 +103,7 @@ jobs:
         working-directory: ${{github.workspace}}
         shell: bash
         run: |
-          cmake -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -A "${{matrix.compiler_arch}}" -G "Visual Studio 17 2022" -S "./src" -B "./build"
+          cmake -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -A "${{matrix.compiler_arch}}" -G "Visual Studio 16 2019" -S "./src" -B "./build"
           cmake --build "./build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
           cd ./build/tests
           ctest --no-tests=error --rerun-failed --output-on-failure --timeout 30 -C "${{matrix.build_type}}"
