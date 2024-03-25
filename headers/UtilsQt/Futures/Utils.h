@@ -130,7 +130,7 @@ template<typename T>
 class Promise
 {
 public:
-    Promise(bool autoStartFuture = true)
+    Promise(bool autoStartFuture = false)
     {
         if (autoStartFuture)
             m_interface.reportStarted();
@@ -501,7 +501,7 @@ template<typename T>
 }
 
 template<typename T>
-[[nodiscard]] Promise<T> createPromise(bool autoStartFuture = true)
+[[nodiscard]] Promise<T> createPromise(bool autoStartFuture = false)
 {
     return Promise<T>(autoStartFuture);
 }

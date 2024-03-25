@@ -106,7 +106,7 @@ public:
 
     QFuture<void> readyPromise()
     {
-        auto f = UtilsQt::createPromise<void>();
+        auto f = UtilsQt::createPromise<void>(true);
         QObject::connect(&getContext()->ownContext, &QObject::destroyed, [f]() mutable { f.finish(); });
         return f.future();
     }

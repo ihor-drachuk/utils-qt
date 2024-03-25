@@ -16,7 +16,7 @@ using namespace UtilsQt;
 
 TEST(UtilsQt, Futures_CancellationChain_Convert)
 {
-    auto promise = createPromise<int>();
+    auto promise = createPromise<int>(true);
     auto f = UtilsQt::convertFuture<int, int>(nullptr, promise.future(), ConverterFlags::IgnoreNullContext, [](int value) -> std::optional<int> {
         return value + 1;
     });
@@ -36,9 +36,9 @@ TEST(UtilsQt, Futures_CancellationChain_Convert)
 TEST(UtilsQt, Futures_CancellationChain_Merge)
 {
     QObject ctx;
-    auto p1 = createPromise<int>();
-    auto p2 = createPromise<int>();
-    auto p3 = createPromise<int>();
+    auto p1 = createPromise<int>(true);
+    auto p2 = createPromise<int>(true);
+    auto p3 = createPromise<int>(true);
     QVector<QFuture<int>> futures {p1.future(), p2.future(), p3.future()};
 
     auto f = UtilsQt::mergeFuturesAll(&ctx, futures);

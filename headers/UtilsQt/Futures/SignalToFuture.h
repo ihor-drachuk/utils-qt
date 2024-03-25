@@ -55,7 +55,7 @@ template<typename Object, typename... Args,
          typename std::enable_if<std::is_base_of<QObject, Object>::value>::type* = nullptr>
 QFuture<ResultType> signalToFuture(Object* object, void (Object::* signal)(Args...), QObject* context = nullptr)
 {
-    auto promise = UtilsQt::createPromise<ResultType>();
+    auto promise = UtilsQt::createPromise<ResultType>(true);
 
     auto ctx = new QObject();
     QObject::connect(object, &QObject::destroyed, ctx, &QObject::deleteLater);

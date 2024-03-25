@@ -195,7 +195,7 @@ TEST(UtilsQt, Futures_Convert_Destruction)
         QFuture<int> resultFuture;
 
         {
-            auto f = createPromise<int>();
+            auto f = createPromise<int>(true);
 
             QObject ctx;
             resultFuture = convertFuture<int, int>(&ctx, f.future(), [&](int value) -> std::optional<int> { ok = true; return value + 1; });

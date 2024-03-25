@@ -166,7 +166,7 @@ QFuture<void> onPropertyFuture(Object* object,
                                int timeout = -1,
                                Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
-    auto promise = UtilsQt::createPromise<void>();
+    auto promise = UtilsQt::createPromise<void>(true);
 
     onProperty(object, getter, notifier, expectedValue, comparison, true, context,
                [promise]() mutable {
