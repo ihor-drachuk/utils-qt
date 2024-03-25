@@ -25,7 +25,8 @@ TEST(UtilsQt, Futures_RetryingFuture_Basic_Bool)
                                     });
 
     waitForFuture<QEventLoop>(future);
-    ASSERT_TRUE(future.result());
+    ASSERT_TRUE(future.result().result);
+    ASSERT_TRUE(future.result().isOk);
     ASSERT_EQ(count, 2);
 }
 
@@ -40,7 +41,8 @@ TEST(UtilsQt, Futures_RetryingFuture_Basic_Int)
                                     });
 
     waitForFuture<QEventLoop>(future);
-    ASSERT_EQ(future.result(), 52);
+    ASSERT_EQ(future.result().result, 52);
+    ASSERT_TRUE(future.result().isOk);
     ASSERT_EQ(count, 2);
 }
 
@@ -57,8 +59,8 @@ TEST(UtilsQt, Futures_RetryingFuture_Retried)
                                     });
 
     waitForFuture<QEventLoop>(future);
-    ASSERT_TRUE(future.result());
-    ASSERT_EQ(count, 0);
+    ASSERT_TRUE(future.isCanceled());
+    ASSERT_EQ(count, 1);
 }
 
 TEST(UtilsQt, Futures_RetryingFuture_Retried_Canceled)
@@ -90,7 +92,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Retried_Canceled_2)
 
     waitForFuture<QEventLoop>(future);
     ASSERT_TRUE(future.isCanceled());
-    ASSERT_EQ(count, 0);
+    ASSERT_EQ(count, 2);
 }
 
 TEST(UtilsQt, Futures_RetryingFuture_Validator)
@@ -111,7 +113,8 @@ TEST(UtilsQt, Futures_RetryingFuture_Validator)
                                     );
 
     waitForFuture<QEventLoop>(future);
-    ASSERT_EQ(future.result(), 48);
+    ASSERT_EQ(future.result().result, 48);
+    ASSERT_TRUE(future.result().isOk);
     ASSERT_EQ(count, 0);
 }
 
@@ -134,7 +137,8 @@ TEST(UtilsQt, Futures_RetryingFuture_Validator_Instant)
                                     0); // Interval
 
     waitForFuture<QEventLoop>(future);
-    ASSERT_EQ(future.result(), 48);
+    ASSERT_EQ(future.result().result, 48);
+    ASSERT_TRUE(future.result().isOk);
     ASSERT_EQ(count, 0);
 }
 
@@ -154,7 +158,9 @@ TEST(UtilsQt, Futures_RetryingFuture_Validator_Canceled)
     );
 
     waitForFuture<QEventLoop>(future);
-    ASSERT_TRUE(future.isCanceled());
+    ASSERT_FALSE(future.isCanceled());
+    ASSERT_EQ(future.result().result, false);
+    ASSERT_EQ(future.result().isOk, false);
     ASSERT_EQ(count, 0);
 }
 
@@ -185,7 +191,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Cancel_Target)
 
 TEST(UtilsQt, Futures_RetryingFuture_Context)
 {
-    QFuture<int> future;
+    QFuture<RetryingResult<int>> future;
     int count = 3;
 
     {
@@ -225,4 +231,41 @@ TEST(UtilsQt, Futures_RetryingFuture_Lifetime)
     qApp->processEvents();
     qApp->processEvents();
     ASSERT_EQ(tracker.count(), 1);
+}
+
+TEST(UtilsQt, Futures_RetryingFuture_PreciseResultValidation)
+{
+    const auto validator = [](const std::optional<int> &result) -> ValidatorDecision {
+        if (result) {
+            return (*result >= 0 && *result <= 100) ? ValidatorDecision::ResultIsValid
+                                                    : ValidatorDecision::NeedRetry;
+        } else {
+            return ValidatorDecision::Cancel;
+        }
+    };
+
+    {
+        auto future = createRetryingFuture(nullptr, []() { return createTimedFuture(27, 52); }, validator);
+
+        waitForFuture<QEventLoop>(future);
+        ASSERT_EQ(future.result().result, 52);
+        ASSERT_TRUE(future.result().isOk);
+    }
+
+    {
+        auto future = createRetryingFuture(nullptr, []() { return createTimedFuture(27, 101); }, validator);
+
+        waitForFuture<QEventLoop>(future);
+        ASSERT_EQ(future.result().result, 101);
+        ASSERT_FALSE(future.result().isOk);
+    }
+
+    {
+        int result = 102;
+        auto future = createRetryingFuture(nullptr, [&result]() { return createTimedFuture(27, result--); }, validator);
+
+        waitForFuture<QEventLoop>(future);
+        ASSERT_EQ(future.result().result, 100);
+        ASSERT_TRUE(future.result().isOk);
+    }
 }

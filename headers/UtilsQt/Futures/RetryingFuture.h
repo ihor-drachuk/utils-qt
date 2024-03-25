@@ -49,13 +49,26 @@ enum ValidatorDecision
     ResultIsValid
 };
 
+template<typename T>
+struct RetryingResult
+{
+    T result {};
+    bool isOk {};
+};
+
+template<>
+struct RetryingResult<void>
+{
+    bool isOk {};
+};
+
 namespace RetryingFutureInternal {
 
 template<typename T>
-struct PayloadTypeGetter;
+struct QFutureUnwrapper;
 
 template<typename T>
-struct PayloadTypeGetter<QFuture<T>>
+struct QFutureUnwrapper<QFuture<T>>
 {
     using Type = T;
 };
@@ -63,17 +76,20 @@ struct PayloadTypeGetter<QFuture<T>>
 struct ContextHelperBase
 {
     template<typename T>
-    static void reportCanceled(QFutureInterface<T>& target) {
+    static void reportCanceled(QFutureInterface<RetryingResult<T>>& target) {
         target.reportCanceled();
         target.reportFinished();
     }
 };
 
 template<typename T>
-struct ContextHelper : ContextHelperBase
+struct ContextHelper;
+
+template<typename T>
+struct ContextHelper<RetryingResult<T>> : ContextHelperBase
 {
-    static void reportFinished(QFutureInterface<T>& target, const QFuture<T>& src) {
-        target.reportResult(src.result());
+    static void reportFinished(QFutureInterface<RetryingResult<T>>& target, const QFuture<T>& src, bool ok) {
+        target.reportResult(RetryingResult<T> {src.result(), ok});
         target.reportFinished();
     }
 
@@ -86,15 +102,16 @@ struct ContextHelper : ContextHelperBase
     static auto getDefaultValidator() {
         return [](const std::optional<T>& result){
             return result ? ValidatorDecision::ResultIsValid :
-                            ValidatorDecision::NeedRetry;
+                            ValidatorDecision::Cancel;
         };
     }
 };
 
 template<>
-struct ContextHelper<void> : ContextHelperBase
+struct ContextHelper<RetryingResult<void>> : ContextHelperBase
 {
-    static void reportFinished(QFutureInterface<void>& target, const QFuture<void>&) {
+    static void reportFinished(QFutureInterface<RetryingResult<void>>& target, const QFuture<void>&, bool ok) {
+        target.reportResult(RetryingResult<void>{ok});
         target.reportFinished();
     }
 
@@ -106,7 +123,7 @@ struct ContextHelper<void> : ContextHelperBase
     static auto getDefaultValidator() {
         return [](bool result){
             return result ? ValidatorDecision::ResultIsValid :
-                            ValidatorDecision::NeedRetry;
+                            ValidatorDecision::Cancel;
         };
     }
 };
@@ -131,7 +148,7 @@ struct Context : public QObject
 {
     NO_COPY_MOVE(Context);
     using This = Context<AsyncCall, ResultValidator, PayloadType>;
-    using Helper = ContextHelper<PayloadType>;
+    using Helper = ContextHelper<RetryingResult<PayloadType>>;
 
     Context(QObject* context,
             const AsyncCall& asyncCall,
@@ -164,7 +181,7 @@ struct Context : public QObject
             m_inFutureWatcher.cancel();
     }
 
-    QFuture<PayloadType> getTargetFuture() { return m_targetFuture.future(); }
+    QFuture<RetryingResult<PayloadType>> getTargetFuture() { return m_targetFuture.future(); }
 
 private:
     void onTargetCanceled() {
@@ -187,7 +204,7 @@ private:
 
             case ValidatorDecision::NeedRetry:
                 if (m_callsDone == m_callsLimit) {
-                    Helper::reportCanceled(m_targetFuture);
+                    Helper::reportFinished(m_targetFuture, m_inFutureWatcher.future(), false);
                     deleteLater();
                     return;
                 }
@@ -204,7 +221,7 @@ private:
 
             case ValidatorDecision::ResultIsValid:
                 assert(!m_inFutureWatcher.isCanceled());
-                Helper::reportFinished(m_targetFuture, m_inFutureWatcher.future());
+                Helper::reportFinished(m_targetFuture, m_inFutureWatcher.future(), true);
                 deleteLater();
                 break;
         }
@@ -224,8 +241,8 @@ private:
     unsigned int m_callsInterval {};
     unsigned int m_callsDone {};
 
-    QFutureInterface<PayloadType> m_targetFuture;
-    QFutureWatcher<PayloadType> m_targetFutureWatcher;
+    QFutureInterface<RetryingResult<PayloadType>> m_targetFuture;
+    QFutureWatcher<RetryingResult<PayloadType>> m_targetFutureWatcher;
 
     QFutureWatcher<PayloadType> m_inFutureWatcher;
 };
@@ -234,11 +251,11 @@ private:
 
 template<typename AsyncCall,
          typename RT = std::result_of_t<AsyncCall()>,
-         typename PT = typename RetryingFutureInternal::PayloadTypeGetter<RT>::Type,
-         typename Helper = RetryingFutureInternal::ContextHelper<PT>,
+         typename PT = typename RetryingFutureInternal::QFutureUnwrapper<RT>::Type,
+         typename Helper = RetryingFutureInternal::ContextHelper<RetryingResult<PT>>,
          typename ResultValidator = decltype(Helper::getDefaultValidator())
          >
-QFuture<PT> createRetryingFuture(QObject* context,
+QFuture<RetryingResult<PT>> createRetryingFuture(QObject* context,
                                 const AsyncCall& asyncCall,
                                 ResultValidator resultValidator = Helper::getDefaultValidator(),
                                 unsigned int callsLimit = 3,
