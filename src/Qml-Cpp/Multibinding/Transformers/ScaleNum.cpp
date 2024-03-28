@@ -4,7 +4,7 @@
 
 #include <UtilsQt/Qml-Cpp/Multibinding/Transformers/ScaleNum.h>
 #include <QQmlEngine>
-
+#include <UtilsQt/qvariant_traits.h>
 
 void ScaleNum::registerTypes()
 {
@@ -14,44 +14,36 @@ void ScaleNum::registerTypes()
 
 QVariant ScaleNum::readConverter(const QVariant& value) const
 {
-    switch (static_cast<int>(value.type())) {
-        case QVariant::Type::Invalid:
-            return value;
+    if (UtilsQt::QVariantTraits::isUnknown(value))
+        return value;
 
-        case QVariant::Type::Int:
-        case (QVariant::Type)QMetaType::Type::Float:
-        case QVariant::Type::Double:
-            if (m_roundOnRead) {
-                return qRound(value.toDouble() / m_factor);
-            } else {
-                return value.toDouble() / m_factor;
-            }
-
-        default:
-            qFatal("Not supported QVariant::Type");
-            return QVariant();
+    if (UtilsQt::QVariantTraits::isInteger(value) || UtilsQt::QVariantTraits::isFloat(value)) {
+        if (m_roundOnRead) {
+            return qRound(value.toDouble() / m_factor);
+        } else {
+            return value.toDouble() / m_factor;
+        }
     }
+
+    qFatal("Not supported QVariant::Type");
+    return QVariant();
 }
 
 QVariant ScaleNum::writeConverter(const QVariant& newValue, const QVariant&) const
 {
-    switch (static_cast<int>(newValue.type())) {
-        case QVariant::Type::Invalid:
-            return newValue;
+    if (UtilsQt::QVariantTraits::isUnknown(newValue))
+        return newValue;
 
-        case QVariant::Type::Int:
-        case (QVariant::Type)QMetaType::Type::Float:
-        case QVariant::Type::Double:
-            if (m_roundOnWrite) {
-                return qRound(newValue.toDouble() * m_factor);
-            } else {
-                return newValue.toDouble() * m_factor;
-            }
-
-        default:
-            qFatal("Not supported QVariant::Type");
-            return QVariant();
+    if (UtilsQt::QVariantTraits::isInteger(newValue) || UtilsQt::QVariantTraits::isFloat(newValue)) {
+        if (m_roundOnWrite) {
+            return qRound(newValue.toDouble() * m_factor);
+        } else {
+            return newValue.toDouble() * m_factor;
+        }
     }
+
+    qFatal("Not supported QVariant::Type");
+    return QVariant();
 }
 
 void ScaleNum::setFactor(qreal value)

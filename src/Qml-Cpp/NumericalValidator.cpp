@@ -9,6 +9,8 @@
 #include <memory>
 #include <cmath>
 
+#include <UtilsQt/qvariant_traits.h>
+
 struct NumericalValidator::impl_t
 {
     QVariant step;
@@ -39,7 +41,7 @@ NumericalValidator::ValueRangeStatus NumericalValidator::isValue(const QString& 
 {
     if (!impl().step.isValid() && !impl().rangeBottom.isValid() && !impl().rangeTop.isValid())
         return IntermediateValue;
-    if (impl().step.type() == QVariant::Type::Double) {
+    if (UtilsQt::QVariantTraits::isDouble(impl().step)) {
         QString top = QString::number(impl().rangeTop.toDouble());
         QString bottom = QString::number(impl().rangeBottom.toDouble());
 
@@ -137,7 +139,7 @@ void NumericalValidator::fixup(QString& input) const
     if (!impl().standartValidator)
         return;
 
-    if (impl().step.type() == QVariant::Type::Int) {
+    if (UtilsQt::QVariantTraits::isInteger(impl().step)) {
         impl().standartValidator->fixup(input);
     } else {
         validateFixup(input, '.');
@@ -164,8 +166,8 @@ void NumericalValidator::setStep(const QVariant& step)
     if (step == impl().step)
         return;
 
-    assert(step.type() == QVariant::Type::Int || step.type() == QVariant::Type::Double);
-    if (step.type() == QVariant::Type::Double)
+    assert(UtilsQt::QVariantTraits::isInteger(step) || UtilsQt::QVariantTraits::isDouble(step));
+    if (UtilsQt::QVariantTraits::isDouble(step))
         assert(step.toDouble() > 0);
 
     impl().step = step;
@@ -178,7 +180,7 @@ void NumericalValidator::setBottom(const QVariant& bottom)
     if (bottom == impl().rangeBottom)
         return;
 
-    assert(bottom.type() == QVariant::Type::Int || bottom.type() == QVariant::Type::Double);
+    assert(UtilsQt::QVariantTraits::isInteger(bottom) || UtilsQt::QVariantTraits::isDouble(bottom));
 
     impl().rangeBottom = bottom;
     emit bottomChanged(impl().rangeBottom);
@@ -190,7 +192,7 @@ void NumericalValidator::setTop(const QVariant& top)
     if (top == impl().rangeTop)
         return;
 
-    assert(top.type() == QVariant::Type::Int || top.type() == QVariant::Type::Double);
+    assert(UtilsQt::QVariantTraits::isInteger(top) || UtilsQt::QVariantTraits::isDouble(top));
 
     impl().rangeTop = top;
     emit topChanged(impl().rangeTop);
@@ -220,7 +222,7 @@ void NumericalValidator::createStandartValidator()
     if (!impl().rangeBottom.isValid() || !impl().rangeTop.isValid() || !impl().step.isValid())
         return;
 
-    if (step().type() == QVariant::Type::Double) {
+    if (UtilsQt::QVariantTraits::isDouble(step())) {
         impl().decimals = calculateDecimalPointPosition();
         impl().standartValidator.reset(new QDoubleValidator(impl().rangeBottom.toDouble(), impl().rangeTop.toDouble(), impl().decimals));
     } else {

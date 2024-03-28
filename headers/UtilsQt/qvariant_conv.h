@@ -6,6 +6,8 @@
 #include <optional>
 #include <QVariant>
 
+#include <UtilsQt/qvariant_migration.h>
+
 namespace UtilsQt {
 namespace QVariantConv {
 
@@ -20,27 +22,27 @@ template<int value0, int... values>
 struct Matcher
 {
     static bool match(const QVariant& value) {
-        return (value.type() == value0) || Matcher<values...>::match(value);
+        return (QVariantMigration::getTypeId(value) == value0) || Matcher<values...>::match(value);
     }
 };
 
 template<int value0>
 struct Matcher<value0>
 {
-    static bool match(const QVariant& value) { /*test(value.type());*/ return value.type() == value0; }
+    static bool match(const QVariant& value) { /*test(value.type());*/ return QVariantMigration::getTypeId(value) == value0; }
 };
 
 template<typename T> struct TypeTools { };
-template<> struct TypeTools<int>                : Matcher<QVariant::Type::Int>        { static auto convert(const QVariant& variant, bool& ok) { return variant.toInt(&ok); } };
-template<> struct TypeTools<unsigned int>       : Matcher<QVariant::Type::UInt>       { static auto convert(const QVariant& variant, bool& ok) { return variant.toUInt(&ok); } };
-template<> struct TypeTools<long long>          : Matcher<QVariant::Type::LongLong>   { static auto convert(const QVariant& variant, bool& ok) { return variant.toLongLong(&ok); } };
-template<> struct TypeTools<unsigned long long> : Matcher<QVariant::Type::ULongLong>  { static auto convert(const QVariant& variant, bool& ok) { return variant.toULongLong(&ok); } };
-template<> struct TypeTools<double>             : Matcher<QVariant::Type::Double>     { static auto convert(const QVariant& variant, bool& ok) { return variant.toDouble(&ok); } };
-template<> struct TypeTools<float>              : Matcher<QMetaType::Type::Float>     { static auto convert(const QVariant& variant, bool& ok) { return variant.toFloat(&ok); } };
-template<> struct TypeTools<bool>               : Matcher<QVariant::Type::Bool>       { static auto convert(const QVariant& variant, bool& ok) { ok = true; return variant.toBool(); } };
-template<> struct TypeTools<char>               : Matcher<QVariant::Type::Int>        { static auto convert(const QVariant& variant, bool& ok) { auto rsl = variant.toInt(&ok); ok &= (rsl >= 0 && rsl <= 255); return rsl; } };
-template<> struct TypeTools<QChar>              : Matcher<QVariant::Type::Char>       { static auto convert(const QVariant& variant, bool& ok) { ok = true; return variant.toChar(); } };
-template<> struct TypeTools<QString>            : Matcher<QVariant::Type::String>     { static auto convert(const QVariant& variant, bool& ok) { ok = true; return variant.toString(); } };
+template<> struct TypeTools<int>                : Matcher<QVariantMigration::Int>        { static auto convert(const QVariant& variant, bool& ok) { return variant.toInt(&ok); } };
+template<> struct TypeTools<unsigned int>       : Matcher<QVariantMigration::UInt>       { static auto convert(const QVariant& variant, bool& ok) { return variant.toUInt(&ok); } };
+template<> struct TypeTools<long long>          : Matcher<QVariantMigration::LongLong>   { static auto convert(const QVariant& variant, bool& ok) { return variant.toLongLong(&ok); } };
+template<> struct TypeTools<unsigned long long> : Matcher<QVariantMigration::ULongLong>  { static auto convert(const QVariant& variant, bool& ok) { return variant.toULongLong(&ok); } };
+template<> struct TypeTools<double>             : Matcher<QVariantMigration::Double>     { static auto convert(const QVariant& variant, bool& ok) { return variant.toDouble(&ok); } };
+template<> struct TypeTools<float>              : Matcher<QVariantMigration::Float>     { static auto convert(const QVariant& variant, bool& ok) { return variant.toFloat(&ok); } };
+template<> struct TypeTools<bool>               : Matcher<QVariantMigration::Bool>       { static auto convert(const QVariant& variant, bool& ok) { ok = true; return variant.toBool(); } };
+template<> struct TypeTools<char>               : Matcher<QVariantMigration::Int>        { static auto convert(const QVariant& variant, bool& ok) { auto rsl = variant.toInt(&ok); ok &= (rsl >= 0 && rsl <= 255); return rsl; } };
+template<> struct TypeTools<QChar>              : Matcher<QVariantMigration::Char>       { static auto convert(const QVariant& variant, bool& ok) { ok = true; return variant.toChar(); } };
+template<> struct TypeTools<QString>            : Matcher<QVariantMigration::String>     { static auto convert(const QVariant& variant, bool& ok) { ok = true; return variant.toString(); } };
 
 } // namespace Internal
 
