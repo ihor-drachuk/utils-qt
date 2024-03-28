@@ -34,6 +34,11 @@ if(MSVC)
     target_link_options(utils-qt PRIVATE "/ignore:4221")
     set_target_properties(utils-qt PROPERTIES STATIC_LIBRARY_OPTIONS "/ignore:4221")
     target_compile_options(utils-qt PRIVATE "/WX")
+
+    # MSVC 2022 + Enterprise + Qt5 + QVector::operator== warning mitigation
+    if(Qt5_FOUND AND MSVC_VERSION GREATER_EQUAL 1929 AND "${CMAKE_CXX_COMPILER}" MATCHES "Enterprise")
+        target_compile_definitions(utils-qt PUBLIC _SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS=1 _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING=1)
+    endif()
 else()
     target_compile_options(utils-qt PRIVATE "-Werror")
 endif()
