@@ -17,8 +17,6 @@ struct PathElider::impl_t
     int widthLimit {};
     QString elidedText;
 
-    QRegularExpression pathSeparatorRegexp;
-
     std::unique_ptr<QFontMetrics> fontMetrics;
 };
 
@@ -31,12 +29,6 @@ PathElider::PathElider(QObject* parent)
     : QObject(parent)
 {
     createImpl();
-    impl().pathSeparatorRegexp.setPattern(
-        "^"
-        "(:/|\\w+:/|/+|\\w:\\\\+)?"
-        "(((.*?)([/\\\\]))*)"
-        "(.*$)"
-    );
 }
 
 PathElider::~PathElider()
@@ -50,7 +42,13 @@ PathEliderDecomposition PathElider::decomposePath(const QString& path) const
     constexpr int SeparatorGroupIdx = 5;
     constexpr int NameGroupIdx = 6;
 
-    auto match = impl().pathSeparatorRegexp.match(path);
+    static const QRegularExpression pathSeparatorRegexp{
+        "^"
+        "(:/|\\w+:/|/+|\\w:\\\\+)?"
+        "(((.*?)([/\\\\]))*)"
+        "(.*$)"
+    };
+    auto match = pathSeparatorRegexp.match(path);
 
     auto optSeparator = [](const QString& separator) -> std::optional<QChar> {
         if (separator.isEmpty()) {

@@ -717,8 +717,8 @@ void MergedListModel::init()
     }
 
     // Make sure role names are unique
-    QRegularExpression isAppliedFix("_mlm\\d+$");
-    QRegularExpression appliedNumber("\\d+$");
+    static const QRegularExpression isAppliedFix("_mlm\\d+$");
+    static const QRegularExpression appliedNumber("\\d+$");
 
     auto updateName = [&](QByteArray& roleName) {
         if (isAppliedFix.match(roleName).hasMatch()) {
