@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
-PROJECT(utils-qt)
+PROJECT(utils-qt LANGUAGES CXX)
 
 option(UTILS_QT_ENABLE_TESTS     "utils-qt: Enable tests" OFF)
 option(UTILS_QT_ENABLE_BENCHMARK "utils-qt: Enable benchmark" OFF)
 option(UTILS_QT_NO_GUI_TESTS     "utils-qt: Disable GUI tests" OFF)
+
+set(UTILS_QT_GTEST_SEARCH_MODE "Auto" CACHE STRING "utils-qt: Set GTest search mode")
+set_property(CACHE UTILS_QT_GTEST_SEARCH_MODE PROPERTY STRINGS "Auto" "Force" "Skip")
 
 set(UTILS_QT_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
