@@ -20,6 +20,7 @@
 #include <qt_windows.h>
 #endif
 
+#include <UtilsQt/qvariant_traits.h>
 
 namespace {
     template<size_t N> constexpr size_t length(char const (&)[N]) { return N-1; }
@@ -273,21 +274,12 @@ bool QmlUtils::isNull(const QVariant& value) const
 
 bool QmlUtils::isFloat(const QVariant& value) const
 {
-    return value.type() == QVariant::Type::Double ||
-           value.type() == static_cast<QVariant::Type>(QMetaType::Type::Float) ||
-           value.type() == static_cast<QVariant::Type>(QMetaType::Type::QReal);
+    return UtilsQt::QVariantTraits::isFloat(value);
 }
 
 bool QmlUtils::isInteger(const QVariant& value) const
 {
-    return value.type() == QVariant::Type::Int ||
-           value.type() == QVariant::Type::UInt ||
-           value.type() == QVariant::Type::LongLong ||
-           value.type() == QVariant::Type::ULongLong ||
-           value.type() == static_cast<QVariant::Type>(QMetaType::Type::Long) ||
-           value.type() == static_cast<QVariant::Type>(QMetaType::Type::ULong) ||
-           value.type() == static_cast<QVariant::Type>(QMetaType::Type::Short) ||
-           value.type() == static_cast<QVariant::Type>(QMetaType::Type::UShort);
+    return UtilsQt::QVariantTraits::isInteger(value);
 }
 
 bool QmlUtils::isNumber(const QVariant& value) const

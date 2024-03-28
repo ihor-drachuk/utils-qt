@@ -9,6 +9,8 @@
 #include <QDebug>
 #include <cassert>
 
+#include <UtilsQt/qvariant_traits.h>
+
 namespace UtilsQt {
 namespace JsonValidator {
 
@@ -333,7 +335,7 @@ bool CtxCheckArrayLength::check(ContextData& ctx, Logger& logger, const QString&
 
 bool CtxAppendToList::check(ContextData& ctx, Logger& /*logger*/, const QString& /*path*/, const QJsonValue& value) const
 {
-    assert(!ctx.contains(m_ctxField) || ctx.value(m_ctxField).type() == QVariant::Type::List);
+    assert(!ctx.contains(m_ctxField) || QVariantTraits::isList(ctx.value(m_ctxField)));
 
     if (ctx.contains(m_ctxField)) {
         auto list = ctx.value(m_ctxField).toList();
@@ -348,7 +350,7 @@ bool CtxAppendToList::check(ContextData& ctx, Logger& /*logger*/, const QString&
 
 bool CtxCheckInList::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
 {
-    assert(ctx.contains(m_ctxField) && ctx.value(m_ctxField).type() == QVariant::Type::List);
+    assert(ctx.contains(m_ctxField) && QVariantTraits::isList(ctx.value(m_ctxField)));
 
     auto list = ctx.value(m_ctxField).toList();
 
@@ -362,7 +364,7 @@ bool CtxCheckInList::check(ContextData& ctx, Logger& logger, const QString& path
 
 bool CtxCheckNotInList::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
 {
-    assert(!ctx.contains(m_ctxField) || ctx.value(m_ctxField).type() == QVariant::Type::List);
+    assert(!ctx.contains(m_ctxField) || QVariantTraits::isList(ctx.value(m_ctxField)));
 
     auto list = ctx.value(m_ctxField).toList();
 

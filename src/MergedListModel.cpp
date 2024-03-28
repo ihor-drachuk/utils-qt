@@ -17,6 +17,7 @@
 #include <utils-cpp/container_utils.h>
 #include <UtilsQt/convertcontainer.h>
 #include <UtilsQt/Qml-Cpp/QmlUtils.h>
+#include <UtilsQt/qvariant_traits.h>
 
 namespace {
 
@@ -36,36 +37,25 @@ std::optional<QString> getString(const MergedListModel::RoleVariant& value)
 
 std::optional<int> getInt(const QVariant& value)
 {
-    // codechecker_intentional [clang-diagnostic-switch-enum]
-    switch (value.type()) {
-        case QVariant::Type::Int:
-        case QVariant::Type::UInt:
-        case QVariant::Type::LongLong:
-        case QVariant::Type::ULongLong: {
-            bool ok;
-            auto result = value.toInt(&ok);
-            assert(ok);
-            return result;
-        }
-
-        default:
-            return {};
+    if (UtilsQt::QVariantTraits::isInteger(value)) {
+        bool ok;
+        auto result = value.toInt(&ok);
+        assert(ok);
+        return result;
     }
+
+    return {};
 }
 
 std::optional<QString> getString(const QVariant& value)
 {
-    // codechecker_intentional [clang-diagnostic-switch-enum]
-    switch (value.type()) {
-        case QVariant::Type::String:
-            return value.toString();
+    if (UtilsQt::QVariantTraits::isString(value))
+        return value.toString();
 
-        case QVariant::Type::ByteArray:
-            return QString::fromLatin1(value.toByteArray());
+    if (UtilsQt::QVariantTraits::isByteArray(value))
+        return QString::fromLatin1(value.toByteArray());
 
-        default:
-            return {};
-    }
+    return {};
 }
 
 
@@ -446,10 +436,7 @@ void MergedListModel::selfCheck() const
             const QVariant value = currentLine.at(r);
 
             if (r == impl().srcRole) {
-                mlm_assert_rel(value.type() == QVariant::Type::Int ||
-                       value.type() == QVariant::Type::UInt ||
-                       value.type() == QVariant::Type::LongLong ||
-                       value.type() == QVariant::Type::ULongLong);
+                mlm_assert_rel(UtilsQt::QVariantTraits::isInteger(value));
 
                 auto intValue = value.toInt();
                 mlm_assert_rel(intValue == 1 || intValue == 2 || intValue == 3);
