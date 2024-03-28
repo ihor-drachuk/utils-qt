@@ -43,7 +43,7 @@ bool Polygon::intersectsWithRect(const QRectF& value) const
 {
     const QPolygonF rectPolygon(value);
 
-    for (const auto& x : qAsConst(impl().translatedPolygons))
+    for (const auto& x : std::as_const(impl().translatedPolygons))
         if (rectPolygon.intersects(x))
             return true;
 
@@ -99,7 +99,7 @@ void Polygon::recalculate()
 
     const QPointF offset (impl().offset * (impl().negativeOffset ? -1 : 1));
 
-    for (const auto& x : qAsConst(impl().polygons))
+    for (const auto& x : std::as_const(impl().polygons))
         impl().combinedPolygon = impl().combinedPolygon.united(x);
 
     impl().combinedPolygon.translate(offset);

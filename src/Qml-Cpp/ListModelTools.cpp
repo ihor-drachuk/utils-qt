@@ -431,7 +431,7 @@ QStringList ListModelTools::listRoles() const
 
     QStringList result;
     auto roles = impl().model->roleNames();
-    for (const auto& x : qAsConst(roles)) {
+    for (const auto& x : std::as_const(roles)) {
         result.append(QString::fromLatin1(x));
     }
 
@@ -525,7 +525,7 @@ void ListModelTools::onDataChanged(const QModelIndex& topLeft, const QModelIndex
         auto modelRoles = impl().model->roleNames();
 
         if (roles.isEmpty()) {
-            for (const auto& x : qAsConst(modelRoles)) {
+            for (const auto& x : std::as_const(modelRoles)) {
                 roleNames.append(QString::fromLatin1(x));
             }
         } else {
