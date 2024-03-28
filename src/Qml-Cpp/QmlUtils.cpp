@@ -17,7 +17,7 @@
 #include <QUrl>
 #include <QClipboard>
 #ifdef UTILS_QT_OS_WIN
-#include <Windows.h>
+#include <qt_windows.h>
 #endif
 
 
@@ -119,7 +119,7 @@ QString QmlUtils::getEnvironentVariable(const QString& name) const
 
 PathDetails QmlUtils::analyzePath(const QString& str) const
 {
-    if ((str.size() >= 2 && str[1] == ":")) {
+    if ((str.size() >= 2 && str[1] == ':')) {
         return {str, PathDetails::Windows, true};
 
     } else if (str.startsWith(filePrefixWin)) {

@@ -12,7 +12,6 @@
 #include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
 
-class QStringList;
 class QRegularExpression;
 
 struct PathEliderDecomposition

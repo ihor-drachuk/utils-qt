@@ -11,6 +11,7 @@
 #include <QSet>
 #include <cassert>
 #include <optional>
+#include <variant>
 #include <unordered_map>
 #include <utils-cpp/scoped_guard.h>
 #include <utils-cpp/container_utils.h>
@@ -18,6 +19,20 @@
 #include <UtilsQt/Qml-Cpp/QmlUtils.h>
 
 namespace {
+
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+std::optional<int> getInt(const MergedListModel::RoleVariant& value)
+{
+    auto result = std::get_if<int>(&value);
+    return result ? *result : std::optional<int>{};
+}
+
+std::optional<QString> getString(const MergedListModel::RoleVariant& value)
+{
+    auto result = std::get_if<QString>(&value);
+    return result ? *result : std::optional<QString>{};
+}
+#endif
 
 std::optional<int> getInt(const QVariant& value)
 {
@@ -107,7 +122,7 @@ struct MergedListModel::impl_t
 {
     QVariant joinRole1;
     QVariant joinRole2;
-    QMap<QVariant, Converter> providedResetters;
+    QMap<RoleVariant, Converter> providedResetters;
 
     // Cache
     ModelContext models[2];
@@ -240,7 +255,7 @@ void MergedListModel::checkConsistency() const
     selfCheck();
 }
 
-void MergedListModel::registerCustomResetter(const QVariant& role, const Converter& converter)
+void MergedListModel::registerCustomResetter(const RoleVariant& role, const Converter& converter)
 {
     assert(utils_cpp::find_in_map(impl().providedResetters, role).has_value() == false);
     auto it = impl().providedResetters.insert(role, converter);
