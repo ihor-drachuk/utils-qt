@@ -32,7 +32,7 @@ QValidator::State NumericValidatorInt::validate(QString& str, int& /*pos*/) cons
     int zeros = 0;
     bool zerosCounting = true;
     bool onlyZeros = true;
-    for (const auto& x : qAsConst(str)) {
+    for (const auto& x : std::as_const(str)) {
         const bool allowMinus = (i == 0 && bottom() < 0);
         const bool allowableChar = x.isDigit() || (allowMinus && x == '-');
 

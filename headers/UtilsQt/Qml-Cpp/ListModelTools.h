@@ -57,7 +57,7 @@ public:
         auto values = collectValuesByRole(model, roleName);
         QVector<T> result;
         result.reserve(values.size());
-        for (const auto& x : qAsConst(values))
+        for (const auto& x : std::as_const(values))
             result.append(x.value<T>());
         return result;
     }

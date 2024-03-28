@@ -135,7 +135,7 @@ void AugmentedModel::updateCalculatedRole(const QModelIndex& topLeft,
 
 void AugmentedModel::disconnectModel()
 {
-    for (const auto& x : qAsConst(impl().modelConnections))
+    for (const auto& x : std::as_const(impl().modelConnections))
         QObject::disconnect(x);
 
     impl().modelConnections.clear();
@@ -258,7 +258,7 @@ void AugmentedModel::updateAllCalculatedRoles()
         return;
 
     QVector<int> affectedRoles;
-    for (const auto& x : qAsConst(impl().calculatedRoles))
+    for (const auto& x : std::as_const(impl().calculatedRoles))
         affectedRoles.append(x->role);
 
     emit dataChanged(index(0, 0, {}), index(rowCount({}) - 1, columnCount({}) - 1, {}), affectedRoles);
@@ -293,7 +293,7 @@ QVariant AugmentedModel::data(const QModelIndex& index, int role) const
         auto crIndex = impl().roleToCalcRolesIndex.value(role);
 
         QVariantList srcValues;
-        for (const auto& x : qAsConst(impl().calculatedRoles.at(crIndex)->sourceRoles)) {
+        for (const auto& x : std::as_const(impl().calculatedRoles.at(crIndex)->sourceRoles)) {
             const auto xValue = impl().srcModel->data(index, x.role);
             srcValues.append(xValue);
         }
