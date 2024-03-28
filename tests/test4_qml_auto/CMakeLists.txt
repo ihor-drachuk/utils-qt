@@ -5,8 +5,10 @@ project(test-utils-qt-4 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS QuickTest REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS QuickTest)
+find_package(Qt6 COMPONENTS QuickTest)
+if (NOT Qt6_FOUND)
+    find_package(Qt5 5.15 REQUIRED COMPONENTS QuickTest)
+endif()
 
 add_executable(test-utils-qt-4 main4.cpp MLMResetter.h main4.qrc)
 set_property(TARGET test-utils-qt-4 PROPERTY CXX_STANDARD 17)

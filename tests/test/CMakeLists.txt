@@ -1,5 +1,7 @@
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Test REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Test)
+find_package(Qt6 COMPONENTS Test)
+if (NOT Qt6_FOUND)
+    find_package(Qt5 5.15 REQUIRED COMPONENTS Test)
+endif()
 
 FILE(GLOB_RECURSE SOURCES *.cpp)
 

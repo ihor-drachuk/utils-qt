@@ -188,7 +188,7 @@ void AugmentedModel::onDataChanged(const QModelIndex& topLeft, const QModelIndex
         }
     }
 
-    QVector changedRoles(changedRolesSet.cbegin(), changedRolesSet.cend());
+    QVector<int> changedRoles(changedRolesSet.cbegin(), changedRolesSet.cend());
     std::sort(changedRoles.begin(), changedRoles.end());
 
     emit dataChanged(topLeft, bottomRight, changedRoles);
