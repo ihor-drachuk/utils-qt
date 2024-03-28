@@ -1,4 +1,4 @@
-find_package(Qt6 COMPONENTS Test)
+find_package(Qt6 COMPONENTS Test QUIET)
 if (NOT Qt6_FOUND)
     find_package(Qt5 5.15 REQUIRED COMPONENTS Test)
 endif()

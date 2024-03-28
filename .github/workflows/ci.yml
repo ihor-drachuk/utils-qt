@@ -15,7 +15,7 @@ jobs:
         os: [linux]
         compiler: [gcc, clang]
         test_libs: [tl_preinstalled, tl_missing]
-        qt: [qt_5.15.2] # += qt_6.6.1
+        qt: [qt_5.15.2, qt_6.6.1]
         build_type: [Debug, Release]
 
     runs-on: ubuntu-latest
@@ -45,7 +45,9 @@ jobs:
           QT_QPA_PLATFORM: 'minimal'
         shell: bash
         run: |
-          cmake -DUTILS_QT_NO_GUI_TESTS=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Unix Makefiles" -S "./src" -B "./build"
+          GTEST_SEARCH_MODE=$([[ "${{ matrix.test_libs }}" == "tl_missing" ]] && echo "Skip" || echo "Force")
+          
+          cmake -DUTILS_QT_NO_GUI_TESTS=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DUTILS_QT_GTEST_SEARCH_MODE:STRING=$GTEST_SEARCH_MODE -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Unix Makefiles" -S "./src" -B "./build"
           cmake --build "./build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
           cd ./build/tests
           ctest --no-tests=error --rerun-failed --output-on-failure --timeout 30 -C "${{matrix.build_type}}"
@@ -57,7 +59,7 @@ jobs:
       matrix:
         compiler_arch: [x64]
         qt_arch: [win64_msvc2019_64]
-        qt: [5.15.2] # += 6.6.1
+        qt: [5.15.2, 6.6.1]
         build_type: [Debug, Release]
         include:
           - compiler_arch: Win32
@@ -65,7 +67,7 @@ jobs:
             qt: 5.15.2
             build_type: Debug
 
-    runs-on: windows-2019
+    runs-on: windows-latest
 
     if: "!contains(github.event.head_commit.message, 'Skip build')"
     timeout-minutes: 30
@@ -103,7 +105,7 @@ jobs:
         working-directory: ${{github.workspace}}
         shell: bash
         run: |
-          cmake -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -A "${{matrix.compiler_arch}}" -G "Visual Studio 16 2019" -S "./src" -B "./build"
+          cmake -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -A "${{matrix.compiler_arch}}" -G "Visual Studio 17 2022" -S "./src" -B "./build"
           cmake --build "./build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
           cd ./build/tests
           ctest --no-tests=error --rerun-failed --output-on-failure --timeout 30 -C "${{matrix.build_type}}"
@@ -113,7 +115,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        qt: [5.15.2] # += 6.6.1
+        qt: [5.15.2, 6.6.1]
         build_type: [Debug, Release]
 
     runs-on: macos-latest
