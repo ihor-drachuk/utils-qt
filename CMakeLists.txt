@@ -19,7 +19,7 @@ if (NOT Qt6_FOUND)
     find_package(Qt5 5.15 REQUIRED COMPONENTS Core Quick)
 endif()
 
-FILE(GLOB_RECURSE SOURCES src/*.cpp src/*.qrc src/*.h headers/*.h)
+FILE(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp src/*.qrc src/*.h headers/*.h)
 
 list(APPEND QML_IMPORT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/qml/")
 list(REMOVE_DUPLICATES QML_IMPORT_PATH)

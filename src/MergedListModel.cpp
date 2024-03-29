@@ -11,7 +11,6 @@
 #include <QSet>
 #include <cassert>
 #include <optional>
-#include <variant>
 #include <unordered_map>
 #include <utils-cpp/scoped_guard.h>
 #include <utils-cpp/container_utils.h>
@@ -21,41 +20,54 @@
 
 namespace {
 
-#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
-std::optional<int> getInt(const MergedListModel::RoleVariant& value)
+std::optional<int> getInt(const std::optional<MergedListModel::RoleVariant>& optValue)
 {
-    auto result = std::get_if<int>(&value);
+    if (!optValue)
+        return {};
+
+    auto result = std::get_if<int>(&*optValue);
     return result ? *result : std::optional<int>{};
 }
 
-std::optional<QString> getString(const MergedListModel::RoleVariant& value)
+std::optional<QString> getString(const std::optional<MergedListModel::RoleVariant>& optValue)
 {
-    auto result = std::get_if<QString>(&value);
+    if (!optValue)
+        return {};
+
+    auto result = std::get_if<QString>(&*optValue);
     return result ? *result : std::optional<QString>{};
 }
-#endif
 
-std::optional<int> getInt(const QVariant& value)
+QVariant roleToVariant(const std::optional<MergedListModel::RoleVariant>& optValue)
+{
+    if (auto intValue = getInt(optValue)) {
+        return {*intValue};
+
+    } else if (auto strValue = getString(optValue)) {
+        return {*strValue};
+
+    } else {
+        return {};
+    }
+}
+
+std::optional<MergedListModel::RoleVariant> variantToRole(const QVariant& value)
 {
     if (UtilsQt::QVariantTraits::isInteger(value)) {
         bool ok;
         auto result = value.toInt(&ok);
         assert(ok);
         return result;
-    }
 
-    return {};
-}
-
-std::optional<QString> getString(const QVariant& value)
-{
-    if (UtilsQt::QVariantTraits::isString(value))
+    } else if (UtilsQt::QVariantTraits::isString(value)) {
         return value.toString();
 
-    if (UtilsQt::QVariantTraits::isByteArray(value))
+    } else if (UtilsQt::QVariantTraits::isByteArray(value)) {
         return QString::fromLatin1(value.toByteArray());
 
-    return {};
+    } else {
+        return {};
+    }
 }
 
 
@@ -110,8 +122,8 @@ struct hash<QVariant>
 
 struct MergedListModel::impl_t
 {
-    QVariant joinRole1;
-    QVariant joinRole2;
+    std::optional<RoleVariant> optJoinRole1;
+    std::optional<RoleVariant> optJoinRole2;
     QMap<RoleVariant, Converter> providedResetters;
 
     // Cache
@@ -271,12 +283,12 @@ QAbstractListModel* MergedListModel::model2() const
 
 QVariant MergedListModel::joinRole1() const
 {
-    return impl().joinRole1;
+    return roleToVariant(impl().optJoinRole1);
 }
 
 QVariant MergedListModel::joinRole2() const
 {
-    return impl().joinRole2;
+    return roleToVariant(impl().optJoinRole2);
 }
 
 void MergedListModel::setModel1(QAbstractListModel* value)
@@ -309,24 +321,26 @@ void MergedListModel::setModel2(QAbstractListModel* value)
 
 void MergedListModel::setJoinRole1(const QVariant& value)
 {
-    if (impl().joinRole1 == value)
+    const auto newValue = variantToRole(value);
+    if (impl().optJoinRole1 == newValue)
         return;
 
-    impl().joinRole1 = value;
+    impl().optJoinRole1 = newValue;
     init();
 
-    emit joinRole1Changed(impl().joinRole1);
+    emit joinRole1Changed(value);
 }
 
 void MergedListModel::setJoinRole2(const QVariant& value)
 {
-    if (impl().joinRole2 == value)
+    const auto newValue = variantToRole(value);
+    if (impl().optJoinRole2 == newValue)
         return;
 
-    impl().joinRole2 = value;
+    impl().optJoinRole2 = newValue;
     init();
 
-    emit joinRole2Changed(impl().joinRole2);
+    emit joinRole2Changed(value);
 }
 
 void MergedListModel::selfCheckModel(int idx) const
@@ -520,7 +534,7 @@ void MergedListModel::selfCheck() const
 
 bool MergedListModel::initable() const
 {
-    return impl().models[0].model && impl().models[1].model && impl().joinRole1.isValid() && impl().joinRole2.isValid();
+    return impl().models[0].model && impl().models[1].model && impl().optJoinRole1 && impl().optJoinRole2;
 }
 
 void MergedListModel::init()
@@ -540,19 +554,19 @@ void MergedListModel::init()
     // Find join roles
     int role1 {-1};
     int role2 {-1};
-    if (auto intValue = getInt(impl().joinRole1)) {
+    if (auto intValue = getInt(impl().optJoinRole1)) {
         if (impl().models[0].model->roleNames().contains(*intValue))
             role1 = *intValue;
-    } else if (auto strValue = getString(impl().joinRole1)) {
+    } else if (auto strValue = getString(impl().optJoinRole1)) {
         auto matchingIds = impl().models[0].model->roleNames().keys(strValue->toLatin1());
         if (matchingIds.size() == 1)
             role1 = matchingIds.first();
     }
 
-    if (auto intValue = getInt(impl().joinRole2)) {
+    if (auto intValue = getInt(impl().optJoinRole2)) {
         if (impl().models[1].model->roleNames().contains(*intValue))
             role2 = *intValue;
-    } else if (auto strValue = getString(impl().joinRole2)) {
+    } else if (auto strValue = getString(impl().optJoinRole2)) {
         auto matchingIds = impl().models[1].model->roleNames().keys(strValue->toLatin1());
         if (matchingIds.size() == 1)
             role2 = matchingIds.first();
@@ -565,35 +579,37 @@ void MergedListModel::init()
     impl().models[1].joinRole = role2;
 
     // Fill own roles and own join role
-    int i = 0;
-    auto roleNames0 = impl().models[0].model->roleNames();
-    for (auto it = roleNames0.cbegin(),
-         itEnd = roleNames0.cend();
-         it != itEnd;
-         it++, i++)
     {
-        impl().roles.append(it.value());
-        impl().models[0].roleRemapFromSrc.insert({it.key(), i});
-        impl().models[0].roleRemapToSrc.insert({i, it.key()});
-
-        if (it.key() == role1)
-            impl().joinRole = i;
-    }
-
-    auto roleNames1 = impl().models[1].model->roleNames();
-    for (auto it = roleNames1.cbegin(),
-         itEnd = roleNames1.cend();
-         it != itEnd;
-         it++)
-    {
-        if (it.key() == impl().models[1].joinRole) {
-            impl().models[1].roleRemapFromSrc.insert({it.key(), impl().joinRole});
-            impl().models[1].roleRemapToSrc.insert({impl().joinRole, it.key()});
-        } else {
+        int i = 0;
+        auto roleNames0 = impl().models[0].model->roleNames();
+        for (auto it = roleNames0.cbegin(),
+             itEnd = roleNames0.cend();
+             it != itEnd;
+             it++, i++)
+        {
             impl().roles.append(it.value());
-            impl().models[1].roleRemapFromSrc.insert({it.key(), i});
-            impl().models[1].roleRemapToSrc.insert({i, it.key()});
-            i++;
+            impl().models[0].roleRemapFromSrc.insert({it.key(), i});
+            impl().models[0].roleRemapToSrc.insert({i, it.key()});
+
+            if (it.key() == role1)
+                impl().joinRole = i;
+        }
+
+        auto roleNames1 = impl().models[1].model->roleNames();
+        for (auto it = roleNames1.cbegin(),
+             itEnd = roleNames1.cend();
+             it != itEnd;
+             it++)
+        {
+            if (it.key() == impl().models[1].joinRole) {
+                impl().models[1].roleRemapFromSrc.insert({it.key(), impl().joinRole});
+                impl().models[1].roleRemapToSrc.insert({impl().joinRole, it.key()});
+            } else {
+                impl().roles.append(it.value());
+                impl().models[1].roleRemapFromSrc.insert({it.key(), i});
+                impl().models[1].roleRemapToSrc.insert({i, it.key()});
+                i++;
+            }
         }
     }
 
@@ -641,7 +657,7 @@ void MergedListModel::init()
         if (foundIndexIt != impl().joinValueToIndex.end()) {
             // Found. Augment line
             int foundIndex = foundIndexIt->second;
-            QVariantList& currentLine = impl().data[foundIndex];
+            QVariantList& currentLine = impl().data[foundIndex]; // clazy:skip
 
             for (int r = 0; r < impl().roles.size(); r++) {
                 QVariant& currentValue = currentLine[r];
@@ -1190,7 +1206,7 @@ void MergedListModel::onAfterInserted(int idx, const QModelIndex& /*parent*/, in
             auto joinValue = line.at(impl().joinRole);
             assert(utils_cpp::find_in_map(impl().joinValueToIndex, joinValue).has_value() == false);
             assert(utils_cpp::find_in_map(ctx.indexRemapFromSrc, i).has_value() == false);
-            assert(utils_cpp::find_in_map(ctx.indexRemapToSrc,   newIndex).has_value() == false);
+            assert(utils_cpp::find_in_map(ctx.indexRemapToSrc, newIndex).has_value() == false);
             if (!QmlUtils::instance().isNull(joinValue))
                 impl().joinValueToIndex.insert({joinValue, newIndex});
             ctx.indexRemapFromSrc.insert({i, newIndex});

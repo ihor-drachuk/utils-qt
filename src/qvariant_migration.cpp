@@ -6,7 +6,7 @@
 
 namespace UtilsQt::QVariantMigration {
 
-int getTypeId(const QVariant &value)
+int getTypeId(const QVariant& value)
 {
 #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
     return value.typeId();

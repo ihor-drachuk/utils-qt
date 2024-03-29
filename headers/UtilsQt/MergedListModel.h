@@ -8,6 +8,7 @@
 #include <utils-cpp/copy_move.h>
 #include <utils-cpp/pimpl.h>
 #include <functional>
+#include <variant>
 
 /* MergedListModel is used for combining two models into one.
  *
@@ -56,11 +57,7 @@ class MergedListModel : public QAbstractListModel
 
 public:
     using Converter = std::function<QVariant(int role, const QLatin1String& roleStr, int row, const QVariant& prevValue)>;
-#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
     using RoleVariant = std::variant<int, QString>;
-#else
-    using RoleVariant = QVariant;
-#endif
 
 public:
     Q_PROPERTY(QVariant joinRole1 READ joinRole1 WRITE setJoinRole1 NOTIFY joinRole1Changed) // int or string
@@ -79,7 +76,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE void checkConsistency() const;
-    void registerCustomResetter(const RoleVariant& role, const Converter& converter); // role = int or string
+    void registerCustomResetter(const RoleVariant& role, const Converter& converter); // for specific role
     void registerCustomResetter(const Converter& converter); // for all roles
 
 // --- Properties support ---
