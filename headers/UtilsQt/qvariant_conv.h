@@ -13,11 +13,6 @@ namespace QVariantConv {
 
 namespace Internal {
 
-//template<typename T>
-//void test(T value) {
-//    (void)value;
-//}
-
 template<int value0, int... values>
 struct Matcher
 {
@@ -29,7 +24,7 @@ struct Matcher
 template<int value0>
 struct Matcher<value0>
 {
-    static bool match(const QVariant& value) { /*test(value.type());*/ return QVariantMigration::getTypeId(value) == value0; }
+    static bool match(const QVariant& value) { return QVariantMigration::getTypeId(value) == value0; }
 };
 
 template<typename T> struct TypeTools { };
@@ -38,7 +33,7 @@ template<> struct TypeTools<unsigned int>       : Matcher<QVariantMigration::UIn
 template<> struct TypeTools<long long>          : Matcher<QVariantMigration::LongLong>   { static auto convert(const QVariant& variant, bool& ok) { return variant.toLongLong(&ok); } };
 template<> struct TypeTools<unsigned long long> : Matcher<QVariantMigration::ULongLong>  { static auto convert(const QVariant& variant, bool& ok) { return variant.toULongLong(&ok); } };
 template<> struct TypeTools<double>             : Matcher<QVariantMigration::Double>     { static auto convert(const QVariant& variant, bool& ok) { return variant.toDouble(&ok); } };
-template<> struct TypeTools<float>              : Matcher<QVariantMigration::Float>     { static auto convert(const QVariant& variant, bool& ok) { return variant.toFloat(&ok); } };
+template<> struct TypeTools<float>              : Matcher<QVariantMigration::Float>      { static auto convert(const QVariant& variant, bool& ok) { return variant.toFloat(&ok); } };
 template<> struct TypeTools<bool>               : Matcher<QVariantMigration::Bool>       { static auto convert(const QVariant& variant, bool& ok) { ok = true; return variant.toBool(); } };
 template<> struct TypeTools<char>               : Matcher<QVariantMigration::Int>        { static auto convert(const QVariant& variant, bool& ok) { auto rsl = variant.toInt(&ok); ok &= (rsl >= 0 && rsl <= 255); return rsl; } };
 template<> struct TypeTools<QChar>              : Matcher<QVariantMigration::Char>       { static auto convert(const QVariant& variant, bool& ok) { ok = true; return variant.toChar(); } };

@@ -3,22 +3,21 @@
  * Contact:  ihor-drachuk-libs@pm.me  */
 
 #include <UtilsQt/qvariant_traits.h>
-
 #include <UtilsQt/qvariant_migration.h>
 
 namespace UtilsQt::QVariantTraits {
 
-bool isUnknown(const QVariant &value)
+bool isUnknown(const QVariant& value)
 {
     return QVariantMigration::getTypeId(value) == QVariantMigration::Invalid;
 }
 
-bool isDouble(const QVariant &value)
+bool isDouble(const QVariant& value)
 {
     return QVariantMigration::getTypeId(value) == QVariantMigration::Double;
 }
 
-bool isFloat(const QVariant &value)
+bool isFloat(const QVariant& value)
 {
     const auto typeId = QVariantMigration::getTypeId(value);
     return typeId == QVariantMigration::Double ||
@@ -26,7 +25,7 @@ bool isFloat(const QVariant &value)
            typeId == QVariantMigration::QReal;
 }
 
-bool isInteger(const QVariant &value)
+bool isInteger(const QVariant& value)
 {
     const auto typeId = QVariantMigration::getTypeId(value);
     return typeId == QVariantMigration::Int ||
@@ -39,17 +38,17 @@ bool isInteger(const QVariant &value)
            typeId == QVariantMigration::UShort;
 }
 
-bool isList(const QVariant &value)
+bool isList(const QVariant& value)
 {
     return QVariantMigration::getTypeId(value) == QVariantMigration::List;
 }
 
-bool isString(const QVariant &value)
+bool isString(const QVariant& value)
 {
     return QVariantMigration::getTypeId(value) == QVariantMigration::String;
 }
 
-bool isByteArray(const QVariant &value)
+bool isByteArray(const QVariant& value)
 {
     return QVariantMigration::getTypeId(value) == QVariantMigration::ByteArray;
 }

@@ -5,6 +5,7 @@
 #pragma once
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QFont>
 #include <tuple>
 #include <optional>
@@ -33,7 +34,7 @@ public:
     Q_GADGET
     Q_PROPERTY(QString protocol MEMBER protocol)
     Q_PROPERTY(QStringList subdirs MEMBER subdirs)
-    Q_PROPERTY(QChar separator READ getSeparator MEMBER separator)
+    Q_PROPERTY(QChar separator READ getSeparator)
     Q_PROPERTY(QString name MEMBER name)
 };
 

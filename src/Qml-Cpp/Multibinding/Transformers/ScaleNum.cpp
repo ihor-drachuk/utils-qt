@@ -18,11 +18,8 @@ QVariant ScaleNum::readConverter(const QVariant& value) const
         return value;
 
     if (UtilsQt::QVariantTraits::isInteger(value) || UtilsQt::QVariantTraits::isFloat(value)) {
-        if (m_roundOnRead) {
-            return qRound(value.toDouble() / m_factor);
-        } else {
-            return value.toDouble() / m_factor;
-        }
+        const auto result = value.toDouble() / m_factor;
+        return m_roundOnRead ? qRound(result) : result;
     }
 
     qFatal("Not supported QVariant::Type");
@@ -35,11 +32,8 @@ QVariant ScaleNum::writeConverter(const QVariant& newValue, const QVariant&) con
         return newValue;
 
     if (UtilsQt::QVariantTraits::isInteger(newValue) || UtilsQt::QVariantTraits::isFloat(newValue)) {
-        if (m_roundOnWrite) {
-            return qRound(newValue.toDouble() * m_factor);
-        } else {
-            return newValue.toDouble() * m_factor;
-        }
+        const auto result = newValue.toDouble() * m_factor;
+        return m_roundOnWrite ? qRound(result) : result;
     }
 
     qFatal("Not supported QVariant::Type");

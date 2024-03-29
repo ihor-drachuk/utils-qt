@@ -88,6 +88,6 @@ enum TypeId {
     LastType = 0xffffffff // need this so that gcc >= 3.4 allocates 32 bits for Type
 };
 
-int getTypeId(const QVariant &value);
+int getTypeId(const QVariant& value);
 
 } // namespace UtilsQt::QVariantMigration

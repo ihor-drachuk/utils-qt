@@ -7,12 +7,12 @@
 
 namespace UtilsQt::QVariantTraits {
 
-bool isUnknown(const QVariant &value);
-bool isDouble(const QVariant &value);
-bool isFloat(const QVariant &value);
-bool isInteger(const QVariant &value);
-bool isList(const QVariant &value);
-bool isString(const QVariant &value);
-bool isByteArray(const QVariant &value);
+bool isUnknown(const QVariant& value);
+bool isDouble(const QVariant& value);
+bool isFloat(const QVariant& value);
+bool isInteger(const QVariant& value);
+bool isList(const QVariant& value);
+bool isString(const QVariant& value);
+bool isByteArray(const QVariant& value);
 
 } // namespace UtilsQt::QVariantTraits
