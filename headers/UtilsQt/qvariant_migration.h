@@ -59,9 +59,13 @@ enum TypeId {
     Region = QMetaType::QRegion,
     Bitmap = QMetaType::QBitmap,
     Cursor = QMetaType::QCursor,
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #if QT_CONFIG(shortcut)
     KeySequence = QMetaType::QKeySequence,
-#endif
+#endif // QT_CONFIG(shortcut)
+#else
+    KeySequence = QMetaType::QKeySequence,
+#endif // QT_VERSION >= 6.0.0
     Pen = QMetaType::QPen,
     TextLength = QMetaType::QTextLength,
     TextFormat = QMetaType::QTextFormat,
