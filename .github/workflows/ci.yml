@@ -80,7 +80,7 @@ jobs:
 
       - name: Install Qt
         if: ${{ matrix.qt != 'qt_no' }}
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
           version: ${{ matrix.qt }}
           host: windows
@@ -131,7 +131,7 @@ jobs:
 
       - name: Install Qt
         if: ${{ matrix.qt != 'qt_no' }}
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
           version: ${{ matrix.qt }}
           host: mac
@@ -139,7 +139,7 @@ jobs:
           arch: clang_64
           dir: ${{github.workspace}}/qt
           cache: true
-          setup-python: false
+          setup-python: true
 
       - name: "Add Qt to PATH"
         if: ${{ matrix.qt != 'qt_no' }}
@@ -156,7 +156,7 @@ jobs:
         working-directory: ${{github.workspace}}
         shell: bash
         run: |
-          cmake -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Unix Makefiles" -S "./src" -B "./build"
+          cmake -DCMAKE_OSX_ARCHITECTURES=x86_64 -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Unix Makefiles" -S "./src" -B "./build"
           cmake --build "./build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
           cd ./build/tests
           ctest --no-tests=error --rerun-failed --output-on-failure --timeout 30 -C "${{matrix.build_type}}"
