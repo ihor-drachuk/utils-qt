@@ -187,6 +187,7 @@ public:
     }
 
     bool isStarted() const { return m_interface.isStarted(); }
+    bool isRunning() const { return m_interface.isRunning(); }
     bool isCanceled() const { return m_interface.isCanceled(); }
     bool isFinished() const { return m_interface.isFinished(); }
 
