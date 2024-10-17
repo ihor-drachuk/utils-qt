@@ -28,29 +28,29 @@ TEST(UtilsQt, JsonValidator_basic)
     test["field2"] = "str";
     test["field3"] = "str";
 
-    NullLogger lg1;
+    ErrorInfo lg1;
     auto rsl = validator->check(lg1, test);
     ASSERT_TRUE(rsl);
-    ASSERT_FALSE(lg1.hasNotifiedError());
+    ASSERT_FALSE(lg1.hasError());
 
     test["field1"] = 0;
     test.remove("field2");
     rsl = validator->check(lg1, test);
     ASSERT_TRUE(rsl);
-    ASSERT_FALSE(lg1.hasNotifiedError());
+    ASSERT_FALSE(lg1.hasError());
 
-    NullLogger lg2;
+    ErrorInfo lg2;
     test["field2"] = 25;
     rsl = validator->check(lg2, test);
     ASSERT_FALSE(rsl);
-    ASSERT_TRUE(lg2.hasNotifiedError());
+    ASSERT_TRUE(lg2.hasError());
 
-    NullLogger lg3;
+    ErrorInfo lg3;
     test["field2"] = "str";
     test.remove("field3");
     rsl = validator->check(lg3, test);
     ASSERT_FALSE(rsl);
-    ASSERT_TRUE(lg3.hasNotifiedError());
+    ASSERT_TRUE(lg3.hasError());
 }
 
 TEST(UtilsQt, JsonValidator_number)
@@ -67,7 +67,7 @@ TEST(UtilsQt, JsonValidator_number)
             )
           );
 
-    NullLogger lg;
+    ErrorInfo lg;
     QJsonObject test;
     test["field_double"] = 1.1;
     test["field_int"] = 2;
@@ -138,7 +138,7 @@ TEST(UtilsQt, JsonValidator_array)
 
     test["values"] = array;
 
-    NullLogger lg;
+    ErrorInfo lg;
     auto rsl = validator->check(lg, test);
     ASSERT_TRUE(rsl);
 
@@ -174,15 +174,15 @@ TEST(UtilsQt, JsonValidator_or)
     test["field1"] = "str";
     test["field2"] = QJsonArray();
 
-    NullLogger lg;
+    ErrorInfo lg;
     auto rsl = validator->check(lg, test);
     ASSERT_TRUE(rsl);
-    ASSERT_FALSE(lg.hasNotifiedError());
+    ASSERT_FALSE(lg.hasError());
 
     test["field2"] = 12;
     rsl = validator->check(lg, test);
     ASSERT_FALSE(rsl);
-    ASSERT_TRUE(lg.hasNotifiedError());
+    ASSERT_TRUE(lg.hasError());
 }
 
 TEST(UtilsQt, JsonValidator_or_exclusive)
@@ -210,17 +210,17 @@ TEST(UtilsQt, JsonValidator_or_exclusive)
     };
 
     for (const auto& x : successCases) {
-        NullLogger lg;
+        ErrorInfo lg;
         auto rsl = validator->check(lg, x);
         ASSERT_TRUE(rsl);
-        ASSERT_FALSE(lg.hasNotifiedError());
+        ASSERT_FALSE(lg.hasError());
     }
 
     for (const auto& x : failCases) {
-        NullLogger lg;
+        ErrorInfo lg;
         auto rsl = validator->check(lg, x);
         ASSERT_FALSE(rsl);
-        ASSERT_TRUE(lg.hasNotifiedError());
+        ASSERT_TRUE(lg.hasError());
     }
 }
 
@@ -242,15 +242,15 @@ TEST(UtilsQt, JsonValidator_include)
     test.append("");
     test.append(true);
 
-    NullLogger lg;
+    ErrorInfo lg;
     auto rsl = validator->check(lg, test);
     ASSERT_TRUE(rsl);
-    ASSERT_FALSE(lg.hasNotifiedError());
+    ASSERT_FALSE(lg.hasError());
 
     test.append(2);
     rsl = validator->check(lg, test);
     ASSERT_FALSE(rsl);
-    ASSERT_TRUE(lg.hasNotifiedError());
+    ASSERT_TRUE(lg.hasError());
 }
 
 TEST(UtilsQt, JsonValidator_exclude)
@@ -270,15 +270,15 @@ TEST(UtilsQt, JsonValidator_exclude)
     test.append("a");
     test.append(false);
 
-    NullLogger lg;
+    ErrorInfo lg;
     auto rsl = validator->check(lg, test);
     ASSERT_TRUE(rsl);
-    ASSERT_FALSE(lg.hasNotifiedError());
+    ASSERT_FALSE(lg.hasError());
 
     test.append(1);
     rsl = validator->check(lg, test);
     ASSERT_FALSE(rsl);
-    ASSERT_TRUE(lg.hasNotifiedError());
+    ASSERT_TRUE(lg.hasError());
 }
 
 
@@ -304,15 +304,15 @@ TEST(UtilsQt, JsonValidator_severalRules)
     test.append("");
     test.append(1);
 
-    NullLogger lg;
+    ErrorInfo lg;
     auto rsl = validator->check(lg, test);
     ASSERT_TRUE(rsl);
-    ASSERT_FALSE(lg.hasNotifiedError());
+    ASSERT_FALSE(lg.hasError());
 
     test.append("hello");
     rsl = validator->check(lg, test);
     ASSERT_FALSE(rsl);
-    ASSERT_TRUE(lg.hasNotifiedError());
+    ASSERT_TRUE(lg.hasError());
 }
 
 
@@ -333,15 +333,15 @@ TEST(UtilsQt, JsonValidator_CtxCheckArrayLength)
     obj["array1"] = QJsonArray{ 1,  2,  3,  4};
     obj["array2"] = QJsonArray{"a","b","c","d"};
 
-    NullLogger lg;
+    ErrorInfo lg;
     auto rsl = validator->check(lg, obj);
     ASSERT_TRUE(rsl);
-    ASSERT_FALSE(lg.hasNotifiedError());
+    ASSERT_FALSE(lg.hasError());
 
     obj["array2"] = QJsonArray{1,2,3};
     rsl = validator->check(lg, obj);
     ASSERT_FALSE(rsl);
-    ASSERT_TRUE(lg.hasNotifiedError());
+    ASSERT_TRUE(lg.hasError());
 }
 
 TEST(UtilsQt, JsonValidator_CtxCheckValue)
@@ -390,12 +390,12 @@ TEST(UtilsQt, JsonValidator_CtxCheckValue)
         },
     };
 
-    NullLogger lg;
+    ErrorInfo lg;
     auto rsl = validator->check(lg, obj);
     ASSERT_TRUE(rsl);
-    ASSERT_FALSE(lg.hasNotifiedError());
+    ASSERT_FALSE(lg.hasError());
 
     rsl = validator->check(lg, obj2);
     ASSERT_FALSE(rsl);
-    ASSERT_TRUE(lg.hasNotifiedError());
+    ASSERT_TRUE(lg.hasError());
 }

@@ -54,25 +54,6 @@ bool MinMaxValidatorDouble::check(const QJsonValue& v) const {
 
 namespace {
 
-class OrProxyLogger : public Logger
-{
-public:
-    void notifyError(const QString& path, const QString& error) override {
-        m_lastPath = path;
-        m_lastError = error;
-    }
-
-    bool hasNotifiedError() const override { return !m_lastPath.isEmpty() || !m_lastError.isEmpty(); }
-    void reset() { m_lastPath.clear(); m_lastError.clear(); }
-
-    const QString& lastPath() const { return m_lastPath; }
-    const QString& lastError() const { return m_lastError; }
-
-private:
-    QString m_lastPath;
-    QString m_lastError;
-};
-
 const QMap<QJsonValue::Type, QString> jsonTypeToString = {
     {QJsonValue::Type::Null, "Null"},
     {QJsonValue::Type::Bool, "Boolean"},
@@ -102,7 +83,7 @@ QString valueToString(const QJsonValue& value)
 
 } // namespace
 
-bool Object::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool Object::check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     if (!value.isObject()) {
         logger.notifyError(path, "Object expected, but it's of type \"" + jsonTypeToString.value(value.type()) + "\"");
@@ -112,7 +93,7 @@ bool Object::check(ContextData& ctx, Logger& logger, const QString& path, const 
     return checkNested(ctx, logger, path, value);
 }
 
-bool Array::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool Array::check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     if (!value.isArray()) {
         logger.notifyError(path, "Array expected, but it's of type \"" + jsonTypeToString.value(value.type()) + "\"");
@@ -133,7 +114,7 @@ bool Array::check(ContextData& ctx, Logger& logger, const QString& path, const Q
     return true;
 }
 
-bool Field::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool Field::check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     assert(value.isObject());
     auto obj = value.toObject();
@@ -153,14 +134,14 @@ bool Field::check(ContextData& ctx, Logger& logger, const QString& path, const Q
     }
 }
 
-bool Or::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool Or::check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
-    OrProxyLogger proxyLogger;
+    ErrorInfo proxyLogger;
 
     size_t matchingItemsCnt = 0;
 
     for (const auto& x : nestedValidators()) {
-        proxyLogger.reset();
+        proxyLogger.clear();
         auto ok = x->check(ctx, proxyLogger, path, value);
         if (ok) {
             if (!m_exclusive) return true;
@@ -177,7 +158,7 @@ bool Or::check(ContextData& ctx, Logger& logger, const QString& path, const QJso
             return true;
 
         } else if (matchingItemsCnt > 1) {
-            logger.notifyError(proxyLogger.lastPath(), "Exclusive OR-condition expected, but several items are matching!");
+            logger.notifyError(proxyLogger.getErrorPath(), "Exclusive OR-condition expected, but several items are matching!");
             return false;
         }
 
@@ -187,13 +168,13 @@ bool Or::check(ContextData& ctx, Logger& logger, const QString& path, const QJso
     // We get here only in cases, when there is no matching items
     // (independently of exclusive mode state)
 
-    assert(proxyLogger.hasNotifiedError());
-    logger.notifyError(proxyLogger.lastPath(), proxyLogger.lastError());
+    assert(proxyLogger.hasError());
+    logger.notifyError(proxyLogger.getErrorPath(), proxyLogger.getErrorDescription());
 
     return false;
 }
 
-bool String::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool String::check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     auto ok = value.isString();
 
@@ -226,7 +207,7 @@ bool String::check(ContextData& ctx, Logger& logger, const QString& path, const 
     return checkNested(ctx, logger, path, value);
 }
 
-bool Bool::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool Bool::check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     auto ok = value.isBool();
 
@@ -238,7 +219,7 @@ bool Bool::check(ContextData& ctx, Logger& logger, const QString& path, const QJ
     return checkNested(ctx, logger, path, value);
 }
 
-bool Number::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool Number::check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     auto ok = value.isDouble();
 
@@ -269,7 +250,7 @@ bool Number::check(ContextData& ctx, Logger& logger, const QString& path, const 
     return checkNested(ctx, logger, path, value);
 }
 
-bool Exclude::check(ContextData& /*ctx*/, Logger& logger, const QString& path, const QJsonValue& value) const
+bool Exclude::check(ContextData& /*ctx*/, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     for (const auto& x : m_values) {
         if (value == x) {
@@ -281,7 +262,7 @@ bool Exclude::check(ContextData& /*ctx*/, Logger& logger, const QString& path, c
     return true;
 }
 
-bool Include::check(ContextData& /*ctx*/, Logger& logger, const QString& path, const QJsonValue& value) const
+bool Include::check(ContextData& /*ctx*/, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     for (const auto& x : m_values) {
         if (value == x)
@@ -292,30 +273,30 @@ bool Include::check(ContextData& /*ctx*/, Logger& logger, const QString& path, c
     return false;
 }
 
-bool And::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool And::check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     return checkNested(ctx, logger, path, value);
 }
 
-bool RootValidator::check(Logger& logger, const QJsonValue& value) const
+bool RootValidator::check(ErrorInfo& logger, const QJsonValue& value) const
 {
     ContextData ctx;
     return check(ctx, logger, "", value);
 }
 
-bool RootValidator::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool RootValidator::check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     return checkNested(ctx, logger, path, value);
 }
 
-bool CtxWriteArrayLength::check(ContextData& ctx, Logger& /*logger*/, const QString& /*path*/, const QJsonValue& value) const
+bool CtxWriteArrayLength::check(ContextData& ctx, ErrorInfo& /*logger*/, const QString& /*path*/, const QJsonValue& value) const
 {
     assert(value.isArray());
     ctx[m_ctxField] = value.toArray().size();
     return true;
 }
 
-bool CtxCheckArrayLength::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool CtxCheckArrayLength::check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     assert(value.isArray());
     assert(ctx.contains(m_ctxField));
@@ -333,7 +314,7 @@ bool CtxCheckArrayLength::check(ContextData& ctx, Logger& logger, const QString&
     return true;
 }
 
-bool CtxAppendToList::check(ContextData& ctx, Logger& /*logger*/, const QString& /*path*/, const QJsonValue& value) const
+bool CtxAppendToList::check(ContextData& ctx, ErrorInfo& /*logger*/, const QString& /*path*/, const QJsonValue& value) const
 {
     assert(!ctx.contains(m_ctxField) || QVariantTraits::isList(ctx.value(m_ctxField)));
 
@@ -348,7 +329,7 @@ bool CtxAppendToList::check(ContextData& ctx, Logger& /*logger*/, const QString&
     return true;
 }
 
-bool CtxCheckInList::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool CtxCheckInList::check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     assert(ctx.contains(m_ctxField) && QVariantTraits::isList(ctx.value(m_ctxField)));
 
@@ -362,7 +343,7 @@ bool CtxCheckInList::check(ContextData& ctx, Logger& logger, const QString& path
     return true;
 }
 
-bool CtxCheckNotInList::check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool CtxCheckNotInList::check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     assert(!ctx.contains(m_ctxField) || QVariantTraits::isList(ctx.value(m_ctxField)));
 
@@ -376,7 +357,7 @@ bool CtxCheckNotInList::check(ContextData& ctx, Logger& logger, const QString& p
     return true;
 }
 
-bool CtxClearRecord::check(ContextData& ctx, Logger& /*logger*/, const QString& /*path*/, const QJsonValue& /*value*/) const
+bool CtxClearRecord::check(ContextData& ctx, ErrorInfo& /*logger*/, const QString& /*path*/, const QJsonValue& /*value*/) const
 {
     ctx.remove(m_ctxField);
     return true;
@@ -384,21 +365,39 @@ bool CtxClearRecord::check(ContextData& ctx, Logger& /*logger*/, const QString& 
 
 } // namespace Internal
 
+void ErrorInfo::notifyError(const QString& path, const QString& error)
+{
+    m_hasError = true;
+    m_path = path;
+    m_error = error;
+    notifyErrorImpl(path, error);
+}
 
-void Logger::notifyError(const QString& path, const QString& error)
+void ErrorInfo::clear()
+{
+    m_hasError = false;
+    m_path.clear();
+    m_error.clear();
+}
+
+QString ErrorInfo::toString() const
+{
+    return QString("Error at '%1': %2").arg(m_path, m_error);
+}
+
+void LoggedErrorInfo::notifyErrorImpl(const QString& path, const QString& error)
 {
     qCritical().noquote() << "Validation failed at path: \"" + (path.isEmpty() ? "/" : path) + "\"";
     qCritical().noquote() << "Error: " << error;
-    setNotifiedFlag();
 }
 
-bool Validator::checkNested(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const
+bool Validator::checkNested(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
 {
     for (const auto& x : m_validators) {
         auto ok = x->check(ctx, logger, path, value);
 
         if (!ok) {
-            assert(logger.hasNotifiedError());
+            assert(logger.hasError());
             return false;
         }
     }
