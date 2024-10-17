@@ -20,29 +20,37 @@
 namespace UtilsQt {
 namespace JsonValidator {
 
-class Logger
+class ErrorInfo
 {
 public:
-    DEFAULT_COPY_MOVE(Logger);
+    DEFAULT_COPY_MOVE(ErrorInfo);
 
-    Logger() = default;
-    virtual ~Logger() = default;
-    virtual void notifyError(const QString& path, const QString& error);
+    ErrorInfo() = default;
+    virtual ~ErrorInfo() = default;
 
-    virtual bool hasNotifiedError() const { return m_notifiedError; }
+    void notifyError(const QString& path, const QString& error);
+    void clear();
+
+    bool hasError() const { return m_hasError; }
+    const QString& getErrorPath() const { return m_path; }
+    const QString& getErrorDescription() const { return m_error; }
+    QString toString() const;
 
 protected:
-    void setNotifiedFlag() { m_notifiedError = true; }
+    virtual void notifyErrorImpl(const QString& /*path*/, const QString& /*error*/) {};
 
 private:
-    mutable bool m_notifiedError { false };
+    bool m_hasError { false };
+    QString m_path;
+    QString m_error;
 };
 
-class NullLogger : public Logger
+class LoggedErrorInfo : public ErrorInfo
 {
-public:
-    void notifyError(const QString& /*path*/, const QString& /*error*/) override { setNotifiedFlag(); };
+protected:
+    void notifyErrorImpl(const QString& path, const QString& error) override;
 };
+
 
 using ContextData = QVariantMap;
 
@@ -61,10 +69,10 @@ public:
     { }
 
     virtual ~Validator() = default;
-    virtual bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const = 0;
+    virtual bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const = 0;
 
 protected:
-    bool checkNested(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const;
+    bool checkNested(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const;
     const std::vector<ValidatorCPtr>& nestedValidators() const { return m_validators; }
 
 private:
@@ -121,8 +129,8 @@ public:
         : Validator(validators)
     { }
 
-    bool check(Logger& logger, const QJsonValue& value) const;
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ErrorInfo& logger, const QJsonValue& value) const;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 };
 
 using RootValidatorCPtr = std::shared_ptr<RootValidator>;
@@ -134,7 +142,7 @@ public:
         : Validator(validators)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 };
 
 class Array : public Validator
@@ -144,7 +152,7 @@ public:
         : Validator(validators)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 };
 
 class Field : public Validator
@@ -162,7 +170,7 @@ public:
           m_key(key)
     {}
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     bool m_optional;
@@ -181,7 +189,7 @@ public:
         : Validator(validators)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     bool m_exclusive{false};
@@ -193,7 +201,7 @@ public:
         : Validator(validators)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 };
 
 class String : public Validator
@@ -214,7 +222,7 @@ public:
           m_hex(true)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     bool m_nonEmpty { false };
@@ -228,7 +236,7 @@ public:
         : Validator(validators)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 };
 
 class Number : public Validator
@@ -254,7 +262,7 @@ public:
           m_validator(std::make_unique<MinMaxValidatorInt>(min, max))
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     bool m_isIntegerExpected {};
@@ -270,7 +278,7 @@ public:
         : m_values(values)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     Values m_values;
@@ -285,7 +293,7 @@ public:
         : m_values(values)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     Values m_values;
@@ -298,7 +306,7 @@ public:
         : m_ctxField(ctxField)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     QString m_ctxField;
@@ -311,7 +319,7 @@ public:
         : m_ctxField(ctxField)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     QString m_ctxField;
@@ -324,7 +332,7 @@ public:
         : m_ctxField(ctxField)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     QString m_ctxField;
@@ -337,7 +345,7 @@ public:
         : m_ctxField(ctxField)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     QString m_ctxField;
@@ -350,7 +358,7 @@ public:
         : m_ctxField(ctxField)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     QString m_ctxField;
@@ -363,7 +371,7 @@ public:
         : m_ctxField(ctxField)
     { }
 
-    bool check(ContextData& ctx, Logger& logger, const QString& path, const QJsonValue& value) const override;
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     QString m_ctxField;
