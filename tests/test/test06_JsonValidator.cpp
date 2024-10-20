@@ -399,3 +399,109 @@ TEST(UtilsQt, JsonValidator_CtxCheckValue)
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg.hasError());
 }
+
+TEST(UtilsQt, JsonValidator_ArrayLength)
+{
+    using namespace UtilsQt::JsonValidator;
+
+    auto validatorOk =
+            RootValidator(
+              Object(
+                Field("array1_3", Array(ArrayLength(1,3))),
+                Field("array2_", Array(ArrayLength(2, {}))),
+                Field("array_3", Array(ArrayLength({},3)))
+              )
+            );
+
+    auto validatorWrong1 =
+        RootValidator(
+          Object(
+            Field("array1_3", Array(ArrayLength(2,3)))
+          )
+        );
+
+    auto validatorWrong2 =
+        RootValidator(
+          Object(
+            Field("array2_", Array(ArrayLength(3, {})))
+          )
+        );
+
+    auto validatorWrong3 =
+        RootValidator(
+          Object(
+            Field("array_3", Array(ArrayLength({},2)))
+          )
+        );
+
+    QJsonObject obj;
+    QJsonArray arrays1_3 {
+        QJsonArray{1},
+        QJsonArray{1, 2},
+        QJsonArray{1, 2, "3"},
+    };
+
+    QJsonArray arrays2_ {
+        QJsonArray{1, 2},
+        QJsonArray{1, 2, "3"},
+    };
+
+    QJsonArray arrays_3 {
+        QJsonArray{1},
+        QJsonArray{1, 2},
+        QJsonArray{1, 2, "3"},
+    };
+    obj["array1_3"] = arrays1_3;
+    obj["array2_"] = arrays2_;
+    obj["array_3"] = arrays_3;
+
+    ErrorInfo lg;
+    auto rsl = validatorOk->check(lg, obj);
+    ASSERT_TRUE(rsl);
+    ASSERT_FALSE(lg.hasError());
+
+    rsl = validatorWrong1->check(lg, obj);
+    ASSERT_FALSE(rsl);
+    ASSERT_TRUE(lg.hasError());
+
+    rsl = validatorWrong2->check(lg, obj);
+    ASSERT_FALSE(rsl);
+    ASSERT_TRUE(lg.hasError());
+
+    rsl = validatorWrong3->check(lg, obj);
+    ASSERT_FALSE(rsl);
+    ASSERT_TRUE(lg.hasError());
+}
+
+
+TEST(UtilsQt, JsonValidator_CustomValidator)
+{
+    using namespace UtilsQt::JsonValidator;
+
+    auto validator =
+        RootValidator(
+          Object(
+            Field("field1", CustomValidator([](const QJsonValue& val) {
+                return val.isString() && val.toString().toInt() > 5;
+            }))
+          )
+        );
+
+    QJsonObject obj;
+    obj["field1"] = "6";
+
+    ErrorInfo lg;
+    auto rsl = validator->check(lg, obj);
+    ASSERT_TRUE(rsl);
+    ASSERT_FALSE(lg.hasError());
+
+    obj["field1"] = 6;
+    rsl = validator->check(lg, obj);
+    ASSERT_FALSE(rsl);
+    ASSERT_TRUE(lg.hasError());
+
+    obj["field1"] = "5";
+    rsl = validator->check(lg, obj);
+    ASSERT_FALSE(rsl);
+    ASSERT_TRUE(lg.hasError());
+}
