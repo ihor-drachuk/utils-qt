@@ -13,6 +13,7 @@
 #include <vector>
 #include <memory>
 #include <optional>
+#include <functional>
 
 #include <utils-cpp/copy_move.h>
 #include <utils-cpp/variadic_tools.h>
@@ -37,7 +38,7 @@ public:
     QString toString() const;
 
 protected:
-    virtual void notifyErrorImpl(const QString& /*path*/, const QString& /*error*/) {};
+    virtual void notifyErrorImpl(const QString& /*path*/, const QString& /*error*/) {}
 
 private:
     bool m_hasError { false };
@@ -377,6 +378,39 @@ private:
     QString m_ctxField;
 };
 
+class ArrayLength : public Validator
+{
+public:
+    ArrayLength(const std::optional<size_t>& min,
+                const std::optional<size_t>& max)
+        : m_min(min),
+          m_max(max)
+    {
+        assert(m_min || m_max);
+    }
+
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
+
+private:
+    std::optional<size_t> m_min;
+    std::optional<size_t> m_max;
+};
+
+class CustomValidator : public Validator
+{
+public:
+    CustomValidator(std::function<bool(const QJsonValue&)> check)
+        : m_validator(check)
+    {
+        assert(m_validator);
+    }
+
+    bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
+
+private:
+    std::function<bool(const QJsonValue&)> m_validator;
+};
+
 } // namespace Internal
 
 constexpr auto Exclusive = Internal::_Exclusive::Exclusive;
@@ -492,6 +526,16 @@ template<typename... Ts>
 ValidatorCPtr Include(const Ts&... values)
 {
     return std::make_shared<Internal::Include>(variadic_to_container<std::vector, QJsonValue>(values...));
+}
+
+inline ValidatorCPtr ArrayLength(const std::optional<size_t>& min, const std::optional<size_t>& max)
+{
+    return std::make_shared<Internal::ArrayLength>(min, max);
+}
+
+inline ValidatorCPtr CustomValidator(std::function<bool(const QJsonValue&)> check)
+{
+    return std::make_shared<Internal::CustomValidator>(check);
 }
 
 ValidatorCPtr CtxWriteArrayLength(const QString& ctxField);

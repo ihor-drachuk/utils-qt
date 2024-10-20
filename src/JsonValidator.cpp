@@ -363,6 +363,37 @@ bool CtxClearRecord::check(ContextData& ctx, ErrorInfo& /*logger*/, const QStrin
     return true;
 }
 
+bool ArrayLength::check(ContextData& /*ctx*/, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
+{
+    if (!value.isArray()) {
+        logger.notifyError(path, "Array expected, but it's of type \"" + jsonTypeToString.value(value.type()) + "\"");
+        return false;
+    }
+
+    const size_t arraySize = static_cast<size_t>(value.toArray().size());
+    if (m_min && arraySize < *m_min) {
+        logger.notifyError(path, QString("Array length is too short: %1, but should be at least %2").arg(arraySize).arg(*m_min));
+        return false;
+    }
+
+    if (m_max && arraySize > *m_max) {
+        logger.notifyError(path, QString("Array length is too long: %1, but should be at most %2").arg(arraySize).arg(*m_max));
+        return false;
+    }
+
+    return true;
+}
+
+bool CustomValidator::check(ContextData& /*ctx*/, ErrorInfo& logger, const QString& path, const QJsonValue& value) const
+{
+    if (!m_validator(value)) {
+        logger.notifyError(path, "Custom validation failed");
+        return false;
+    }
+
+    return true;
+}
+
 } // namespace Internal
 
 void ErrorInfo::notifyError(const QString& path, const QString& error)
