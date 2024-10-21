@@ -381,6 +381,11 @@ bool ArrayLength::check(ContextData& /*ctx*/, ErrorInfo& logger, const QString& 
         return false;
     }
 
+    if (m_strictLen && arraySize != *m_strictLen) {
+        logger.notifyError(path, QString("Array length is %1, but should be exactly %2").arg(arraySize).arg(*m_strictLen));
+        return false;
+    }
+
     return true;
 }
 
@@ -399,7 +404,7 @@ bool CustomValidator::check(ContextData& /*ctx*/, ErrorInfo& logger, const QStri
 void ErrorInfo::notifyError(const QString& path, const QString& error)
 {
     m_hasError = true;
-    m_path = path;
+    m_path = path.isEmpty() ? "/" : path;
     m_error = error;
     notifyErrorImpl(path, error);
 }

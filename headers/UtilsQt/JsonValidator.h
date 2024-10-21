@@ -389,9 +389,14 @@ public:
         assert(m_min || m_max);
     }
 
+    ArrayLength(size_t strictLen)
+        : m_strictLen(strictLen)
+    { }
+
     bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
+    std::optional<size_t> m_strictLen;
     std::optional<size_t> m_min;
     std::optional<size_t> m_max;
 };
@@ -531,6 +536,11 @@ ValidatorCPtr Include(const Ts&... values)
 inline ValidatorCPtr ArrayLength(const std::optional<size_t>& min, const std::optional<size_t>& max)
 {
     return std::make_shared<Internal::ArrayLength>(min, max);
+}
+
+inline ValidatorCPtr ArrayLength(size_t strictLen)
+{
+    return std::make_shared<Internal::ArrayLength>(strictLen);
 }
 
 inline ValidatorCPtr CustomValidator(std::function<bool(const QJsonValue&)> check)
