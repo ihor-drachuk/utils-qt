@@ -404,7 +404,7 @@ TEST(UtilsQt, JsonValidator_ArrayLength)
 {
     using namespace UtilsQt::JsonValidator;
 
-    auto validatorOk =
+    auto validatorOk1 =
             RootValidator(
               Object(
                 Field("array1_3", Array(ArrayLength(1,3))),
@@ -434,6 +434,15 @@ TEST(UtilsQt, JsonValidator_ArrayLength)
           )
         );
 
+    auto validatorOk2 =
+        RootValidator(
+          Object(
+            Field("array1", ArrayLength(1)),
+            Field("array2", ArrayLength(2)),
+            Field("array3", ArrayLength(3))
+          )
+        );
+
     QJsonObject obj;
     QJsonArray arrays1_3 {
         QJsonArray{1},
@@ -456,21 +465,34 @@ TEST(UtilsQt, JsonValidator_ArrayLength)
     obj["array_3"] = arrays_3;
 
     ErrorInfo lg;
-    auto rsl = validatorOk->check(lg, obj);
+    auto rsl = validatorOk1->check(lg, obj);
     ASSERT_TRUE(rsl);
     ASSERT_FALSE(lg.hasError());
+    lg.clear();
 
     rsl = validatorWrong1->check(lg, obj);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg.hasError());
+    lg.clear();
 
     rsl = validatorWrong2->check(lg, obj);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg.hasError());
+    lg.clear();
 
     rsl = validatorWrong3->check(lg, obj);
     ASSERT_FALSE(rsl);
     ASSERT_TRUE(lg.hasError());
+    lg.clear();
+
+    QJsonObject obj2;
+    obj2["array1"] = QJsonArray{1};
+    obj2["array2"] = QJsonArray{1,2};
+    obj2["array3"] = QJsonArray{1,2,3};
+    rsl = validatorOk2->check(lg, obj2);
+    ASSERT_TRUE(rsl);
+    ASSERT_FALSE(lg.hasError());
+    lg.clear();
 }
 
 
