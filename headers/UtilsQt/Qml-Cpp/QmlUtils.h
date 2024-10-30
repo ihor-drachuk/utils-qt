@@ -103,6 +103,7 @@ public:
     Q_INVOKABLE void setCustomCursor(QQuickItem* item, const QString& file, const QPoint& hotPoint);
     Q_INVOKABLE void setDefaultCursor(QQuickItem* item, Qt::CursorShape cursorShape);
     Q_INVOKABLE void resetCursor(QQuickItem* item);
+    Q_INVOKABLE QPoint cursorPosition();
 
 signals:
     void keyPressed(Qt::Key key);

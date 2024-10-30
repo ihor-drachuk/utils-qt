@@ -4,8 +4,7 @@
 
 #include <UtilsQt/Qml-Cpp/QmlUtils.h>
 
-#include <optional>
-
+#include <QCursor>
 #include <QFile>
 #include <QQmlEngine>
 #include <QImageReader>
@@ -412,6 +411,11 @@ void QmlUtils::setDefaultCursor(QQuickItem* item, Qt::CursorShape cursorShape)
 void QmlUtils::resetCursor(QQuickItem* item)
 {
     item->unsetCursor();
+}
+
+QPoint QmlUtils::cursorPosition()
+{
+    return QCursor::pos();
 }
 
 #ifdef UTILS_QT_OS_WIN
