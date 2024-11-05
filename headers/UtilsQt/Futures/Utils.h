@@ -191,11 +191,11 @@ public:
     bool isCanceled() const { return m_interface.isCanceled(); }
     bool isFinished() const { return m_interface.isFinished(); }
 
-    QFuture<T> future() { return m_interface.future(); }
-    QFutureInterface<T> futureInterface() { return m_interface; };
+    QFuture<T> future() const { return m_interface.future(); }
+    QFutureInterface<T> futureInterface() { return m_interface; }
 
 private:
-    QFutureInterface<T> m_interface;
+    mutable QFutureInterface<T> m_interface;
     std::shared_ptr<void> m_contextTracker;
 };
 
