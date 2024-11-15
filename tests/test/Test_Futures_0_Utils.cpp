@@ -391,6 +391,112 @@ TEST(UtilsQt, Futures_Utils_Lifetime)
     ASSERT_EQ(data.count(), 1);
 }
 
+TEST(UtilsQt, Futures_Utils_getFutureState)
+{
+    {
+        QFutureInterface<int> fi;
+        auto f = fi.future();
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::NotStarted);
+
+        fi.reportStarted();
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Running);
+
+        fi.reportResult(10);
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Running);
+
+        fi.reportFinished();
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Completed);
+
+        fi.reportCanceled();
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Canceled);
+    }
+
+    {
+        QFutureInterface<int> fi;
+        auto f = fi.future();
+        fi.reportStarted();
+        fi.reportCanceled();
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Running);
+
+        fi.reportFinished();
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Canceled);
+    }
+
+    {
+        QFutureInterface<int> fi;
+        auto f = fi.future();
+        fi.reportStarted();
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Running);
+
+        fi.reportFinished();
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::CompletedWrong);
+    }
+
+    {
+        QFutureInterface<int> fi;
+        auto f = fi.future();
+        fi.reportStarted();
+        fi.reportException(QExceptionPtr(std::make_exception_ptr(std::runtime_error("Test"))));
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Running);
+
+        fi.reportFinished();
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Exception);
+    }
+}
+
+TEST(UtilsQt, Futures_Utils_hasResult)
+{
+    {
+        QFutureInterface<int> fi;
+        auto f = fi.future();
+        ASSERT_FALSE(UtilsQt::hasResult(f));
+
+        fi.reportStarted();
+        ASSERT_FALSE(UtilsQt::hasResult(f));
+
+        fi.reportResult(10);
+        ASSERT_FALSE(UtilsQt::hasResult(f));
+
+        fi.reportFinished();
+        ASSERT_TRUE(UtilsQt::hasResult(f));
+
+        fi.reportCanceled();
+        ASSERT_TRUE(UtilsQt::hasResult(f));
+    }
+
+    {
+        QFutureInterface<int> fi;
+        auto f = fi.future();
+        fi.reportStarted();
+        ASSERT_FALSE(UtilsQt::hasResult(f));
+
+        fi.reportFinished();
+        ASSERT_FALSE(UtilsQt::hasResult(f));
+    }
+
+    {
+        QFutureInterface<int> fi;
+        auto f = fi.future();
+        fi.reportStarted();
+        fi.reportCanceled();
+        ASSERT_FALSE(UtilsQt::hasResult(f));
+
+        fi.reportFinished();
+        ASSERT_FALSE(UtilsQt::hasResult(f));
+    }
+
+    {
+        QFutureInterface<int> fi;
+        auto f = fi.future();
+        fi.reportStarted();
+        fi.reportException(QExceptionPtr(std::make_exception_ptr(std::runtime_error("Test"))));
+        ASSERT_FALSE(UtilsQt::hasResult(f));
+
+        fi.reportFinished();
+        ASSERT_FALSE(UtilsQt::hasResult(f));
+    }
+}
+
 TEST(UtilsQt, Futures_Utils_onCancelNotified)
 {
     QObject obj;
