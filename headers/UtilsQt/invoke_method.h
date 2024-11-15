@@ -8,7 +8,29 @@
 
 namespace UtilsQt {
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0) // Qt 5.10 (^) and upper
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+
+template<typename Callable>
+void invokeMethod(QObject* context, const Callable& callable, Qt::ConnectionType connectionType = Qt::AutoConnection)
+{
+    const auto c = callable;
+    QMetaObject::invokeMethod(context, std::move(callable), connectionType);
+}
+
+template<typename Callable>
+void invokeMethod(QObject* context, Callable&& callable, Qt::ConnectionType connectionType = Qt::AutoConnection)
+{
+    QMetaObject::invokeMethod(context, callable, connectionType);
+}
+
+template<typename Obj,
+         typename std::enable_if<std::is_base_of<QObject, Obj>::value>::type* = nullptr>
+void invokeMethod(Obj* context, void (Obj::* member)(), Qt::ConnectionType connectionType = Qt::AutoConnection)
+{
+    QMetaObject::invokeMethod(context, member, connectionType);
+}
+
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 
 template<typename Callable>
 void invokeMethod(QObject* context, const Callable& callable, Qt::ConnectionType connectionType = Qt::AutoConnection)
