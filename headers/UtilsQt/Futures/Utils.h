@@ -67,6 +67,10 @@
  * QFuture<T> createTimedCanceledFuture<T>();
  * QFuture<T> createTimedExceptionFuture<T>(int time, exception e, QObject* ctx);
 
+ * getFutureState(QFuture<T>) -> [NotStarted, Running, Completed, CompletedWrong, Canceled, Exception]
+
+ * hasResult(QFuture<T>)
+
  * Promise<T> createPromise<T>();
      -> finish(T);
      -> cancel();
@@ -131,6 +135,15 @@ void connectTimer(QTimer* timer, QObject* context, const T& handler)
 
 } // namespace FutureUtilsInternals
 
+enum class FutureState
+{
+    NotStarted,
+    Running,
+    Completed,
+    CompletedWrong,
+    Canceled,
+    Exception
+};
 
 struct FuturesSetProperties
 {
@@ -702,6 +715,44 @@ template<typename T>
 bool futureCompleted(const QFuture<T>& value)
 {
     return value.isFinished() && !value.isCanceled();
+}
+
+template<typename T>
+FutureState getFutureState(QFuture<T> value)
+{
+    if (value.isFinished()) {
+        if (value.isCanceled()) {
+            bool hasException { false };
+
+            try {
+                value.waitForFinished();
+            } catch (...) {
+                hasException = true;
+            }
+
+            return hasException ? FutureState::Exception :
+                                  FutureState::Canceled;
+        } else {
+            if constexpr (std::is_same_v<T, void>) {
+                return FutureState::Completed;
+            } else {
+                return value.resultCount() > 0 ? FutureState::Completed :
+                                                 FutureState::CompletedWrong;
+            }
+        }
+
+    } else if (value.isStarted()) {
+        return FutureState::Running;
+
+    } else {
+        return FutureState::NotStarted;
+    }
+}
+
+template<typename T>
+bool hasResult(const QFuture<T>& value)
+{
+    return value.isFinished() && (value.resultCount() > 0);
 }
 
 template<template <typename, typename...> class Container, typename T, typename... Args,
