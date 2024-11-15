@@ -4,6 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#define FUTUREUTILS_NO_DEPRECATED
+
 #include <string>
 #include <QEventLoop>
 #include <UtilsQt/Futures/futureutils_sequential.h>

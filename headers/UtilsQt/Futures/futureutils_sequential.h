@@ -224,8 +224,16 @@ private:
 
 } // namespace FutureUtilsInternals
 
+#ifdef FUTUREUTILS_NO_DEPRECATED
+#define CONNECTFUTURESEQ_DEPRECATION
+#else
+#define CONNECTFUTURESEQ_DEPRECATION \
+    [[deprecated("Use UtilsQt::Sequential from UtilsQt/Futures/Sequential.h")]]
+#endif // FUTUREUTILS_NO_DEPRECATED
+
 
 template<typename Type>
+CONNECTFUTURESEQ_DEPRECATION
 ::FutureUtilsInternals::FutureResult<Type> connectFutureSeq(const QFuture<Type>& future,
                     QObject* context,
                     Qt::ConnectionType connectionType = Qt::AutoConnection)
