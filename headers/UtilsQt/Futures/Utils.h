@@ -8,11 +8,13 @@
 #include <utility>
 #include <tuple>
 #include <memory>
+#include <exception>
 #include <QObject>
 #include <QFuture>
 #include <QFutureInterface>
 #include <QFutureWatcher>
 #include <QTimer>
+#include <QException>
 
 #include <utils-cpp/tuple_utils.h>
 #include <UtilsQt/invoke_method.h>
@@ -58,14 +60,17 @@
  * QFuture<T> createReadyFuture<T = void>();
  * QFuture<T> createReadyFuture<T>(T value);
  * QFuture<T> createCanceledFuture<T>();
+ * QFuture<T> createExceptionFuture<T>(exception e);
 
  * QFuture<T> createTimedFuture<T>(int time, T value);
  * QFuture<T> createTimedFuture<void>(int time);
  * QFuture<T> createTimedCanceledFuture<T>();
+ * QFuture<T> createTimedExceptionFuture<T>(int time, exception e, QObject* ctx);
 
  * Promise<T> createPromise<T>();
      -> finish(T);
      -> cancel();
+     -> finishWithException(std::exception or std::exception_ptr);
      -> isFinished();
      -> future();
 */
@@ -114,6 +119,16 @@ struct ResultContentTypeImpl<std::tuple<>>
     using Type = std::tuple<>;
 };
 
+template<typename T>
+void connectTimer(QTimer* timer, QObject* context, const T& handler)
+{
+    if (context) {
+        QObject::connect(timer, &QTimer::timeout, context, handler);
+    } else {
+        QObject::connect(timer, &QTimer::timeout, handler);
+    }
+}
+
 } // namespace FutureUtilsInternals
 
 
@@ -141,6 +156,20 @@ struct FuturesSetProperties
     bool operator== (const FuturesSetProperties& rhs) const { return asTuple() == rhs.asTuple(); }
 };
 
+class QExceptionPtr : public QException
+{
+public:
+    QExceptionPtr(const std::exception_ptr& eptr) : m_eptr(eptr) {} // NOLINT(bugprone-throw-keyword-missing)
+    QExceptionPtr(std::exception_ptr&& eptr) : m_eptr(std::move(eptr)) {} // NOLINT(bugprone-throw-keyword-missing)
+    QExceptionPtr(const QExceptionPtr&) = delete;
+    QExceptionPtr(QExceptionPtr&&) noexcept = default;
+
+    void raise() const override { if (m_eptr) std::rethrow_exception(m_eptr); }
+    QException* clone() const override { return new QExceptionPtr(m_eptr); }
+
+private:
+    std::exception_ptr m_eptr;
+};
 
 template<typename T>
 class Promise
@@ -192,6 +221,23 @@ public:
 
         m_interface.reportResult(result);
         m_interface.reportFinished();
+    }
+
+    void finishWithException(const std::exception_ptr& e)
+    {
+        assert(isStarted());
+        assert(!isFinished());
+
+        m_interface.reportException(QExceptionPtr(e));
+        m_interface.reportFinished();
+    }
+
+    template<typename Ex,
+             typename = std::enable_if_t<std::is_base_of_v<std::exception, Ex>>
+             >
+    void finishWithException(const Ex& ex)
+    {
+        finishWithException(std::make_exception_ptr(ex));
     }
 
     void cancel()
@@ -596,6 +642,54 @@ template<typename T>
         QObject::connect(ctx, &QObject::destroyed, timer, handler);
 
     return futureInterface.future();
+}
+
+template<typename T>
+[[nodiscard]] QFuture<T> createExceptionFuture(const std::exception_ptr& eptr)
+{
+    return Promise<T>(true).finishWithException(eptr).future();
+}
+
+template<typename T,
+         typename Ex,
+         typename = std::enable_if_t<std::is_base_of_v<std::exception, Ex>>
+         >
+[[nodiscard]] QFuture<T> createExceptionFuture(const Ex& ex)
+{
+    return createExceptionFuture<T>(std::make_exception_ptr(ex));
+}
+
+template<typename T>
+[[nodiscard]] QFuture<T> createTimedExceptionFuture(int time, const std::exception_ptr& eptr, QObject* ctx = nullptr)
+{
+    if (!time)
+        return createExceptionFuture<T>(eptr);
+
+    Promise<T> promise(true);
+
+    auto timer = new QTimer();
+    auto handler = [timer, promise, eptr]() mutable {
+        promise.finishWithException(eptr);
+        timer->deleteLater();
+    };
+
+    FutureUtilsInternals::connectTimer(timer, ctx, handler);
+    timer->setSingleShot(true);
+    timer->start(time);
+
+    if (ctx)
+        QObject::connect(ctx, &QObject::destroyed, timer, &QObject::deleteLater);
+
+    return promise.future();
+}
+
+template<typename T,
+         typename Ex,
+         typename = std::enable_if_t<std::is_base_of_v<std::exception, Ex>>
+         >
+[[nodiscard]] QFuture<T> createTimedExceptionFuture(int time, const Ex& ex, QObject* ctx = nullptr)
+{
+    return createTimedExceptionFuture<T>(time, std::make_exception_ptr(ex), ctx);
 }
 
 template<typename T>

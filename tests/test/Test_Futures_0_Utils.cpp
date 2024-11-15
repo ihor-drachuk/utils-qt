@@ -85,6 +85,20 @@ TEST(UtilsQt, Futures_Utils_createFinished)
         ASSERT_TRUE(f.isCanceled());
         ASSERT_TRUE(f.isFinished());
     }
+
+    {
+        auto f = createExceptionFuture<int>(std::make_exception_ptr(std::runtime_error("Test")));
+        ASSERT_TRUE(f.isCanceled());
+        ASSERT_TRUE(f.isFinished());
+        ASSERT_THROW(f.waitForFinished(), std::runtime_error);
+    }
+
+    {
+        auto f = createExceptionFuture<int>(std::runtime_error("Test"));
+        ASSERT_TRUE(f.isCanceled());
+        ASSERT_TRUE(f.isFinished());
+        ASSERT_THROW(f.waitForFinished(), std::runtime_error);
+    }
 }
 
 TEST(UtilsQt, Futures_Utils_Timed)
@@ -124,6 +138,26 @@ TEST(UtilsQt, Futures_Utils_Timed)
         waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(f.isCanceled());
         ASSERT_TRUE(f.isFinished());
+    }
+
+    {
+        auto f = createTimedExceptionFuture<int>(20, std::make_exception_ptr(std::runtime_error("Test")));
+        ASSERT_FALSE(f.isFinished());
+        ASSERT_FALSE(f.isCanceled());
+        waitForFuture<QEventLoop>(f);
+        ASSERT_TRUE(f.isCanceled());
+        ASSERT_TRUE(f.isFinished());
+        ASSERT_THROW(f.waitForFinished(), std::runtime_error);
+    }
+
+    {
+        auto f = createTimedExceptionFuture<int>(20, std::runtime_error("Test"));
+        ASSERT_FALSE(f.isFinished());
+        ASSERT_FALSE(f.isCanceled());
+        waitForFuture<QEventLoop>(f);
+        ASSERT_TRUE(f.isCanceled());
+        ASSERT_TRUE(f.isFinished());
+        ASSERT_THROW(f.waitForFinished(), std::runtime_error);
     }
 }
 
@@ -427,9 +461,13 @@ TEST(UtilsQt, Futures_Utils_onFinishedNP)
         calls++;
     });
 
+    UtilsQt::onFinishedNP(UtilsQt::createExceptionFuture<QString>(std::runtime_error("Test")), &obj, [&]() mutable {
+        calls++;
+    });
+
     qApp->processEvents();
     qApp->processEvents();
-    ASSERT_EQ(calls, 2);
+    ASSERT_EQ(calls, 3);
 }
 
 TEST_P(UtilsQt_Futures_Utils_AnalyzeFutures, Test)
