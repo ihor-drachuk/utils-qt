@@ -3,11 +3,14 @@
  * Contact:  ihor-drachuk-libs@pm.me  */
 
 #include <gtest/gtest.h>
-#include <UtilsQt/Futures/Utils.h>
+
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QTimer>
 #include <QVector>
+
+#include <UtilsQt/Futures/Utils.h>
+
 #include "internal/LifetimeTracker.h"
 
 using namespace UtilsQt;
@@ -352,6 +355,81 @@ TEST(UtilsQt, Futures_Utils_Lifetime)
     qApp->processEvents();
 
     ASSERT_EQ(data.count(), 1);
+}
+
+TEST(UtilsQt, Futures_Utils_onCancelNotified)
+{
+    QObject obj;
+    int calls {};
+    auto f = UtilsQt::createTimedCanceledFuture<void>(10);
+
+    UtilsQt::onCancelNotified(f, &obj, [&]() {
+        calls++;
+    });
+
+    waitForFuture<QEventLoop>(f);
+    ASSERT_EQ(calls, 1);
+
+    UtilsQt::onCancelNotified(createCanceledFuture<int>(), &obj, [&]() {
+        calls++;
+    });
+
+    waitForFuture<QEventLoop>(createTimedFuture(10, 100));
+
+    qApp->processEvents();
+    qApp->processEvents();
+    ASSERT_EQ(calls, 2);
+
+    UtilsQt::onCancelNotified(UtilsQt::createReadyFuture(), &obj, [&]() {
+        calls++;
+    });
+
+    f = UtilsQt::createTimedFuture<int>(10, 150);
+    UtilsQt::onCancelNotified(f, &obj, [&]() {
+        calls++;
+    });
+
+    waitForFuture<QEventLoop>(f);
+    ASSERT_EQ(calls, 2);
+
+    f = UtilsQt::createTimedCanceledFuture<int>(10);
+    auto obj2 = std::make_unique<QObject>();
+    UtilsQt::onCancelNotified(f, obj2.get(), [&]() {
+        calls++;
+    });
+    obj2.reset();
+
+    waitForFuture<QEventLoop>(f);
+    ASSERT_EQ(calls, 2);
+
+    QFutureInterface<int> fi;
+    fi.reportCanceled();
+
+    UtilsQt::onCancelNotified(fi.future(), &obj, [&]() {
+        calls++;
+    });
+
+    qApp->processEvents();
+    qApp->processEvents();
+    ASSERT_EQ(calls, 3);
+}
+
+TEST(UtilsQt, Futures_Utils_onFinishedNP)
+{
+    QObject obj;
+    int calls {};
+
+    UtilsQt::onFinishedNP(UtilsQt::createCanceledFuture<int>(), &obj, [&]() mutable {
+        calls++;
+    });
+
+    UtilsQt::onFinishedNP(UtilsQt::createReadyFuture(QString("123")), &obj, [&]() mutable {
+        calls++;
+    });
+
+    qApp->processEvents();
+    qApp->processEvents();
+    ASSERT_EQ(calls, 2);
 }
 
 TEST_P(UtilsQt_Futures_Utils_AnalyzeFutures, Test)
