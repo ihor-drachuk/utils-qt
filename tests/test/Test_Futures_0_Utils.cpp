@@ -497,6 +497,37 @@ TEST(UtilsQt, Futures_Utils_hasResult)
     }
 }
 
+TEST(UtilsQt, Futures_Utils_Promise)
+{
+    {
+        Promise<int> p;
+        auto f = p.future();
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::NotStarted);
+
+        p.start();
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Running);
+
+        p.finish(10);
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Completed);
+    }
+
+    {
+        Promise<int> p;
+        auto f = p.future();
+        p.cancel();
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Canceled);
+    }
+
+    {
+        Promise<int> p;
+        auto f = p.future();
+        p.start();
+        p.finishWithException(std::runtime_error("Test"));
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Exception);
+        ASSERT_THROW(f.waitForFinished(), std::runtime_error);
+    }
+}
+
 TEST(UtilsQt, Futures_Utils_onCancelNotified)
 {
     QObject obj;
