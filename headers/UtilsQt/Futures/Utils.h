@@ -27,6 +27,15 @@
    handler, when future is finished.
 
 
+ * onFinishedNP(QFuture<T>, context, handler);
+
+   QFuture<Type>  -->  void  (always)
+
+   Similar to onFinished, but it doesn't call `QFuture::result()` internally and
+   doesn't pass it to handler. This is mitigation solution to work safely with
+   futures which contain exception.
+
+
  * onResult(QFuture<T>, context, handler);
 
    QFuture<Type>  -->  Type  (only on success)
@@ -35,6 +44,13 @@
  * onCanceled(QFuture<T>, context, handler);
 
    QFuture<Type>  -->  void  (only on cancellation)
+
+
+* onCancelNotified(QFuture<T>, context, handler);
+
+  QFuture<Type>  -->  void  (only on cancellation)
+
+  Is called when future is canceled (immediately).
 
 
  * waitForFuture<QEventLoop>(future);
@@ -248,6 +264,47 @@ void onFinished(const QFuture<Type>& future,
 }
 
 
+template<typename Type, typename Callable>
+void onFinishedNP(const QFuture<Type>& future,
+                  QObject* context,
+                  const Callable& callable,
+                  Qt::ConnectionType connectionType = Qt::AutoConnection)
+{
+    assert(context);
+
+    auto callable2 = [context, callable](){
+        if constexpr (std::is_invocable_v<Callable>) {
+            return callable;
+
+        } else {
+            static_assert(std::is_member_function_pointer_v<Callable>);
+
+            assert(context && "'context' is required for member function pointer!");
+
+            return [context, callable = std::move(callable)]() mutable { (context->*callable)(); };
+        }
+    }();
+
+    if (future.isFinished()) {
+        // If already done
+        UtilsQt::invokeMethod(context, std::move(callable2), connectionType);
+    } else {
+        // If not finished yet...
+        auto watcherPtr = new QFutureWatcher<Type>();
+
+        QObject::connect(context, &QObject::destroyed, watcherPtr, &QObject::deleteLater, connectionType);
+
+        QObject::connect(watcherPtr, &QFutureWatcherBase::finished, context, [watcherPtr, callable2 = std::move(callable2)]() mutable {
+            callable2();
+            watcherPtr->deleteLater();
+        },
+        connectionType);
+
+        watcherPtr->setFuture(future);
+    }
+}
+
+
 template<typename Type, typename Obj, typename Callable,
          typename std::enable_if<std::is_base_of<QObject, Obj>::value, int>::type = 0>
 void onResult(const QFuture<Type>& future,
@@ -326,6 +383,46 @@ void onCanceled(const QFuture<Type>& future,
     auto callable = [object, member](){ (object->*member)(); };
 
     onCanceled(future, object, callable, connectionType);
+}
+
+
+template<typename Type, typename Callable>
+void onCancelNotified(const QFuture<Type>& future,
+                QObject* context,
+                const Callable& callable,
+                Qt::ConnectionType connectionType = Qt::AutoConnection)
+{
+    assert(context);
+
+    auto callable2 = [context, callable](){
+        if constexpr (std::is_invocable_v<Callable>) {
+            return callable;
+
+        } else {
+            static_assert(std::is_member_function_pointer_v<Callable>);
+
+            assert(context && "'context' is required for member function pointer!");
+
+            return [context, callable = std::move(callable)]() mutable { (context->*callable)(); };
+        }
+    }();
+
+    if (future.isCanceled()) {
+        UtilsQt::invokeMethod(context, callable2, connectionType);
+
+    } else {
+        auto watcherPtr = new QFutureWatcher<Type>();
+
+        QObject::connect(context, &QObject::destroyed, watcherPtr, &QObject::deleteLater, connectionType);
+
+        QObject::connect(watcherPtr, &QFutureWatcherBase::canceled, context, [watcherPtr, callable2]() {
+            callable2();
+            watcherPtr->deleteLater();
+        }, connectionType);
+
+        QObject::connect(watcherPtr, &QFutureWatcherBase::finished, watcherPtr, &QObject::deleteLater);
+        watcherPtr->setFuture(future);
+    }
 }
 
 
