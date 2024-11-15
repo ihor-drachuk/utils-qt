@@ -25,6 +25,8 @@
 
  * onFinished(QFuture<T>, context, handler);
 
+   QFuture<Type>  -->  std::optional<Type>  (always)
+
    QFuture<Type> is converted to std::optional<Type> and passed to
    handler, when future is finished.
 
@@ -47,6 +49,8 @@
 
    QFuture<Type>  -->  void  (only on cancellation)
 
+   Is called when future is canceled AND finished.
+
 
 * onCancelNotified(QFuture<T>, context, handler);
 
@@ -57,25 +61,38 @@
 
  * waitForFuture<QEventLoop>(future);
 
- * QFuture<T> createReadyFuture<T = void>();
+
  * QFuture<T> createReadyFuture<T>(T value);
  * QFuture<T> createCanceledFuture<T>();
  * QFuture<T> createExceptionFuture<T>(exception e);
 
- * QFuture<T> createTimedFuture<T>(int time, T value);
- * QFuture<T> createTimedFuture<void>(int time);
- * QFuture<T> createTimedCanceledFuture<T>();
+ * QFuture<T> createTimedFuture<T>(int time, T value, QObject* ctx);
+ * QFuture<T> createTimedCanceledFuture<T>(int time, QObject* ctx);
  * QFuture<T> createTimedExceptionFuture<T>(int time, exception e, QObject* ctx);
 
  * getFutureState(QFuture<T>) -> [NotStarted, Running, Completed, CompletedWrong, Canceled, Exception]
 
  * hasResult(QFuture<T>)
 
- * Promise<T> createPromise<T>();
+ * futureCompleted(QFuture<T>)
+
+ * analyzeFutures(Container<QFuture<T>...>) ->
+   [allFinished, someFinished, noneFinished, allCanceled, someCanceled, noneCanceled, allCompleted, someCompleted]
+
+ * futuresToOptResults(Container<QFuture<T>...>) -> Container<std::optional<T>...>
+
+
+ * Promise<T> createPromise<T>(autoStart = false);
+     -> start();
      -> finish(T);
      -> cancel();
      -> finishWithException(std::exception or std::exception_ptr);
+
+     -> isStarted();
+     -> isRunning();
+     -> isCanceled();
      -> isFinished();
+
      -> future();
 */
 
@@ -207,26 +224,28 @@ public:
     Promise<T>& operator= (const Promise<T>&) = default;
     Promise<T>& operator= (Promise<T>&&) noexcept = default;
 
-    void start()
+    Promise& start()
     {
         assert(!isStarted());
         m_interface.reportStarted();
+        return *this;
     }
 
     // if [T == void]
     template<typename X = T>
-    typename std::enable_if<std::is_same<X, void>::value && std::is_same<X, T>::value>::type
+    typename std::enable_if<std::is_same<X, void>::value && std::is_same<X, T>::value, Promise&>::type
     finish()
     {
         assert(isStarted());
         assert(!isFinished());
 
         m_interface.reportFinished();
+        return *this;
     }
 
     // if [T != void]
     template<typename X = T>
-    typename std::enable_if<!std::is_same<X, void>::value && std::is_same<X, T>::value>::type
+    typename std::enable_if<!std::is_same<X, void>::value && std::is_same<X, T>::value, Promise&>::type
     finish(const X& result)
     {
         assert(isStarted());
@@ -234,31 +253,35 @@ public:
 
         m_interface.reportResult(result);
         m_interface.reportFinished();
+        return *this;
     }
 
-    void finishWithException(const std::exception_ptr& e)
+    Promise& finishWithException(const std::exception_ptr& e)
     {
         assert(isStarted());
         assert(!isFinished());
 
         m_interface.reportException(QExceptionPtr(e));
         m_interface.reportFinished();
+        return *this;
     }
 
     template<typename Ex,
              typename = std::enable_if_t<std::is_base_of_v<std::exception, Ex>>
              >
-    void finishWithException(const Ex& ex)
+    Promise& finishWithException(const Ex& ex)
     {
         finishWithException(std::make_exception_ptr(ex));
+        return *this;
     }
 
-    void cancel()
+    Promise& cancel()
     {
         assert(!isFinished());
 
         m_interface.reportCanceled();
         m_interface.reportFinished();
+        return *this;
     }
 
     bool isStarted() const { return m_interface.isStarted(); }
@@ -267,7 +290,6 @@ public:
     bool isFinished() const { return m_interface.isFinished(); }
 
     QFuture<T> future() const { return m_interface.future(); }
-    QFutureInterface<T> futureInterface() { return m_interface; }
 
 private:
     mutable QFutureInterface<T> m_interface;
@@ -281,6 +303,8 @@ void onFinished(const QFuture<Type>& future,
                 const Callable& callable,
                 Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
+    assert(context);
+
     auto resultHandler = [future, callable] () {
         if (future.isCanceled()) {
             FutureUtilsInternals::callCanceled(callable, future);
@@ -314,8 +338,8 @@ void onFinished(const QFuture<Type>& future,
                 void (Obj::* member)(const std::optional<Type>&),
                 Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
-    Q_ASSERT(object);
-    Q_ASSERT(member);
+    assert(object);
+    assert(member);
 
     auto callable = [object, member](const std::optional<Type>& param){ (object->*member)(param); };
 
@@ -371,6 +395,8 @@ void onResult(const QFuture<Type>& future,
               const Callable& callable,
               Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
+    assert(context);
+
     if constexpr (std::is_same<Type,void>::value) {
         onFinished(future, context, [future, callable]() {
             if (!future.isCanceled())
@@ -395,8 +421,8 @@ void onResult(const QFuture<Type>& future,
               void (Obj::* member)(SArg),
               Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
-    Q_ASSERT(object);
-    Q_ASSERT(member);
+    assert(object);
+    assert(member);
 
     if constexpr (std::is_same<Type,void>::value) {
         auto callable = [object, member](){ (object->*member)(); };
@@ -436,8 +462,8 @@ void onCanceled(const QFuture<Type>& future,
                 void (Obj::* member)(),
                 Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
-    Q_ASSERT(object);
-    Q_ASSERT(member);
+    assert(object);
+    assert(member);
 
     auto callable = [object, member](){ (object->*member)(); };
 
@@ -507,37 +533,26 @@ void waitForFuture(const QFuture<T>& future, const std::optional<unsigned>& time
     eventLoop.exec();
 
     if (!timeout)
-        Q_ASSERT(future.isFinished());
+        assert(future.isFinished());
 }
 
 
 template<typename T>
 [[nodiscard]] QFuture<T> createReadyFuture(const T& value)
 {
-    QFutureInterface<T> futureInterface;
-    futureInterface.reportStarted();
-    futureInterface.reportResult(value);
-    futureInterface.reportFinished();
-    return futureInterface.future();
+    return Promise<T>(true).finish(value).future();
 }
 
 [[nodiscard]] static QFuture<void> createReadyFuture()
 {
-    QFutureInterface<void> futureInterface;
-    futureInterface.reportStarted();
-    futureInterface.reportFinished();
-    return futureInterface.future();
+    return Promise<void>(true).finish().future();
 }
 
 
 template<typename T>
 [[nodiscard]] QFuture<T> createCanceledFuture()
 {
-    QFutureInterface<T> futureInterface;
-    futureInterface.reportStarted();
-    futureInterface.reportCanceled();
-    futureInterface.reportFinished();
-    return futureInterface.future();
+    return Promise<T>(true).cancel().future();
 }
 
 
@@ -547,28 +562,20 @@ template<typename T>
     if (!time)
         return createReadyFuture(value);
 
-    QFutureInterface<T> futureInterface;
-    futureInterface.reportStarted();
+    Promise<T> promise(true);
 
     auto timer = new QTimer();
-    QObject::connect(timer, &QTimer::timeout, [timer, futureInterface, value]() mutable {
-        futureInterface.reportResult(value);
-        futureInterface.reportFinished();
+    FutureUtilsInternals::connectTimer(timer, ctx, [timer, promise, value]() mutable {
+        promise.finish(value);
         timer->deleteLater();
     });
     timer->setSingleShot(true);
     timer->start(time);
 
-    if (ctx) {
-        QObject::connect(ctx, &QObject::destroyed, timer, [timer, futureInterface]() mutable {
-            timer->stop();
-            futureInterface.reportCanceled();
-            futureInterface.reportFinished();
-            timer->deleteLater();
-        });
-    }
+    if (ctx)
+        QObject::connect(ctx, &QObject::destroyed, timer, &QObject::deleteLater);
 
-    return futureInterface.future();
+    return promise.future();
 }
 
 template<typename T>
@@ -579,26 +586,19 @@ template<typename T>
     if (!time)
         return createReadyFuture(value);
 
-    QFutureInterface<T> futureInterface;
-    futureInterface.reportStarted();
+    Promise<T> promise(true);
 
     auto timer = new QTimer();
-    QObject::connect(timer, &QTimer::timeout, [timer, futureInterface, &value]() mutable {
-        futureInterface.reportResult(value);
-        futureInterface.reportFinished();
+    FutureUtilsInternals::connectTimer(timer, ctx, [timer, promise, &value]() mutable {
+        promise.finish(value);
         timer->deleteLater();
     });
     timer->setSingleShot(true);
     timer->start(time);
 
-    QObject::connect(ctx, &QObject::destroyed, timer, [timer, futureInterface]() mutable {
-        timer->stop();
-        futureInterface.reportCanceled();
-        futureInterface.reportFinished();
-        timer->deleteLater();
-    });
+    QObject::connect(ctx, &QObject::destroyed, timer, &QObject::deleteLater);
 
-    return futureInterface.future();
+    return promise.future();
 }
 
 [[nodiscard]] static inline QFuture<void> createTimedFuture(int time, QObject* ctx = nullptr)
@@ -606,27 +606,22 @@ template<typename T>
     if (!time)
         return createReadyFuture();
 
-    QFutureInterface<void> futureInterface;
-    futureInterface.reportStarted();
+    Promise<void> promise(true);
 
     auto timer = new QTimer();
-    QObject::connect(timer, &QTimer::timeout, [timer, futureInterface]() mutable {
-        futureInterface.reportFinished();
+
+    FutureUtilsInternals::connectTimer(timer, ctx, [timer, promise]() mutable {
+        promise.finish();
         timer->deleteLater();
     });
+
     timer->setSingleShot(true);
     timer->start(time);
 
-    if (ctx) {
-        QObject::connect(ctx, &QObject::destroyed, timer, [timer, futureInterface]() mutable {
-            timer->stop();
-            futureInterface.reportCanceled();
-            futureInterface.reportFinished();
-            timer->deleteLater();
-        });
-    }
+    if (ctx)
+        QObject::connect(ctx, &QObject::destroyed, timer, &QObject::deleteLater);
 
-    return futureInterface.future();
+    return promise.future();
 }
 
 
@@ -636,25 +631,22 @@ template<typename T>
     if (!time)
         return createCanceledFuture<T>();
 
-    QFutureInterface<T> futureInterface;
-    futureInterface.reportStarted();
+    Promise<T> promise(true);
 
     auto timer = new QTimer();
-    auto handler = [timer, futureInterface]() mutable {
-        timer->stop();
-        futureInterface.reportCanceled();
-        futureInterface.reportFinished();
+    auto handler = [timer, promise]() mutable {
+        promise.cancel();
         timer->deleteLater();
     };
 
-    QObject::connect(timer, &QTimer::timeout, handler);
+    FutureUtilsInternals::connectTimer(timer, ctx, handler);
     timer->setSingleShot(true);
     timer->start(time);
 
     if (ctx)
-        QObject::connect(ctx, &QObject::destroyed, timer, handler);
+        QObject::connect(ctx, &QObject::destroyed, timer, &QObject::deleteLater);
 
-    return futureInterface.future();
+    return promise.future();
 }
 
 template<typename T>
