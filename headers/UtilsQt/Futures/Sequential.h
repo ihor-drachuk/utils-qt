@@ -440,7 +440,7 @@ public:
     template<typename F>
     [[nodiscard]] auto then(F&& f)
     {
-        using Func = decltype(std::function(f))*;
+        using Func = decltype(std::function(std::move(std::declval<decltype(f)>())))*;
         return thenImpl(std::forward<F>(f), Func());
     }
 
@@ -455,7 +455,7 @@ private:
     auto thenImpl(F&& f, std::function<QFuture<R>(const AsyncResult<T>&)>*)
     {
         auto f2 = [f = std::forward<F>(f)](const AsyncResult<T>& ar, const CancelStatus&) mutable { return f(ar); };
-        using Func = decltype(std::function(f2))*;
+        using Func = decltype(std::function(std::move(std::declval<decltype(f2)>())))*;
         return thenImpl(std::move(f2), Func());
     }
 
@@ -486,7 +486,7 @@ public:
              >
     [[nodiscard]] auto start(F&& f)
     {
-        using Func = decltype(std::function(f))*;
+        using Func = decltype(std::function(std::move(std::declval<decltype(f)>())))*;
         return startImpl(std::forward<F>(f), Func());
     }
 
@@ -501,7 +501,7 @@ private:
     auto startImpl(F&& f, std::function<QFuture<R>()>*)
     {
         auto f2 = [f = std::forward<F>(f)](const CancelStatus&){ return f(); };
-        using Func = decltype(std::function(f2))*;
+        using Func = decltype(std::function(std::move(std::declval<decltype(f2)>())))*;
         return startImpl(std::move(f2), Func());
     }
 
