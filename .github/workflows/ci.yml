@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: ihordrachuk/id-build-env:${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.test_libs }}-${{ matrix.qt }}-${{ matrix.arch || 'default' }}
+      image: ihordrachuk/id-build-env:d12-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.test_libs }}-${{ matrix.qt }}-${{ matrix.arch || 'default' }}
       options: --workdir ${{ github.workspace }}
 
     if: "!contains(github.event.head_commit.message, 'Skip build')"
