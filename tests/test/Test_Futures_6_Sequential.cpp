@@ -18,6 +18,12 @@
 
 namespace {
 
+#ifdef UTILS_QT_OS_MACOS
+constexpr auto TimeFactor = 5;
+#else
+constexpr auto TimeFactor = 1;
+#endif // UTILS_QT_OS_MACOS
+
 struct OpStatistics
 {
     int constructions = 0;
@@ -438,7 +444,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
             QThreadPool::globalInstance()->start([c, promise, &status]() mutable {
                 const auto now = Clock::now();
 
-                while (!c.isCanceledRequested() && (Clock::now() - now < 200ms))
+                while (!c.isCanceledRequested() && (Clock::now() - now < 200ms * TimeFactor))
                     QThread::currentThread()->msleep(20);
 
                 if (c.isCanceledRequested()) {
@@ -464,7 +470,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
             QThreadPool::globalInstance()->start([r, c, promise, &status]() mutable {
                 const auto now = Clock::now();
 
-                while (!c.isCanceledRequested() && (Clock::now() - now < 200ms))
+                while (!c.isCanceledRequested() && (Clock::now() - now < 200ms * TimeFactor))
                     QThread::currentThread()->msleep(20);
 
                 if (c.isCanceledRequested()) {
@@ -485,7 +491,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
         status = {};
         const auto start = Clock::now();
         auto f = factory();
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50));
+        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50 * TimeFactor));
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
         const auto end = Clock::now();
@@ -494,14 +500,14 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
         ASSERT_TRUE(f.isCanceled());
         ASSERT_EQ(status, (Status{true, false, false, false, false, false}));
 
-        ASSERT_LE(end - start, 150ms);
+        ASSERT_LE(end - start, 150ms * TimeFactor);
     }
 
     {
         status = {};
         const auto start = Clock::now();
         auto f = factory();
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(250));
+        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(250 * TimeFactor));
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
         const auto end = Clock::now();
@@ -511,14 +517,14 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
         ASSERT_EQ(f.resultCount(), 0);
         ASSERT_EQ(status, (Status{false, true, false, true, true, false}));
 
-        ASSERT_LE(end - start, 350ms);
+        ASSERT_LE(end - start, 350ms * TimeFactor);
     }
 
     {
         status = {};
         const auto start = Clock::now();
         auto f = factory();
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(250));
+        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(250 * TimeFactor));
         ASSERT_TRUE(f.isRunning());
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
@@ -529,14 +535,14 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
         ASSERT_EQ(f.resultCount(), 0);
         ASSERT_EQ(status, (Status{false, true, false, true, true, false}));
 
-        ASSERT_LE(end - start, 350ms);
+        ASSERT_LE(end - start, 350ms * TimeFactor);
     }
 
     {
         status = {};
         const auto start = Clock::now();
         auto f = factory();
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(500));
+        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(500 * TimeFactor));
         ASSERT_TRUE(f.isFinished());
         ASSERT_FALSE(f.isCanceled());
         f.cancel();
@@ -549,7 +555,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
         ASSERT_EQ(f.result(), "17");
         ASSERT_EQ(status, (Status{false, true, false, true, false, true}));
 
-        ASSERT_GE(end - start, 400ms);
+        ASSERT_GE(end - start, 400ms * TimeFactor);
     }
 }
 
@@ -571,7 +577,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellationSubscription)
                              auto subscription = c.subscribe([&run]() mutable { run = false; });
 
                              const auto start = Clock::now();
-                             while (run && (Clock::now() - start < 200ms))
+                             while (run && (Clock::now() - start < 200ms * TimeFactor))
                                  QThread::currentThread()->msleep(20);
 
                              duration = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
@@ -587,13 +593,13 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellationSubscription)
                      })
                      .execute();
 
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50));
+        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50 * TimeFactor));
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
         ASSERT_EQ(f.resultCount(), 0);
-        ASSERT_LE(duration, 150ms);
+        ASSERT_LE(duration, 150ms * TimeFactor);
     }
 
     // Test unsubscription on scope exit
@@ -609,7 +615,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellationSubscription)
                              (void)c.subscribe([&run]() mutable { run = false; });
 
                              const auto start = Clock::now();
-                             while (run && (Clock::now() - start < 200ms))
+                             while (run && (Clock::now() - start < 200ms * TimeFactor))
                                  QThread::currentThread()->msleep(20);
 
                              duration = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
@@ -625,13 +631,13 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellationSubscription)
                      })
                      .execute();
 
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50));
+        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50 * TimeFactor));
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
         ASSERT_EQ(f.resultCount(), 0);
-        ASSERT_GE(duration, 200ms);
+        ASSERT_GE(duration, 200ms * TimeFactor);
     }
 
     // Test idle subscription
@@ -647,7 +653,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellationSubscription)
                              auto subscription = c.subscribe([&run]() mutable { run = false; });
 
                              const auto start = Clock::now();
-                             while (run && (Clock::now() - start < 200ms))
+                             while (run && (Clock::now() - start < 200ms * TimeFactor))
                                  QThread::currentThread()->msleep(20);
 
                              duration = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
