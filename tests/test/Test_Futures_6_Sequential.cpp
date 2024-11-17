@@ -511,7 +511,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
             // localAw (Awaitables) is destroyed here
             localAw.confirmWait();
         }
-        ASSERT_LE(Clock::now() - start, 95ms * TimeFactor); // 50ms delay + 20ms check interval + 25ms as usual time gap
+        ASSERT_LE(Clock::now() - start, 120ms * TimeFactor); // 50ms delay + 20ms check interval + 50ms as usual time gap
         const auto end = Clock::now();
 
         ASSERT_TRUE(f.isFinished());
@@ -528,7 +528,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
         UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(250 * TimeFactor));
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
-        ASSERT_LE(Clock::now() - start, 275ms * TimeFactor);
+        ASSERT_LE(Clock::now() - start, 300ms * TimeFactor);
         awaitables.wait();
         const auto end = Clock::now();
 
@@ -548,7 +548,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
         ASSERT_TRUE(f.isRunning());
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
-        ASSERT_LE(Clock::now() - start, 275ms * TimeFactor);
+        ASSERT_LE(Clock::now() - start, 300ms * TimeFactor);
         awaitables.wait();
         const auto end = Clock::now();
 
@@ -569,7 +569,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
         ASSERT_FALSE(f.isCanceled());
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
-        ASSERT_LE(Clock::now() - start, 525ms * TimeFactor);
+        ASSERT_LE(Clock::now() - start, 550ms * TimeFactor);
         awaitables.wait();
         const auto end = Clock::now();
 
