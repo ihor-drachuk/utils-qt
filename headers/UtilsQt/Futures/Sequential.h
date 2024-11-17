@@ -3,6 +3,7 @@
  * Contact:  ihor-drachuk-libs@pm.me  */
 
 #pragma once
+#include <algorithm>
 #include <cassert>
 #include <exception>
 #include <mutex>
@@ -13,6 +14,7 @@
 
 #include <UtilsQt/Futures/Utils.h>
 
+#include <utils-cpp/threadid.h>
 #include <utils-cpp/scoped_guard.h>
 #include <utils-cpp/function_traits.h>
 
@@ -28,7 +30,7 @@
      of the previous step to the next.
   2. Execution proceeds to completion unless interrupted by external cancellation or
      internal exceptions/cancellations (if configured to handle them).
-  3. Users can optionally access cancellation state via the CancelStatus object during
+  3. Users can optionally access cancellation state via the SequentialMediator object during
      each step to cancel asynchronous operations if requested.
 
   This design makes it easy to compose complex asynchronous workflows while maintaining
@@ -36,19 +38,19 @@
 
   Schematic example:
   QFuture<L> f = UtilsQt::Sequential(this)
-    .start([]()                            -> QFuture<T>    { ... })
-    .then([](AsyncResult<T>, CancelStatus) -> QFuture<G>    { ... })
-    .then([](AsyncResult<G>)               -> QFuture<void> { ... })
-    .then([](AsyncResult<void>)            -> QFuture<L>    { ... })
+    .start([]()                                  -> QFuture<T>    { ... })
+    .then([](AsyncResult<T>, SequentialMediator) -> QFuture<G>    { ... })
+    .then([](AsyncResult<G>)                     -> QFuture<void> { ... })
+    .then([](AsyncResult<void>)                  -> QFuture<L>    { ... })
     .execute();
 
   Common usage example:
    /
   |  auto f = UtilsQt::Sequential(this)
-  |  .start([](const CancelStatus& c) -> QFuture<int> {
+  |  .start([](const SequentialMediator& c) -> QFuture<int> {
   |      return UtilsQt::createReadyFuture(123);
   |  })
-  |  .then([](const AsyncResult<int>& result){
+  |  .then([](const AsyncResult<int>& result) {
   |      result.tryRethrow(); // Propagate exceptions, if we want.
   |
   |      if (result.isCanceled()) {
@@ -57,7 +59,7 @@
   |
   |      return UtilsQt::createReadyFuture(QString::number(result.value()));
   |  }
-  |  .then([](const AsyncResult<QString>& result, const CancelStatus& c){
+  |  .then([](const AsyncResult<QString>& result, SequentialMediator& sm) {
   |      result.tryRethrow(); // Propagate exceptions, if we want.
   |
   |      if (result.isCanceled()) {
@@ -67,23 +69,25 @@
   |      Promise<int> promise(true);
   |
   |      // Long-running operation
-  |      QThreadPool::globalInstance()->start([promise, c, result](){
+  |      auto fThr = QtConcurrent::run([promise, sm, result](){
   |          int x = result.value().toInt();
   |
   |          while (x < 1000000 && !c.isCancelRequested()) {
   |              x++;
   |          }
   |
-  |          if (c.isCancelRequested()) {
+  |          if (sm.isCancelRequested()) {
   |              p.cancel();
   |          } else {
   |              p.finish(x);
   |          }
   |      });
   |
+  |      sm.registerAwaitable(fThr);
+  |
   |      return promise.future();
   |  })
-  |  .execute();
+  |  .execute(savedAwaitables);
   \
 
   If a future from one handler is canceled, an empty AsyncResult is passed to next handler. This
@@ -95,12 +99,12 @@
 
   Each handler in the chain:
   - Receives the AsyncResult from the previous handler (contains result, canceled state or exception).
-  - Optionally receives a CancelStatus object, which provides:
-     - Cancel checking: Detect whether cancellation was requested due to external events via `CancelStatus::isCancelRequested`.
-     - Event subscription: React to cancel events via `CancelStatus::subscribe`.
-       (Notice! Cancellation of the resulting future and deletion of the context inside `CancelStatus::subscribe` is prohibited).
+  - Optionally receives a SequentialMediator object, which provides:
+     - Cancel checking: Detect whether cancellation was requested due to external events via `SequentialMediator::isCancelRequested`.
+     - Event subscription: React to cancel events via `SequentialMediator::subscribe`.
+       (Notice! Cancellation of the resulting future and deletion of the context inside `SequentialMediator::subscribe` is prohibited).
 
-  CancelStatus transitions to a "canceled" state in the following scenarios:
+  SequentialMediator transitions to a "canceled" state in the following scenarios:
    - When the user explicitly cancels the resulting QFuture.
    - When the associated context is destroyed.
   Notice: after an external cancellation request, no further handlers in the chain will be invoked.
@@ -120,37 +124,156 @@
   - For long-running tasks, consider using `QtConcurrent::run` within the handler.
   - If a handler starts a thread, Sequential does not guarantee that the context will remain live for the thread.
     To ensure safety:
-     - User must explicitly manage this guarantee, e.g.: in context (`this`) destructor call `waitForFinished` on all
-       QFuture objects from `QtConcurrent::run` started in all Sequential objects.
-     - Capture CancelStatus and all necessary data by value so the thread has its own copy or shared pointer.
-    Not main solution, but optionally can be used in some cases:
-     - Avoid using the context (`this`) within the thread.
+     - Capture SequentialMediator and all necessary data by value so the thread has its own copy or shared pointer.
+     - Call `SequentialMediator::registerAwaitable` to register QFuture of true asynchronous operation.
+     - Pass the `Awaitables` object via reference to `execute` method to save the `Awaitables` object.
+     - Call `Awaitables::confirmWait` in destructor of context (`this`).
 */
 
 namespace UtilsQt {
 
 namespace Futures_Seq_Internal {
 
-class CancelStatus
+class Awaitables
+{
+    friend class SequentialMediator;
+public:
+    struct AwaitableData
+    {
+        std::function<void()> expectant;
+        std::function<bool()> checker;
+    };
+
+    Awaitables() = default;
+    ~Awaitables() = default;
+    Awaitables(const Awaitables&) = delete;
+
+    Awaitables(Awaitables&& other) noexcept
+        : m_anchor(std::move(other.m_anchor)),
+          m_weakData(m_anchor)
+    { }
+
+    Awaitables& operator=(const Awaitables&) = delete;
+
+    Awaitables& operator=(Awaitables&& other) noexcept
+    {
+        if (this != &other) {
+            m_anchor = std::move(other.m_anchor);
+            m_weakData = m_anchor;
+        }
+
+        return *this;
+    }
+
+    void confirmWait()
+    {
+        auto data = lock();
+        assert(!data->confirmed && "Don't confirm `Awaitables` twice!");
+        data->confirmed = true;
+    }
+
+    void wait()
+    {
+        auto data = lock();
+        assert(!data->confirmed && "Don't call `wait` after `confirmWait`!");
+        data->confirmed = true;
+        data->wait();
+    }
+
+    bool isRunning()
+    {
+        auto aws = lock()->awaitables;
+        return std::any_of(aws.begin(), aws.end(), [](const AwaitableData& x) { return !x.checker || !x.checker(); });
+    }
+
+private: // For SequentialMediator
+    Awaitables& operator+=(const AwaitableData& f)
+    {
+        auto data = lock();
+        assert(!data->confirmed && "Don't add `Awaitable` after `confirmWait`!");
+
+        auto& aws = data->awaitables;
+        aws.erase(std::remove_if(aws.begin(), aws.end(), [](const AwaitableData& x) { return x.checker && x.checker(); }), aws.end());
+
+        data->awaitables += f;
+
+        return *this;
+    }
+
+    bool isMoved() const
+    {
+        return !m_anchor;
+    }
+
+    bool isEmpty() const
+    {
+        return lock()->awaitables.isEmpty();
+    }
+
+private:
+    struct Data {
+        const uintmax_t mainThreadId { currentThreadId() };
+        QVector<AwaitableData> awaitables;
+        bool confirmed { false };
+
+        void wait() {
+            for (const auto& x : std::as_const(awaitables))
+                x.expectant();
+
+            awaitables.clear();
+        }
+
+        ~Data() {
+            assert((confirmed || awaitables.isEmpty()) &&
+                   "Seems you forgot to save `Awaitables` or to call `confirmWait`!");
+
+            wait();
+        }
+    };
+
+    std::shared_ptr<Data> lock()
+    {
+        auto ptr = m_weakData.lock();
+        assert(ptr && "Awaitables is gone!");
+        assert(currentThreadId() == ptr->mainThreadId &&
+               "Awaitable-related functionality shouldn't be called from another thread!");
+        return ptr;
+    }
+
+    std::shared_ptr<const Data> lock() const
+    {
+        auto ptr = m_weakData.lock();
+        assert(ptr && "Awaitables is gone!");
+        assert(currentThreadId() == ptr->mainThreadId &&
+               "Awaitable-related functionality shouldn't be called from another thread!");
+        return ptr;
+    }
+
+    std::shared_ptr<Data> m_anchor { std::make_shared<Data>() };
+    std::weak_ptr<Data> m_weakData { m_anchor };
+};
+
+class SequentialMediator
 {
     template<typename... Fs>
     friend class Executor;
 public:
     using Handler = std::function<void()>;
+    using AwaitableData = Awaitables::AwaitableData;
 
-    CancelStatus() = default;
-    CancelStatus(const CancelStatus&) = default;
-    CancelStatus(CancelStatus&&) = default;
-    CancelStatus& operator=(const CancelStatus&) = default;
-    CancelStatus& operator=(CancelStatus&&) = default;
+    SequentialMediator() = default;
+    SequentialMediator(const SequentialMediator&) = default;
+    SequentialMediator(SequentialMediator&&) = default;
+    SequentialMediator& operator=(const SequentialMediator&) = default;
+    SequentialMediator& operator=(SequentialMediator&&) = default;
 
-    bool isCancelRequested() const
+    bool isCancelRequested() const // Called from another thread
     {
         std::lock_guard lock(m_data->mutex);
         return m_data->cancelRequested;
     }
 
-    [[nodiscard]] auto subscribe(const Handler& handler) const
+    [[nodiscard]] auto onCancellation(const Handler& handler) const // Called from another thread
     {
         std::lock_guard lock(m_data->mutex);
 
@@ -164,6 +287,22 @@ public:
 
         m_data->handlers[id] = handler;
         return unsubscribeGuard;
+    }
+
+    void registerAwaitable(QFuture<void> f)
+    {
+        registerAwaitable([f]() mutable { f.waitForFinished(); },
+                          [f]() { return f.isFinished(); });
+    }
+
+    void registerAwaitable(const std::function<void()>& expectant, const std::function<bool()>& checker)
+    {
+        registerAwaitable(AwaitableData{expectant, checker});
+    }
+
+    void registerAwaitable(const AwaitableData& f)
+    {
+        m_data->awaitables += f;
     }
 
 private: // For Executor
@@ -180,12 +319,24 @@ private: // For Executor
             handler();
     }
 
+    bool hasAwaitables() const
+    {
+        return !m_data->awaitables.isEmpty();
+    }
+
+    Awaitables moveAwaitables() const
+    {
+        assert(!m_data->awaitables.isMoved());
+        return std::move(m_data->awaitables);
+    }
+
 private:
     struct Data {
         std::mutex mutex;
         bool cancelRequested {false};
         int ids {0};
         std::unordered_map<int, Handler> handlers;
+        Awaitables awaitables;
     };
 
     std::shared_ptr<Data> m_data { std::make_shared<Data>() };
@@ -263,7 +414,7 @@ struct IsQFuture : std::false_type { };
 template<typename T>
 struct IsQFuture<QFuture<T>> : std::true_type { };
 
-enum SequenceOptions
+enum SequentialOptions
 {
     Default = 0,
     AutoFinishOnCanceled = 1 << 0,
@@ -274,7 +425,7 @@ enum SequenceOptions
 struct Settings
 {
     QObject* context {};
-    SequenceOptions options {Default};
+    SequentialOptions options {Default};
 };
 
 template<typename... Fs>
@@ -313,7 +464,7 @@ public:
         if constexpr (I == Length) {
             AsyncResult<LastFuncResult> lastAsyncResult = std::move(args...);
 
-            if (m_cancelStatus.isCancelRequested()) {
+            if (m_sequentialMediator.isCancelRequested()) {
                 m_promise.cancel();
 
             } else if (lastAsyncResult.hasException()) {
@@ -335,14 +486,14 @@ public:
             // return;
 
         } else { // I < Length
-            using Func = std::tuple_element_t<I, Tuple>;                           // []([const T&]?, const CancelStatus&) -> QFuture<T> {}
-            using Ret = std::invoke_result_t<Func, Args..., const CancelStatus&>;  // QFuture<T>
+            using Func = std::tuple_element_t<I, Tuple>;                           // []([const T&]?, SequentialMediator&) -> QFuture<T> {}
+            using Ret = std::invoke_result_t<Func, Args..., SequentialMediator&>;  // QFuture<T>
             using T = typename QFutureUnwrap<Ret>::type;                           // T
             using QFutureT = Ret;
 
             // Report start
             if constexpr (I == 0) {
-                assert(!m_cancelStatus.isCancelRequested());
+                assert(!m_sequentialMediator.isCancelRequested());
                 m_promise.start();
             }
 
@@ -351,12 +502,12 @@ public:
                 const auto& prevAsyncResult = cref(args...);
 
                 // Check previous result according to options
-                if ((m_settings.options & SequenceOptions::AutoFinishOnException) && prevAsyncResult.hasException()) {
+                if ((m_settings.options & SequentialOptions::AutoFinishOnException) && prevAsyncResult.hasException()) {
                     m_promise.finishWithException(prevAsyncResult.exception());
                     return;
                 }
 
-                if ((m_settings.options & SequenceOptions::AutoFinishOnCanceled) && prevAsyncResult.isCanceled()) {
+                if ((m_settings.options & SequentialOptions::AutoFinishOnCanceled) && prevAsyncResult.isCanceled()) {
                     m_promise.cancel();
                     return;
                 }
@@ -366,7 +517,7 @@ public:
             QFutureT fResult;
 
             try {
-                fResult = std::get<I>(m_handlers)(args..., m_cancelStatus);
+                fResult = std::get<I>(m_handlers)(args..., m_sequentialMediator);
 
                 if (!fResult.isFinished())
                     m_futures.append(QFuture<void>(fResult));
@@ -411,13 +562,22 @@ public:
 
     LastFuncQFuture execute()
     {
+        assert(!m_sequentialMediator.hasAwaitables() && "You can't call `execute` without saving `Awaitables`!");
+
+        call<0>();
+        return m_promise.future();
+    }
+
+    LastFuncQFuture execute(Awaitables& awaitables)
+    {
+        awaitables = m_sequentialMediator.moveAwaitables();
         call<0>();
         return m_promise.future();
     }
 
     void cancel()
     {
-        m_cancelStatus.cancel();
+        m_sequentialMediator.cancel();
 
         if (!m_promise.isFinished())
             m_promise.cancel();
@@ -430,7 +590,7 @@ private:
     Settings m_settings;
     Tuple m_handlers;
     QVector<QFuture<void>> m_futures;
-    CancelStatus m_cancelStatus;
+    SequentialMediator m_sequentialMediator;
     Promise<LastFuncResult> m_promise;
 };
 
@@ -462,17 +622,43 @@ public:
         return executor->execute();
     }
 
+    [[nodiscard]] QFuture<T> execute(Awaitables& awaitables)
+    {
+        auto executor = new Executor(std::move(m_settings), std::move(m_handlers)); // "detached" lifetime
+        return executor->execute(awaitables);
+    }
+
 private:
     template<typename F, typename R>
     auto thenImpl(F&& f, std::function<QFuture<R>(const AsyncResult<T>&)>*)
     {
-        auto f2 = [f = std::forward<F>(f)](const AsyncResult<T>& ar, const CancelStatus&) mutable { return f(ar); };
+        auto f2 = [f = std::forward<F>(f)](const AsyncResult<T>& ar, SequentialMediator&) mutable { return f(ar); };
         using Func = decltype(std::function(std::move(std::declval<decltype(f2)>())))*;
         return thenImpl(std::move(f2), Func());
     }
 
     template<typename F, typename R>
-    auto thenImpl(F&& f, std::function<QFuture<R>(const AsyncResult<T>&, const CancelStatus&)>*)
+    auto thenImpl(F&& f, std::function<QFuture<R>(const AsyncResult<T>&, SequentialMediator)>*)
+    {
+        return std::apply(
+            [this, f = std::forward<F>(f)](auto&... xs) mutable {
+                return create<R>(std::move(m_settings), std::move(xs)..., std::forward<F>(f));
+            },
+            m_handlers);
+    }
+
+    template<typename F, typename R>
+    auto thenImpl(F&& f, std::function<QFuture<R>(const AsyncResult<T>&, const SequentialMediator&)>*)
+    {
+        return std::apply(
+            [this, f = std::forward<F>(f)](auto&... xs) mutable {
+                return create<R>(std::move(m_settings), std::move(xs)..., std::forward<F>(f));
+            },
+            m_handlers);
+    }
+
+    template<typename F, typename R>
+    auto thenImpl(F&& f, std::function<QFuture<R>(const AsyncResult<T>&, SequentialMediator&)>*)
     {
         return std::apply(
             [this, f = std::forward<F>(f)](auto&... xs) mutable {
@@ -489,7 +675,7 @@ private:
 class Sequential
 {
 public:
-    Sequential(QObject* context, SequenceOptions options = Default)
+    Sequential(QObject* context, SequentialOptions options = Default)
         : m_settings{context, options}
     { }
 
@@ -512,13 +698,25 @@ private:
     template<typename F, typename R>
     auto startImpl(F&& f, std::function<QFuture<R>()>*)
     {
-        auto f2 = [f = std::forward<F>(f)](const CancelStatus&){ return f(); };
+        auto f2 = [f = std::forward<F>(f)](const SequentialMediator&){ return f(); };
         using Func = decltype(std::function(std::move(std::declval<decltype(f2)>())))*;
         return startImpl(std::move(f2), Func());
     }
 
     template<typename F, typename R>
-    auto startImpl(F&& f, std::function<QFuture<R>(const CancelStatus&)>*)
+    auto startImpl(F&& f, std::function<QFuture<R>(SequentialMediator)>*)
+    {
+        return SequentialPart<R, F>(std::move(m_settings), std::forward<F>(f));
+    }
+
+    template<typename F, typename R>
+    auto startImpl(F&& f, std::function<QFuture<R>(const SequentialMediator&)>*)
+    {
+        return SequentialPart<R, F>(std::move(m_settings), std::forward<F>(f));
+    }
+
+    template<typename F, typename R>
+    auto startImpl(F&& f, std::function<QFuture<R>(SequentialMediator&)>*)
     {
         return SequentialPart<R, F>(std::move(m_settings), std::forward<F>(f));
     }
@@ -534,8 +732,10 @@ using Sequential = Futures_Seq_Internal::Sequential;
 template<typename T>
 using AsyncResult = Futures_Seq_Internal::AsyncResult<T>;
 
-using CancelStatus = Futures_Seq_Internal::CancelStatus;
+using Awaitables = Futures_Seq_Internal::Awaitables;
 
-using SequenceOptions = Futures_Seq_Internal::SequenceOptions;
+using SequentialMediator = Futures_Seq_Internal::SequentialMediator;
+
+using SequentialOptions = Futures_Seq_Internal::SequentialOptions;
 
 } // namespace UtilsQt
