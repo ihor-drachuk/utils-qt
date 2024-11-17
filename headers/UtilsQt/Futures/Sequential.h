@@ -70,11 +70,11 @@
   |      QThreadPool::globalInstance()->start([promise, c, result](){
   |          int x = result.value().toInt();
   |
-  |          while (x < 1000000 && !c.isCanceledRequested()) {
+  |          while (x < 1000000 && !c.isCancelRequested()) {
   |              x++;
   |          }
   |
-  |          if (c.isCanceledRequested()) {
+  |          if (c.isCancelRequested()) {
   |              p.cancel();
   |          } else {
   |              p.finish(x);
@@ -96,7 +96,7 @@
   Each handler in the chain:
   - Receives the AsyncResult from the previous handler (contains result, canceled state or exception).
   - Optionally receives a CancelStatus object, which provides:
-     - Cancel checking: Detect whether cancellation was requested due to external events via `CancelStatus::isCanceledRequested`.
+     - Cancel checking: Detect whether cancellation was requested due to external events via `CancelStatus::isCancelRequested`.
      - Event subscription: React to cancel events via `CancelStatus::subscribe`.
        (Notice! Cancellation of the resulting future and deletion of the context inside `CancelStatus::subscribe` is prohibited).
 
@@ -142,7 +142,7 @@ public:
     CancelStatus& operator=(const CancelStatus&) = default;
     CancelStatus& operator=(CancelStatus&&) = default;
 
-    bool isCanceledRequested() const
+    bool isCancelRequested() const
     {
         std::lock_guard lock(m_data->mutex);
         return m_data->cancelRequested;
@@ -168,6 +168,9 @@ private: // For Executor
     void cancel()
     {
         std::lock_guard lock(m_data->mutex);
+
+        if (m_data->cancelRequested)
+            return;
 
         m_data->cancelRequested = true;
 
@@ -304,7 +307,7 @@ public:
         if constexpr (I == Length) {
             AsyncResult<LastFuncResult> lastAsyncResult = std::move(args...);
 
-            if (m_cancelStatus.isCanceledRequested()) {
+            if (m_cancelStatus.isCancelRequested()) {
                 m_promise.cancel();
 
             } else if (lastAsyncResult.hasException()) {
@@ -333,14 +336,14 @@ public:
 
             // Report start
             if constexpr (I == 0) {
-                assert(!m_cancelStatus.isCanceledRequested());
+                assert(!m_cancelStatus.isCancelRequested());
                 m_promise.start();
             }
 
             // If user requested cancellation or context is gone:
             // - Don't call handlers anymore.
             // - Return canceled future.
-            if (m_cancelStatus.isCanceledRequested()) {
+            if (m_cancelStatus.isCancelRequested()) {
                 m_promise.cancel();
                 return;
             }
