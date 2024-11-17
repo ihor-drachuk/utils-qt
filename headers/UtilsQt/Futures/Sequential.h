@@ -305,6 +305,10 @@ public:
     {
         static_assert(sizeof...(Args) <= 1, "Only one optional argument is possible!");
 
+        // If promise is already finished, don't call handlers anymore.
+        if (m_promise.isFinished())
+            return;
+
         // Last result obtained, report finish.
         if constexpr (I == Length) {
             AsyncResult<LastFuncResult> lastAsyncResult = std::move(args...);
@@ -340,14 +344,6 @@ public:
             if constexpr (I == 0) {
                 assert(!m_cancelStatus.isCancelRequested());
                 m_promise.start();
-            }
-
-            // If user requested cancellation or context is gone:
-            // - Don't call handlers anymore.
-            // - Return canceled future.
-            if (m_cancelStatus.isCancelRequested()) {
-                m_promise.cancel();
-                return;
             }
 
             if constexpr (sizeof...(args) == 1) { // I >= 1
@@ -422,6 +418,9 @@ public:
     void cancel()
     {
         m_cancelStatus.cancel();
+
+        if (!m_promise.isFinished())
+            m_promise.cancel();
 
         for (auto& f : m_futures)
             f.cancel();
