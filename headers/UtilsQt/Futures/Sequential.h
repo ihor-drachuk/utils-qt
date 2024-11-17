@@ -114,15 +114,17 @@
     Automatically finishes the chain if any handler operation raises an exception.
     In this mode, no handlers are executed after the one that encounters an exception.
 
-  Cautions
-  --------
+       Cautions!
+  ------------------
   - Avoid long-running operations in handlers, as they execute in the main thread.
-  - For long-running tasks, consider using QtConcurrent::run within the handler.
+  - For long-running tasks, consider using `QtConcurrent::run` within the handler.
   - If a handler starts a thread, Sequential does not guarantee that the context will remain live for the thread.
     To ensure safety:
-     - The user must explicitly manage this guarantee.
-     - Alternatively, avoid using the context within the thread.
-     - Capture all necessary data by value so the thread has its own copy.
+     - User must explicitly manage this guarantee, e.g.: in context (`this`) destructor call `waitForFinished` on all
+       QFuture objects from `QtConcurrent::run` started in all Sequential objects.
+     - Capture CancelStatus and all necessary data by value so the thread has its own copy or shared pointer.
+    Not main solution, but optionally can be used in some cases:
+     - Avoid using the context (`this`) within the thread.
 */
 
 namespace UtilsQt {
@@ -369,6 +371,10 @@ public:
 
             try {
                 fResult = std::get<I>(m_handlers)(args..., m_cancelStatus);
+
+                if (!fResult.isFinished())
+                    m_futures.append(QFuture<void>(fResult));
+
             } catch (...) {
                 eptr = std::current_exception();
             }
@@ -416,11 +422,15 @@ public:
     void cancel()
     {
         m_cancelStatus.cancel();
+
+        for (auto& f : m_futures)
+            f.cancel();
     }
 
 private:
     Settings m_settings;
     Tuple m_handlers;
+    QVector<QFuture<void>> m_futures;
     CancelStatus m_cancelStatus;
     Promise<LastFuncResult> m_promise;
 };
