@@ -122,7 +122,7 @@ struct MovableCopyableCancellableFunctor
 
     auto operator()(const UtilsQt::AsyncResult<QString>& r, const UtilsQt::CancelStatus& c) const {
         if (isCanceledPtr)
-            *isCanceledPtr |= c.isCanceledRequested();
+            *isCanceledPtr |= c.isCancelRequested();
 
         r.tryRethrow();
         return UtilsQt::createReadyFuture(r.value());
@@ -259,8 +259,8 @@ TEST(UtilsQt, Futures_Sequential_Cancellable_Movable)
     QObject obj;
     bool cf = false;
     auto f = UtilsQt::Sequential(&obj)
-                 .start([m1 = std::move(m1), &cf](const UtilsQt::CancelStatus& c){ (void)m1; cf |= c.isCanceledRequested(); return UtilsQt::createReadyFuture(15); })
-                 .then([m2 = std::move(m2), &cf](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c){ (void)m2; cf |= c.isCanceledRequested(); r.tryRethrow(); return UtilsQt::createReadyFuture(QString::number(r.value())); })
+                 .start([m1 = std::move(m1), &cf](const UtilsQt::CancelStatus& c){ (void)m1; cf |= c.isCancelRequested(); return UtilsQt::createReadyFuture(15); })
+                 .then([m2 = std::move(m2), &cf](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c){ (void)m2; cf |= c.isCancelRequested(); r.tryRethrow(); return UtilsQt::createReadyFuture(QString::number(r.value())); })
                  .execute();
 
     UtilsQt::waitForFuture<QEventLoop>(f);
@@ -279,8 +279,8 @@ TEST(UtilsQt, Futures_Sequential_Cancellable_Copyable)
     QObject obj;
     bool cf = false;
     auto f = UtilsQt::Sequential(&obj)
-                 .start([m1, &cf](const UtilsQt::CancelStatus& c){ (void)m1; cf |= c.isCanceledRequested(); return UtilsQt::createReadyFuture(15); })
-                 .then([m2, &cf](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c){ (void)m2; cf |= c.isCanceledRequested(); r.tryRethrow(); return UtilsQt::createReadyFuture(QString::number(r.value())); })
+                 .start([m1, &cf](const UtilsQt::CancelStatus& c){ (void)m1; cf |= c.isCancelRequested(); return UtilsQt::createReadyFuture(15); })
+                 .then([m2, &cf](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c){ (void)m2; cf |= c.isCancelRequested(); r.tryRethrow(); return UtilsQt::createReadyFuture(QString::number(r.value())); })
                  .execute();
 
     UtilsQt::waitForFuture<QEventLoop>(f);
@@ -301,8 +301,8 @@ TEST(UtilsQt, Futures_Sequential_Cancellable_MovableCopyable)
     MovableCopyableCancellableFunctor mc3 (&cf);
 
     auto f = UtilsQt::Sequential(&obj)
-                 .start([mc1, &cf](const UtilsQt::CancelStatus& c){ (void)mc1; cf |= c.isCanceledRequested(); return UtilsQt::createReadyFuture(15); })
-                 .then([mc2, &cf](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c){ (void)mc2; cf |= c.isCanceledRequested(); r.tryRethrow(); return UtilsQt::createReadyFuture(QString::number(r.value())); })
+                 .start([mc1, &cf](const UtilsQt::CancelStatus& c){ (void)mc1; cf |= c.isCancelRequested(); return UtilsQt::createReadyFuture(15); })
+                 .then([mc2, &cf](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c){ (void)mc2; cf |= c.isCancelRequested(); r.tryRethrow(); return UtilsQt::createReadyFuture(QString::number(r.value())); })
                  .then(mc3)
                  .execute();
 
@@ -400,8 +400,8 @@ TEST(UtilsQt, Futures_Sequential_ExternalCancellation)
 
     QObject obj;
     auto f = UtilsQt::Sequential(&obj)
-                 .start([&](const UtilsQt::CancelStatus& c){ calls++; if (c.isCanceledRequested()) cancels++; return UtilsQt::createTimedFuture(50, 15); })
-                 .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c){ calls++; if (c.isCanceledRequested()) cancels++; r.tryRethrow(); return UtilsQt::createTimedFuture(50, QString::number(r.value())); })
+                 .start([&](const UtilsQt::CancelStatus& c){ calls++; if (c.isCancelRequested()) cancels++; return UtilsQt::createTimedFuture(50, 15); })
+                 .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c){ calls++; if (c.isCancelRequested()) cancels++; r.tryRethrow(); return UtilsQt::createTimedFuture(50, QString::number(r.value())); })
                  .execute();
 
     f.cancel();
@@ -439,15 +439,15 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
     auto factory = [&](){
         return UtilsQt::Sequential(&obj)
         .start([&status](const UtilsQt::CancelStatus& c) {
-                UtilsQt::Promise<int> promise(true);
+            UtilsQt::Promise<int> promise(true);
 
             QThreadPool::globalInstance()->start([c, promise, &status]() mutable {
                 const auto now = Clock::now();
 
-                while (!c.isCanceledRequested() && (Clock::now() - now < 200ms * TimeFactor))
+                while (!c.isCancelRequested() && (Clock::now() - now < 200ms * TimeFactor))
                     QThread::currentThread()->msleep(20);
 
-                if (c.isCanceledRequested()) {
+                if (c.isCancelRequested()) {
                     status.h1Cancel = true;
                     promise.cancel();
                 } else {
@@ -470,10 +470,10 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
             QThreadPool::globalInstance()->start([r, c, promise, &status]() mutable {
                 const auto now = Clock::now();
 
-                while (!c.isCanceledRequested() && (Clock::now() - now < 200ms * TimeFactor))
+                while (!c.isCancelRequested() && (Clock::now() - now < 200ms * TimeFactor))
                     QThread::currentThread()->msleep(20);
 
-                if (c.isCanceledRequested()) {
+                if (c.isCancelRequested()) {
                     status.h2Cancel = true;
                     promise.cancel();
                 } else {
@@ -684,8 +684,8 @@ TEST(UtilsQt, Futures_Sequential_LoosingContext)
     int cancels {};
 
     auto f = UtilsQt::Sequential(obj.get())
-                 .start([&](const UtilsQt::CancelStatus& c){ calls++; if (c.isCanceledRequested()) cancels++; return UtilsQt::createTimedFuture(50, 15); })
-                 .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c){ calls++; if (c.isCanceledRequested()) cancels++; r.tryRethrow(); return UtilsQt::createTimedFuture(50, QString::number(r.value())); })
+                 .start([&](const UtilsQt::CancelStatus& c){ calls++; if (c.isCancelRequested()) cancels++; return UtilsQt::createTimedFuture(50, 15); })
+                 .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c){ calls++; if (c.isCancelRequested()) cancels++; r.tryRethrow(); return UtilsQt::createTimedFuture(50, QString::number(r.value())); })
                  .execute();
 
     obj.reset();
@@ -722,7 +722,7 @@ TEST(UtilsQt, Futures_Sequential_InternalCancellation)
                  .start([&](const UtilsQt::CancelStatus& c) {
                      calls++;
 
-                     if (c.isCanceledRequested())
+                     if (c.isCancelRequested())
                          cancels++;
 
                      return UtilsQt::createTimedCanceledFuture<int>(50);
@@ -730,7 +730,7 @@ TEST(UtilsQt, Futures_Sequential_InternalCancellation)
                  .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c) {
                      calls++;
 
-                     if (c.isCanceledRequested())
+                     if (c.isCancelRequested())
                          cancels++;
 
                      if (r.isCanceled()) {
@@ -764,7 +764,7 @@ TEST(UtilsQt, Futures_Sequential_Exception)
                  .start([&](const UtilsQt::CancelStatus& c) {
                      calls++;
 
-                     if (c.isCanceledRequested())
+                     if (c.isCancelRequested())
                          cancels++;
 
                      return UtilsQt::createExceptionFuture<int>(std::make_exception_ptr(MyException()));
@@ -772,7 +772,7 @@ TEST(UtilsQt, Futures_Sequential_Exception)
                  .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c) {
                      calls++;
 
-                     if (c.isCanceledRequested())
+                     if (c.isCancelRequested())
                          cancels++;
 
                      if (r.hasException())
@@ -811,7 +811,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Cancellation)
                  .start([&](const UtilsQt::CancelStatus& c) {
                      calls++;
 
-                     if (c.isCanceledRequested())
+                     if (c.isCancelRequested())
                          cancels++;
 
                      return UtilsQt::createTimedCanceledFuture<int>(50);
@@ -819,7 +819,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Cancellation)
                  .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c) {
                      calls++;
 
-                     if (c.isCanceledRequested())
+                     if (c.isCancelRequested())
                          cancels++;
 
                      if (r.isCanceled()) {
@@ -853,7 +853,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Exception_1)
                  .start([&](const UtilsQt::CancelStatus& c) {
                      calls++;
 
-                     if (c.isCanceledRequested())
+                     if (c.isCancelRequested())
                          cancels++;
 
                      return UtilsQt::createExceptionFuture<int>(std::make_exception_ptr(MyException()));
@@ -861,7 +861,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Exception_1)
                  .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c) {
                      calls++;
 
-                     if (c.isCanceledRequested())
+                     if (c.isCancelRequested())
                          cancels++;
 
                      if (r.hasException())
@@ -900,7 +900,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Exception_2)
                  .start([&](const UtilsQt::CancelStatus& c) -> QFuture<int> {
                      calls++;
 
-                     if (c.isCanceledRequested())
+                     if (c.isCancelRequested())
                          cancels++;
 
                      throw MyException();
@@ -909,7 +909,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Exception_2)
                  .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c) {
                      calls++;
 
-                     if (c.isCanceledRequested())
+                     if (c.isCancelRequested())
                          cancels++;
 
                      if (r.hasException())
@@ -949,7 +949,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Exception_3)
                  .start([&](const UtilsQt::CancelStatus& c) -> QFuture<int> {
                      calls++;
 
-                     if (c.isCanceledRequested())
+                     if (c.isCancelRequested())
                          cancels++;
 
                      return UtilsQt::createReadyFuture(15);
@@ -957,7 +957,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Exception_3)
                  .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::CancelStatus& c) -> QFuture<QString> {
                      calls++;
 
-                     if (c.isCanceledRequested())
+                     if (c.isCancelRequested())
                          cancels++;
 
                      if (r.hasException())
