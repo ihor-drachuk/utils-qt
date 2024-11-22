@@ -14,6 +14,7 @@
 
 #include <UtilsQt/Futures/Utils.h>
 
+#include <utils-cpp/copy_move.h>
 #include <utils-cpp/threadid.h>
 #include <utils-cpp/scoped_guard.h>
 #include <utils-cpp/function_traits.h>
@@ -498,7 +499,7 @@ public:
             }
 
             if constexpr (sizeof...(args) == 1) { // I >= 1
-                constexpr auto cref = [](const auto& xs) -> const auto& { return xs; };
+                constexpr auto cref = [](const auto& x) -> const auto& { return x; };
                 const auto& prevAsyncResult = cref(args...);
 
                 // Check previous result according to options
@@ -674,6 +675,7 @@ private:
 
 class Sequential
 {
+    NO_COPY_MOVE(Sequential);
 public:
     Sequential(QObject* context, SequentialOptions options = Default)
         : m_settings{context, options}
