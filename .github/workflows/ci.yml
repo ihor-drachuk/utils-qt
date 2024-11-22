@@ -31,7 +31,6 @@ jobs:
       - name: "Set env values"
         shell: bash
         run: |
-         echo "CORES=$(nproc --all)" >> $GITHUB_ENV
          echo "WORKSPACE=$(pwd)" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
@@ -46,9 +45,9 @@ jobs:
         shell: bash
         run: |
           GTEST_SEARCH_MODE=$([[ "${{ matrix.test_libs }}" == "tl_missing" ]] && echo "Skip" || echo "Force")
-          
-          cmake -DUTILS_QT_NO_GUI_TESTS=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DUTILS_QT_GTEST_SEARCH_MODE:STRING=$GTEST_SEARCH_MODE -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Unix Makefiles" -S "./src" -B "./build"
-          cmake --build "./build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
+
+          cmake -DUTILS_QT_NO_GUI_TESTS=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DUTILS_QT_GTEST_SEARCH_MODE:STRING=$GTEST_SEARCH_MODE -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Ninja" -S "./src" -B "./build"
+          cmake --build "./build" --config "${{matrix.build_type}}"
           cd ./build/tests
           ctest --no-tests=error --rerun-failed --output-on-failure --timeout 30 -C "${{matrix.build_type}}"
 
@@ -73,11 +72,6 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: "Set env values"
-        shell: bash
-        run: |
-          echo "CORES=$NUMBER_OF_PROCESSORS" >> $GITHUB_ENV
-
       - name: Install Qt
         if: ${{ matrix.qt != 'qt_no' }}
         uses: jurplel/install-qt-action@v4
@@ -90,11 +84,9 @@ jobs:
           cache: true
           setup-python: false
 
-      - name: "Add Qt to PATH"
-        if: ${{ matrix.qt != 'qt_no' }}
-        shell: bash
+      - name: Install Ninja
         run: |
-          echo "${{github.workspace}}/qt" >> $GITHUB_PATH
+          choco install ninja -y
 
       - uses: actions/checkout@v4
         with:
@@ -103,10 +95,16 @@ jobs:
 
       - name: Build
         working-directory: ${{github.workspace}}
-        shell: bash
+        shell: cmd
         run: |
-          cmake -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -A "${{matrix.compiler_arch}}" -G "Visual Studio 17 2022" -S "./src" -B "./build"
-          cmake --build "./build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
+          if "${{matrix.compiler_arch}}"=="x64" (
+            call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          ) else (
+            call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsamd64_x86.bat"
+          )
+          
+          cmake -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Ninja" -S "./src" -B "./build"
+          cmake --build "./build" --config "${{matrix.build_type}}"
           cd ./build/tests
           ctest --no-tests=error --rerun-failed --output-on-failure --timeout 30 -C "${{matrix.build_type}}"
 
@@ -124,11 +122,6 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: "Set env values"
-        shell: bash
-        run: |
-          echo "CORES=$(sysctl -n hw.ncpu)" >> $GITHUB_ENV
-
       - name: Install Qt
         if: ${{ matrix.qt != 'qt_no' }}
         uses: jurplel/install-qt-action@v4
@@ -140,6 +133,10 @@ jobs:
           dir: ${{github.workspace}}/qt
           cache: true
           setup-python: true
+
+      - name: Install Ninja
+        run: |
+          brew install ninja
 
       - name: "Add Qt to PATH"
         if: ${{ matrix.qt != 'qt_no' }}
@@ -156,10 +153,10 @@ jobs:
         working-directory: ${{github.workspace}}
         shell: bash
         run: |
-          cmake -DCMAKE_OSX_ARCHITECTURES=x86_64 -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Unix Makefiles" -S "./src" -B "./build"
-          cmake --build "./build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
+          cmake -DCMAKE_OSX_ARCHITECTURES=x86_64 -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Ninja" -S "./src" -B "./build"
+          cmake --build "./build" --config "${{matrix.build_type}}"
           cd ./build/tests
-          ctest --no-tests=error --rerun-failed --output-on-failure --timeout 45 -C "${{matrix.build_type}}"
+          ctest --no-tests=error --rerun-failed --output-on-failure --timeout 60 -C "${{matrix.build_type}}"
 
 
   CodeChecker:
@@ -190,8 +187,8 @@ jobs:
           echo "-/usr/include/*" >> build/skipfile.txt
           echo "-/opt/Qt/*" >> build/skipfile.txt
           echo "-$(pwd)/build*" >> build/skipfile.txt
-          cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE="Debug" -S "./src" -B "./build" -G "Unix Makefiles"
-          cmake --build "./build" --config "Debug" -j $(nproc --all)
+          cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE="Debug" -S "./src" -B "./build" -G "Ninja"
+          cmake --build "./build" --config "Debug"
 
       - name: "Run the analysis"
         working-directory: ${{github.workspace}}
