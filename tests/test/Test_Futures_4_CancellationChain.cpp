@@ -58,17 +58,40 @@ TEST(UtilsQt, Futures_CancellationChain_Merge)
 }
 
 
+TEST(UtilsQt, Futures_CancellationChain_RetryingFutureRR)
+{
+    int calls {0};
+    auto future = createRetryingFutureRR(
+        nullptr,
+        [&calls]() -> QFuture<int> {
+            calls++;
+            return UtilsQt::createTimedFuture(27, 52);
+        },
+        [](const std::optional<int>& result) -> ValidatorDecision {
+            return result.value_or(-1) == 48 ? ValidatorDecision::ResultIsValid : ValidatorDecision::NeedRetry;
+        });
+
+    ASSERT_FALSE(future.isCanceled());
+    future.cancel();
+    ASSERT_TRUE(future.isCanceled());
+
+    waitForFuture<QEventLoop>(future);
+
+    ASSERT_EQ(calls, 1);
+}
+
 TEST(UtilsQt, Futures_CancellationChain_RetryingFuture)
 {
     int calls {0};
-    auto future = createRetryingFuture(nullptr, [&calls]() -> QFuture<int> {
-                                        calls++;
-                                        return UtilsQt::createTimedFuture(27, 52);
-                                    },
-                                    [](const std::optional<int>& result) -> ValidatorDecision {
-                                        return result.value_or(-1) == 48 ? ValidatorDecision::ResultIsValid :
-                                                                           ValidatorDecision::NeedRetry;
-                                    });
+    auto future = createRetryingFuture(
+        nullptr,
+        [&calls]() -> QFuture<int> {
+            calls++;
+            return UtilsQt::createTimedFuture(27, 52);
+        },
+        [](const std::optional<int>& result) -> ValidatorDecision {
+            return result.value_or(-1) == 48 ? ValidatorDecision::ResultIsValid : ValidatorDecision::NeedRetry;
+        });
 
     ASSERT_FALSE(future.isCanceled());
     future.cancel();
