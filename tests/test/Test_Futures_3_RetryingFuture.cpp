@@ -19,7 +19,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Basic_Bool)
     QObject context;
     int count = 3;
 
-    auto future = createRetryingFuture(&context, [&count]() -> QFuture<bool> {
+    auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<bool> {
                                         count--;
                                         return createTimedFuture(50, true);
                                     });
@@ -35,7 +35,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Basic_Int)
     QObject context;
     int count = 3;
 
-    auto future = createRetryingFuture(&context, [&count]() -> QFuture<int> {
+    auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<int> {
                                         count--;
                                         return createTimedFuture(100, 52);
                                     });
@@ -51,7 +51,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Retried)
     QObject context;
     int count = 2;
 
-    auto future = createRetryingFuture(&context, [&count]() -> QFuture<bool> {
+    auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<bool> {
                                         count--;
                                         if (count == 0)
                                             return createTimedFuture(48, true);
@@ -68,7 +68,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Retried_Canceled)
     QObject context;
     int count = 3;
 
-    auto future = createRetryingFuture(&context, [&count]() -> QFuture<bool> {
+    auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<bool> {
                                         count--;
                                         if (count == 0)
                                             return createTimedFuture(48, true);
@@ -85,7 +85,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Retried_Canceled_2)
     QObject context;
     int count = 3;
 
-    auto future = createRetryingFuture(&context, [&count]() -> QFuture<bool> {
+    auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<bool> {
                                         count--;
                                         return createTimedCanceledFuture<bool>(14);
                                     });
@@ -100,7 +100,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Validator)
     QObject context;
     int count = 3;
 
-    auto future = createRetryingFuture(&context, [&count]() -> QFuture<int> {
+    auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<int> {
                                         count--;
                                         if (count == 0)
                                             return createTimedFuture(21, 48);
@@ -123,7 +123,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Validator_Instant)
     QObject context;
     int count = 3;
 
-    auto future = createRetryingFuture(&context, [&count]() -> QFuture<int> {
+    auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<int> {
                                         count--;
                                         if (count == 0)
                                             return createTimedFuture(21, 48);
@@ -147,7 +147,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Validator_Canceled)
     QObject context;
     int count = 3;
 
-    auto future = createRetryingFuture(&context, [&count]() -> QFuture<bool> {
+    auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<bool> {
                                         count--;
                                         return createTimedFuture(14, false);
                                     },
@@ -169,7 +169,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Cancel_Target)
     QObject context;
     int count = 3;
 
-    auto future = createRetryingFuture(&context, [&count]() -> QFuture<int> {
+    auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<int> {
                                         count--;
                                         if (count == 0)
                                             return createTimedFuture(21, 48);
@@ -198,7 +198,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Context)
         QObject context;
 
 
-        future = createRetryingFuture(&context, [&count]() -> QFuture<int> {
+        future = createRetryingFutureRR(&context, [&count]() -> QFuture<int> {
                                        count--;
                                        if (count == 0)
                                            return createTimedFuture(21, 48);
@@ -224,7 +224,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Lifetime)
     LifetimeTracker tracker;
 
     ASSERT_EQ(tracker.count(), 1);
-    auto f = createRetryingFuture(nullptr, [tracker](){ (void)tracker; return createTimedFuture(10); });
+    auto f = createRetryingFutureRR(nullptr, [tracker](){ (void)tracker; return createTimedFuture(10); });
     ASSERT_EQ(tracker.count(), 2);
 
     waitForFuture<QEventLoop>(f);
@@ -245,7 +245,7 @@ TEST(UtilsQt, Futures_RetryingFuture_PreciseResultValidation)
     };
 
     {
-        auto future = createRetryingFuture(nullptr, []() { return createTimedFuture(27, 52); }, validator);
+        auto future = createRetryingFutureRR(nullptr, []() { return createTimedFuture(27, 52); }, validator);
 
         waitForFuture<QEventLoop>(future);
         ASSERT_EQ(future.result().result, 52);
@@ -253,7 +253,7 @@ TEST(UtilsQt, Futures_RetryingFuture_PreciseResultValidation)
     }
 
     {
-        auto future = createRetryingFuture(nullptr, []() { return createTimedFuture(27, 101); }, validator);
+        auto future = createRetryingFutureRR(nullptr, []() { return createTimedFuture(27, 101); }, validator);
 
         waitForFuture<QEventLoop>(future);
         ASSERT_EQ(future.result().result, 101);
@@ -262,7 +262,7 @@ TEST(UtilsQt, Futures_RetryingFuture_PreciseResultValidation)
 
     {
         int result = 102;
-        auto future = createRetryingFuture(nullptr, [&result]() { return createTimedFuture(27, result--); }, validator);
+        auto future = createRetryingFutureRR(nullptr, [&result]() { return createTimedFuture(27, result--); }, validator);
 
         waitForFuture<QEventLoop>(future);
         ASSERT_EQ(future.result().result, 100);

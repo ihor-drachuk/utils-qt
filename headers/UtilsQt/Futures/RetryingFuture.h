@@ -10,6 +10,7 @@
 #include <optional>
 #include <type_traits>
 #include <utils-cpp/copy_move.h>
+#include <UtilsQt/Futures/Converter.h>
 
 /*            Reminder
   -------------------------------
@@ -256,7 +257,7 @@ template<typename AsyncCall,
          typename Helper = RetryingFutureInternal::ContextHelper<RetryingResult<PT>>,
          typename ResultValidator = decltype(Helper::getDefaultValidator())
          >
-QFuture<RetryingResult<PT>> createRetryingFuture(QObject* context,
+QFuture<RetryingResult<PT>> createRetryingFutureRR(QObject* context,
                                 const AsyncCall& asyncCall,
                                 ResultValidator resultValidator = Helper::getDefaultValidator(),
                                 unsigned int callsLimit = 3,
@@ -266,6 +267,25 @@ QFuture<RetryingResult<PT>> createRetryingFuture(QObject* context,
     auto ctx = new Context(context, asyncCall, resultValidator, callsLimit, callsInterval);
 
     return ctx->getTargetFuture();
+}
+
+template<typename AsyncCall,
+         typename RT = std::invoke_result_t<AsyncCall>,
+         typename PT = typename RetryingFutureInternal::QFutureUnwrapper<RT>::Type,
+         typename Helper = RetryingFutureInternal::ContextHelper<RetryingResult<PT>>,
+         typename ResultValidator = decltype(Helper::getDefaultValidator())
+         >
+QFuture<PT> createRetryingFuture(QObject* context,
+                                 const AsyncCall& asyncCall,
+                                 ResultValidator resultValidator = Helper::getDefaultValidator(),
+                                 unsigned int callsLimit = 3,
+                                 unsigned int callsInterval = 1000)
+{
+    auto f = createRetryingFutureRR(context, asyncCall, resultValidator, callsLimit, callsInterval);
+
+    auto f2 = convertFuture(context, f, UtilsQt::ConverterFlags::IgnoreNullContext, [](const RetryingResult<PT>& x){ return x.result; });
+
+    return f2;
 }
 
 template<typename T>
