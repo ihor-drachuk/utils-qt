@@ -711,8 +711,8 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellationSubscription)
         ASSERT_FALSE(f.isCanceled());
         ASSERT_EQ(f.resultCount(), 1);
         ASSERT_EQ(f.result(), 17);
-        ASSERT_FALSE(awaitables.isRunning());
-        ASSERT_GE(duration, 200ms * TimeFactor);
+        //ASSERT_FALSE(awaitables.isRunning());  <---| Likely true, but not guaranteed without `wait`
+        ASSERT_GE(duration, 200ms * TimeFactor); //  | as promise.finish() occurs earlier than thread finishes.
         awaitables.confirmWait();
     }
 }
