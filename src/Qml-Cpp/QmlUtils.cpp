@@ -112,7 +112,7 @@ QString QmlUtils::clipboardGetText() const
     return qApp->clipboard()->text();
 }
 
-QString QmlUtils::getEnvironentVariable(const QString& name) const
+QString QmlUtils::getEnvironmentVariable(const QString& name) const
 {
     return QString::fromLatin1(qgetenv(name.toLatin1().constData()));
 }

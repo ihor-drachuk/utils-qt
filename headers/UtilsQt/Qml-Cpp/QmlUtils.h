@@ -51,7 +51,7 @@ public:
     Q_INVOKABLE QString clipboardGetText() const;
 
     // Env. variables
-    Q_INVOKABLE QString getEnvironentVariable(const QString& name) const;
+    Q_INVOKABLE QString getEnvironmentVariable(const QString& name) const;
 
     // Path
     Q_INVOKABLE PathDetails analyzePath(const QString& str) const;
