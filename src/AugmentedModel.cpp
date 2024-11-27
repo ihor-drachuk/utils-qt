@@ -311,7 +311,7 @@ bool AugmentedModel::setData(const QModelIndex& index, const QVariant& value, in
         return false;
 
     if (isCalculatedRole(role)) {
-        assert(!"setData on calculated role is not supported!");
+        assert(false && "setData on calculated role is not supported!");
         return false;
     } else {
         return impl().srcModel->setData(index, value, role);

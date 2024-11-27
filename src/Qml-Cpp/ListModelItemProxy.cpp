@@ -345,17 +345,17 @@ void ListModelItemProxy::onLayoutChanged(const QList<QPersistentModelIndex>& /*p
 
 void ListModelItemProxy::onColumnsAboutToBeInserted(const QModelIndex& /*parent*/, int /*first*/, int /*last*/)
 {
-    assert(!"Unsupported");
+    assert(false && "Unsupported");
 }
 
 void ListModelItemProxy::onColumnsAboutToBeRemoved(const QModelIndex& /*parent*/, int /*first*/, int /*last*/)
 {
-    assert(!"Unsupported");
+    assert(false && "Unsupported");
 }
 
 void ListModelItemProxy::onColumnsAboutToBeMoved(const QModelIndex& /*sourceParent*/, int /*sourceStart*/, int /*sourceEnd*/, const QModelIndex& /*destinationParent*/, int /*destinationColumn*/)
 {
-    assert(!"Unsupported");
+    assert(false && "Unsupported");
 }
 
 void ListModelItemProxy::setPropertyMap(QQmlPropertyMap* value)
