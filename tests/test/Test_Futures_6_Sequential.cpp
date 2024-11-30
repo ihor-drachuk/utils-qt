@@ -625,7 +625,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellationSubscription)
         UtilsQt::waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
-        ASSERT_TRUE(awaitables.isRunning());
+        // ASSERT_TRUE(awaitables.isRunning()); -- Likely true, but not guaranteed, as thread could finish earlier.
         awaitables.wait();
         ASSERT_EQ(f.resultCount(), 0);
         ASSERT_LE(duration, 150ms * TimeFactor);
@@ -668,7 +668,7 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellationSubscription)
         UtilsQt::waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
-        ASSERT_TRUE(awaitables.isRunning());
+        //ASSERT_TRUE(awaitables.isRunning()); -- Likely true, but not guaranteed, as thread could finish earlier.
         awaitables.wait();
         ASSERT_EQ(f.resultCount(), 0);
         ASSERT_GE(duration, 200ms * TimeFactor);
