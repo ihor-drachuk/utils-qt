@@ -537,6 +537,18 @@ void waitForFuture(const QFuture<T>& future, const std::optional<unsigned>& time
 }
 
 
+template<typename EventLoopType, typename T>
+std::optional<T> waitForFutureRet(const QFuture<T>& future, const std::optional<unsigned>& timeout = {})
+{
+    waitForFuture<EventLoopType, T>(future, timeout);
+
+    if (!future.isFinished() || future.isCanceled())
+        return {};
+
+    return future.result();
+}
+
+
 template<typename T>
 [[nodiscard]] QFuture<T> createReadyFuture(const T& value)
 {
