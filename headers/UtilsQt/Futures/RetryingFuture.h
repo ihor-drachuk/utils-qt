@@ -19,7 +19,7 @@
                        context,       // controls lifetime
                        asyncCall,     // []() -> QFuture<T> { ... }
                        validator,     // [](const std::optional<T>& result) -> ValidatorDecision { ... }
-                       callsLimit,    // Default: 3
+                       optCallsLimit, // Default: 3
                        callsInterval  // Default: 1000
   );
 
@@ -43,6 +43,12 @@
 */
 
 namespace UtilsQt {
+
+namespace RetryingFuture {
+constexpr unsigned int DefaultCallsLimit = 3;
+constexpr std::optional<unsigned int> UnlimitedCalls = std::nullopt;
+constexpr unsigned int DefaultCallsInterval = 1000;
+} // namespace RetryingFuture
 
 enum ValidatorDecision
 {
@@ -155,15 +161,15 @@ struct Context : public QObject
     Context(QObject* context,
             const AsyncCall& asyncCall,
             ResultValidator resultValidator,
-            unsigned int callsLimit,
+            const std::optional<unsigned int>& optCallsLimit,
             unsigned int callsInterval)
         : QObject(context),
           m_asyncCall(asyncCall),
           m_resultValidator(resultValidator),
-          m_callsLimit(callsLimit),
+          m_optCallsLimit(optCallsLimit),
           m_callsInterval(callsInterval)
     {
-        assert(m_callsLimit >= 1);
+        assert(m_optCallsLimit.value_or(1) >= 1);
 
         QObject::connect(&m_targetFutureWatcher, &QFutureWatcherBase::canceled, this, &This::onTargetCanceled);
         m_targetFutureWatcher.setFuture(m_targetFuture.future());
@@ -205,13 +211,14 @@ private:
                 break;
 
             case ValidatorDecision::NeedRetry:
-                if (m_callsDone == m_callsLimit) {
+                if (m_callsDone == m_optCallsLimit) {
                     Helper::reportFinished(m_targetFuture, m_inFutureWatcher.future(), false);
                     deleteLater();
                     return;
                 }
 
-                assert(m_callsDone < m_callsLimit);
+                if (m_optCallsLimit)
+                    assert(m_callsDone < m_optCallsLimit);
 
                 if (m_callsInterval) {
                     QTimer::singleShot(m_callsInterval, this, &This::doCall);
@@ -230,7 +237,8 @@ private:
     }
 
     void doCall() {
-        m_callsDone++;
+        if (m_optCallsLimit)
+            m_callsDone++;
 
         auto f = m_asyncCall();
         m_inFutureWatcher.setFuture(f);
@@ -239,8 +247,8 @@ private:
 private:
     AsyncCall m_asyncCall;
     ResultValidator m_resultValidator;
-    unsigned int m_callsLimit {};
-    unsigned int m_callsInterval {};
+    const std::optional<unsigned int> m_optCallsLimit;
+    const unsigned int m_callsInterval {};
     unsigned int m_callsDone {};
 
     QFutureInterface<RetryingResult<PayloadType>> m_targetFuture;
@@ -260,11 +268,11 @@ template<typename AsyncCall,
 QFuture<RetryingResult<PT>> createRetryingFutureRR(QObject* context,
                                 const AsyncCall& asyncCall,
                                 ResultValidator resultValidator = Helper::getDefaultValidator(),
-                                unsigned int callsLimit = 3,
-                                unsigned int callsInterval = 1000)
+                                const std::optional<unsigned int>& optCallsLimit = RetryingFuture::DefaultCallsLimit,
+                                unsigned int callsInterval = RetryingFuture::DefaultCallsInterval)
 {
     using Context = RetryingFutureInternal::Context<AsyncCall, ResultValidator, PT>;
-    auto ctx = new Context(context, asyncCall, resultValidator, callsLimit, callsInterval);
+    auto ctx = new Context(context, asyncCall, resultValidator, optCallsLimit, callsInterval);
 
     return ctx->getTargetFuture();
 }
@@ -278,10 +286,10 @@ template<typename AsyncCall,
 QFuture<PT> createRetryingFuture(QObject* context,
                                  const AsyncCall& asyncCall,
                                  ResultValidator resultValidator = Helper::getDefaultValidator(),
-                                 unsigned int callsLimit = 3,
-                                 unsigned int callsInterval = 1000)
+                                 const std::optional<unsigned int>& optCallsLimit = RetryingFuture::DefaultCallsLimit,
+                                 unsigned int callsInterval = RetryingFuture::DefaultCallsInterval)
 {
-    auto f = createRetryingFutureRR(context, asyncCall, resultValidator, callsLimit, callsInterval);
+    auto f = createRetryingFutureRR(context, asyncCall, resultValidator, optCallsLimit, callsInterval);
 
     auto f2 = convertFuture(context, f, UtilsQt::ConverterFlags::IgnoreNullContext, [](const RetryingResult<PT>& x){ return x.result; });
 
