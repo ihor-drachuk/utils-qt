@@ -6,7 +6,7 @@
 #include <QObject>
 #include <QPolygonF>
 #include <QVector>
-#include <utils-cpp/copy_move.h>
+#include <utils-cpp/default_ctor_ops.h>
 #include <utils-cpp/pimpl.h>
 
 

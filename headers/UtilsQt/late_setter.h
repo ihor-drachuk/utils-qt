@@ -3,7 +3,7 @@
  * Contact:  ihor-drachuk-libs@pm.me  */
 
 #pragma once
-#include <utils-cpp/copy_move.h>
+#include <utils-cpp/default_ctor_ops.h>
 
 template<typename T, typename Signal>
 class LateSetter

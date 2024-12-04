@@ -14,7 +14,7 @@
 
 #include <UtilsQt/Futures/Utils.h>
 
-#include <utils-cpp/copy_move.h>
+#include <utils-cpp/default_ctor_ops.h>
 #include <utils-cpp/threadid.h>
 #include <utils-cpp/scoped_guard.h>
 #include <utils-cpp/function_traits.h>

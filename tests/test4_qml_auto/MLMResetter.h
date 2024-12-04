@@ -5,7 +5,7 @@
 #pragma once
 #include <QObject>
 #include <QQmlEngine>
-#include <utils-cpp/copy_move.h>
+#include <utils-cpp/default_ctor_ops.h>
 #include <UtilsQt/MergedListModel.h>
 
 class MLMResetter : public QObject

@@ -7,7 +7,7 @@
 #include <QVariantList>
 #include <functional>
 #include <variant>
-#include <utils-cpp/copy_move.h>
+#include <utils-cpp/default_ctor_ops.h>
 #include <utils-cpp/pimpl.h>
 
 class AugmentedModel : public QAbstractItemModel

@@ -4,7 +4,7 @@
 
 #pragma once
 #include <QQuickItem>
-#include <utils-cpp/copy_move.h>
+#include <utils-cpp/default_ctor_ops.h>
 
 class MultibindingItem;
 
