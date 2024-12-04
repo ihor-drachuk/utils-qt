@@ -20,7 +20,7 @@
 namespace {
 
 #ifdef UTILS_QT_OS_MACOS
-constexpr auto TimeFactor = 5;
+constexpr auto TimeFactor = 7;
 #else
 constexpr auto TimeFactor = 1;
 #endif // UTILS_QT_OS_MACOS
