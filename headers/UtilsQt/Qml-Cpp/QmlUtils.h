@@ -9,7 +9,7 @@
 #include <QPoint>
 #include <QList>
 #include <QStringList>
-#include <utils-cpp/copy_move.h>
+#include <utils-cpp/default_ctor_ops.h>
 #include <utils-cpp/pimpl.h>
 
 class QQuickItem;

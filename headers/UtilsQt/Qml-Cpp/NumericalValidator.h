@@ -5,7 +5,7 @@
 #pragma once
 #include <QValidator>
 #include <QVariant>
-#include <utils-cpp/copy_move.h>
+#include <utils-cpp/default_ctor_ops.h>
 #include <utils-cpp/pimpl.h>
 
 class NumericalValidator : public QValidator

@@ -5,7 +5,7 @@
 #pragma once
 #include <QLatin1String>
 #include <QAbstractListModel>
-#include <utils-cpp/copy_move.h>
+#include <utils-cpp/default_ctor_ops.h>
 #include <utils-cpp/pimpl.h>
 #include <functional>
 #include <variant>

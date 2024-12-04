@@ -6,7 +6,7 @@
 #include <QObject>
 #include <QString>
 #include <QUrl>
-#include <utils-cpp/copy_move.h>
+#include <utils-cpp/default_ctor_ops.h>
 #include <utils-cpp/pimpl.h>
 
 class FileWatcher : public QObject
