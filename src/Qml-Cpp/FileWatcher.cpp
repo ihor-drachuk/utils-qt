@@ -4,9 +4,10 @@
 
 #include <UtilsQt/Qml-Cpp/FileWatcher.h>
 
+#include <UtilsQt/SetterWithDeferredSignal.h>
+
 #include <stdexcept>
 #include <limits>
-#include <UtilsQt/late_setter.h>
 
 #include <QFileSystemWatcher>
 #include <QFile>
@@ -55,8 +56,8 @@ void FileWatcher::setFileName(const QUrl& value)
         return;
 
     bool isChanged = false;
-    auto _ls1 = MakeLateSetter(impl().fileName, value, [this](const auto& v){ emit fileNameChanged(v); }, &isChanged);
-    auto _ls2 = MakeLateSetter(impl().localFileName, value.toLocalFile(), [this](const auto& v){ emit localFileNameChanged(v); }, &isChanged);
+    auto _ls1 = MakeSetterWithDeferredSignal(impl().fileName, value, [this](const auto& v){ emit fileNameChanged(v); }, &isChanged);
+    auto _ls2 = MakeSetterWithDeferredSignal(impl().localFileName, value.toLocalFile(), [this](const auto& v){ emit localFileNameChanged(v); }, &isChanged);
     recreateWatcher();
     updateFileInfo(&isChanged, false);
 }
@@ -72,8 +73,8 @@ void FileWatcher::setLocalFileName(const QString& value)
         return;
 
     bool isChanged = false;
-    auto _ls1 = MakeLateSetter(impl().localFileName, value,                                     [this](const auto& v){ emit localFileNameChanged(v); }, &isChanged);
-    auto _ls2 = MakeLateSetter(impl().fileName,      QUrl::fromLocalFile(impl().localFileName), [this](const auto& v){ emit fileNameChanged(v); }, &isChanged);
+    auto _ls1 = MakeSetterWithDeferredSignal(impl().localFileName, value,                                     [this](const auto& v){ emit localFileNameChanged(v); }, &isChanged);
+    auto _ls2 = MakeSetterWithDeferredSignal(impl().fileName,      QUrl::fromLocalFile(impl().localFileName), [this](const auto& v){ emit fileNameChanged(v); }, &isChanged);
     recreateWatcher();
     updateFileInfo(&isChanged, false);
 }
@@ -125,9 +126,9 @@ void FileWatcher::updateFileInfo(bool* changedFlag, bool readdPaths)
     bool ownIsChanged = false;
     if (!changedFlag) changedFlag = &ownIsChanged;
 
-    auto _ls3 = MakeLateSetter(impl().fileExists, QFile::exists(impl().localFileName),   [this](const auto& v){ emit fileExistsChanged(v); }, changedFlag);
-    auto _ls4 = MakeLateSetter(impl().hasAccess,  checkReadAccess(impl().localFileName), [this](const auto& v){ emit hasAccessChanged(v); }, changedFlag);
-    auto _ls5 = MakeLateSetter(impl().size,       checkSize(impl().localFileName),       [this](const auto& v){ emit sizeChanged(v); }, changedFlag);
+    auto _ls3 = MakeSetterWithDeferredSignal(impl().fileExists, QFile::exists(impl().localFileName),   [this](const auto& v){ emit fileExistsChanged(v); }, changedFlag);
+    auto _ls4 = MakeSetterWithDeferredSignal(impl().hasAccess,  checkReadAccess(impl().localFileName), [this](const auto& v){ emit hasAccessChanged(v); }, changedFlag);
+    auto _ls5 = MakeSetterWithDeferredSignal(impl().size,       checkSize(impl().localFileName),       [this](const auto& v){ emit sizeChanged(v); }, changedFlag);
 
     if (readdPaths) {
         impl().fsWatcher->addPaths(QStringList{
