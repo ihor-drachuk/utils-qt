@@ -199,59 +199,59 @@ TEST(UtilsQt, Futures_Utils_onFinished)
 {
     {
         QObject ctx;
-        bool ok = false;
-        bool ok2 = false;
-        bool ok3 = false;
+        std::optional<bool> checkpoint1;
+        std::optional<bool> checkpoint2;
+        std::optional<bool> checkpoint3;
         auto f = createReadyFuture();
-        onFinished(f, &ctx, [&ok](){ ok = true; });
-        onResult(f, &ctx, [&ok2](){ ok2 = true; });
-        onCanceled(f, &ctx, [&ok3](){ ok3 = true; });
-        ASSERT_TRUE(ok);
-        ASSERT_TRUE(ok2);
-        ASSERT_FALSE(ok3);
+        onFinished(f, &ctx, [&checkpoint1](const std::optional<std::monostate>& optResult){ checkpoint1 = optResult.has_value(); });
+        onResult(f, &ctx, [&checkpoint2](){ checkpoint2 = true; });
+        onCanceled(f, &ctx, [&checkpoint3](){ checkpoint3 = true; });
+        EXPECT_EQ(checkpoint1, std::optional(true));
+        EXPECT_EQ(checkpoint2, std::optional(true));
+        EXPECT_EQ(checkpoint3, std::optional<bool>());
     }
 
     {
         QObject ctx;
         std::optional<int> result;
         int result2 = -1;
-        bool ok3 = false;
+        std::optional<bool> checkpoint3;
         auto f = createReadyFuture(170);
         onFinished(f, &ctx, [&result](const std::optional<int>& value){ result = value; });
         onResult(f, &ctx, [&result2](int value){ result2 = value; });
-        onCanceled(f, &ctx, [&ok3](){ ok3 = true; });
+        onCanceled(f, &ctx, [&checkpoint3](){ checkpoint3 = true; });
         ASSERT_TRUE(result.has_value());
         ASSERT_EQ(result.value(), 170);
         ASSERT_EQ(result2, 170);
-        ASSERT_FALSE(ok3);
+        EXPECT_EQ(checkpoint3, std::optional<bool>());
     }
 
     {
         QObject ctx;
-        bool ok = false;
-        bool ok2 = false;
-        bool ok3 = false;
+        std::optional<bool> checkpoint1;
+        std::optional<bool> checkpoint2;
+        std::optional<bool> checkpoint3;
         auto f = createCanceledFuture<void>();
-        onFinished(f, &ctx, [&ok](){ ok = true; });
-        onResult(f, &ctx, [&ok2](){ ok2 = true; });
-        onCanceled(f, &ctx, [&ok3](){ ok3 = true; });
-        ASSERT_TRUE(ok);
-        ASSERT_FALSE(ok2);
-        ASSERT_TRUE(ok3);
+        onFinished(f, &ctx, [&checkpoint1](const std::optional<std::monostate>& optResult){ checkpoint1 = optResult.has_value(); });
+        onResult(f, &ctx, [&checkpoint2](){ checkpoint2 = true; });
+        onCanceled(f, &ctx, [&checkpoint3](){ checkpoint3 = true; });
+        EXPECT_EQ(checkpoint1, std::optional(false));
+        EXPECT_EQ(checkpoint2, std::optional<bool>());
+        EXPECT_EQ(checkpoint3, std::optional(true));
     }
 
     {
         QObject ctx;
         std::optional<int> result;
         int result2 = -1;
-        bool ok3 = false;
+        std::optional<bool> checkpoint3;
         auto f = createCanceledFuture<int>();
         onFinished(f, &ctx, [&result](const std::optional<int>& value){ result = value; });
         onResult(f, &ctx, [&result2](int value){ result2 = value; });
-        onCanceled(f, &ctx, [&ok3](){ ok3 = true; });
+        onCanceled(f, &ctx, [&checkpoint3](){ checkpoint3 = true; });
         ASSERT_FALSE(result.has_value());
         ASSERT_EQ(result2, -1);
-        ASSERT_TRUE(ok3);
+        EXPECT_EQ(checkpoint3, std::optional(true));
     }
 }
 
@@ -259,63 +259,63 @@ TEST(UtilsQt, Futures_Utils_Timed_onFinished)
 {
     {
         QObject ctx;
-        bool ok = false;
-        bool ok2 = false;
-        bool ok3 = false;
+        std::optional<bool> checkpoint1;
+        std::optional<bool> checkpoint2;
+        std::optional<bool> checkpoint3;
         auto f = createTimedFuture(20);
-        onFinished(f, &ctx, [&ok](){ ok = true; });
-        onResult(f, &ctx, [&ok2](){ ok2 = true; });
-        onCanceled(f, &ctx, [&ok3](){ ok3 = true; });
+        onFinished(f, &ctx, [&checkpoint1](const std::optional<std::monostate>& optResult){ checkpoint1 = optResult.has_value(); });
+        onResult(f, &ctx, [&checkpoint2](){ checkpoint2 = true; });
+        onCanceled(f, &ctx, [&checkpoint3](){ checkpoint3 = true; });
         waitForFuture<QEventLoop>(f);
-        ASSERT_TRUE(ok);
-        ASSERT_TRUE(ok2);
-        ASSERT_FALSE(ok3);
+        EXPECT_EQ(checkpoint1, std::optional(true));
+        EXPECT_EQ(checkpoint2, std::optional(true));
+        EXPECT_EQ(checkpoint3, std::optional<bool>());
     }
 
     {
         QObject ctx;
         std::optional<int> result;
         int result2 = -1;
-        bool ok3 = false;
+        std::optional<bool> checkpoint3;
         auto f = createTimedFuture(20, 170);
         onFinished(f, &ctx, [&result](const std::optional<int>& value){ result = value; });
         onResult(f, &ctx, [&result2](int value){ result2 = value; });
-        onCanceled(f, &ctx, [&ok3](){ ok3 = true; });
+        onCanceled(f, &ctx, [&checkpoint3](){ checkpoint3 = true; });
         waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(result.has_value());
         ASSERT_EQ(result.value(), 170);
         ASSERT_EQ(result2, 170);
-        ASSERT_FALSE(ok3);
+        EXPECT_EQ(checkpoint3, std::optional<bool>());
     }
 
     {
         QObject ctx;
-        bool ok = false;
-        bool ok2 = false;
-        bool ok3 = false;
+        std::optional<bool> checkpoint1;
+        std::optional<bool> checkpoint2;
+        std::optional<bool> checkpoint3;
         auto f = createTimedCanceledFuture<void>(20);
-        onFinished(f, &ctx, [&ok](){ ok = true; });
-        onResult(f, &ctx, [&ok2](){ ok2 = true; });
-        onCanceled(f, &ctx, [&ok3](){ ok3 = true; });
+        onFinished(f, &ctx, [&checkpoint1](const std::optional<std::monostate>& optResult){ checkpoint1 = optResult.has_value(); });
+        onResult(f, &ctx, [&checkpoint2](){ checkpoint2 = true; });
+        onCanceled(f, &ctx, [&checkpoint3](){ checkpoint3 = true; });
         waitForFuture<QEventLoop>(f);
-        ASSERT_TRUE(ok);
-        ASSERT_FALSE(ok2);
-        ASSERT_TRUE(ok3);
+        EXPECT_EQ(checkpoint1, std::optional(false));
+        EXPECT_EQ(checkpoint2, std::optional<bool>());
+        EXPECT_EQ(checkpoint3, std::optional(true));
     }
 
     {
         QObject ctx;
         std::optional<int> result;
         int result2 = -1;
-        bool ok3 = false;
+        std::optional<bool> checkpoint3;
         auto f = createTimedCanceledFuture<int>(20);
         onFinished(f, &ctx, [&result](const std::optional<int>& value){ result = value; });
         onResult(f, &ctx, [&result2](int value){ result2 = value; });
-        onCanceled(f, &ctx, [&ok3](){ ok3 = true; });
+        onCanceled(f, &ctx, [&checkpoint3](){ checkpoint3 = true; });
         waitForFuture<QEventLoop>(f);
         ASSERT_FALSE(result.has_value());
         ASSERT_EQ(result2, -1);
-        ASSERT_TRUE(ok3);
+        EXPECT_EQ(checkpoint3, std::optional(true));
     }
 }
 
@@ -381,7 +381,7 @@ TEST(UtilsQt, Futures_Utils_Lifetime)
     auto f = createTimedFuture(10, &context);
 
     ASSERT_EQ(data.count(), 1);
-    onFinished(f, &context, [tracker](){ (void)tracker; });
+    onFinished(f, &context, [tracker](const auto&){ (void)tracker; });
     ASSERT_EQ(data.count(), 2);
 
     waitForFuture<QEventLoop>(f);

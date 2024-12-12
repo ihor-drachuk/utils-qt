@@ -23,13 +23,14 @@
           Description
 ------------------------------
 
- * onFinished(QFuture<T>, context, handler);
+ * onFinished(QFuture<Type>, context, handler);
 
    QFuture<Type>  -->  std::optional<Type>  (always)
 
    QFuture<Type> is converted to std::optional<Type> and passed to
    handler, when future is finished.
 
+   If T == void, then QFuture<Type> is converted to std::optional<std::monostate>.
 
  * onFinishedNP(QFuture<T>, context, handler);
 
@@ -109,7 +110,7 @@ void call(const C& c, const QFuture<T>& future)
 template <typename C>
 void call(const C& c, const QFuture<void>&)
 {
-    const_cast<C&>(c)();
+    const_cast<C&>(c)(std::optional<std::monostate>(std::monostate()));
 }
 
 template <typename Callable, typename T>
@@ -121,7 +122,7 @@ void callCanceled(const Callable& callable, const QFuture<T>&)
 template <typename Callable>
 void callCanceled(const Callable& callable, const QFuture<void>&)
 {
-    const_cast<Callable&>(callable)();
+    const_cast<Callable&>(callable)(std::optional<std::monostate>(std::nullopt));
 }
 
 template<typename T>
@@ -398,7 +399,7 @@ void onResult(const QFuture<Type>& future,
     assert(context);
 
     if constexpr (std::is_same<Type,void>::value) {
-        onFinished(future, context, [future, callable]() {
+        onFinished(future, context, [future, callable](const auto&) {
             if (!future.isCanceled())
                 callable();
         }, connectionType);
@@ -442,7 +443,7 @@ void onCanceled(const QFuture<Type>& future,
                 Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
     if constexpr (std::is_same<Type, void>::value) {
-        onFinished(future, context, [callable, future]() {
+        onFinished(future, context, [callable, future](const auto&) {
             if (future.isCanceled())
                 callable();
         }, connectionType);
