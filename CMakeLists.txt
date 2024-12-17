@@ -4,6 +4,7 @@ PROJECT(utils-qt LANGUAGES CXX)
 option(UTILS_QT_ENABLE_TESTS     "utils-qt: Enable tests" OFF)
 option(UTILS_QT_ENABLE_BENCHMARK "utils-qt: Enable benchmark" OFF)
 option(UTILS_QT_NO_GUI_TESTS     "utils-qt: Disable GUI tests" OFF)
+option(UTILS_QT_LONG_INTERVALS   "utils-qt: Enable long intervals in tests" OFF)
 
 set(UTILS_QT_GTEST_SEARCH_MODE "Auto" CACHE STRING "utils-qt: Set GTest search mode")
 set_property(CACHE UTILS_QT_GTEST_SEARCH_MODE PROPERTY STRINGS "Auto" "Force" "Skip")
@@ -80,6 +81,10 @@ target_include_directories(utils-qt PUBLIC headers)
 
 if (UTILS_QT_NO_GUI_TESTS)
     target_compile_definitions(utils-qt PUBLIC UTILS_QT_NO_GUI_TESTS)
+endif()
+
+if (UTILS_QT_LONG_INTERVALS)
+    target_compile_definitions(utils-qt PUBLIC UTILS_QT_LONG_INTERVALS)
 endif()
 
 add_subdirectory(tests)
