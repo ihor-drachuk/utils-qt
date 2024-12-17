@@ -5,6 +5,7 @@
 #include <UtilsQt/qml.h>
 
 #include <UtilsQt/Qml/QmlControls.h>
+#include <UtilsQt/Qml-Cpp/SteadyTimer.h>
 #include <UtilsQt/Qml-Cpp/FileWatcher.h>
 #include <UtilsQt/Qml-Cpp/PathElider.h>
 #include <UtilsQt/Qml-Cpp/ListModelItemProxy.h>
@@ -31,6 +32,7 @@ namespace Qml {
 void registerAll(QQmlEngine& engine)
 {
     QmlControls::init(engine);
+    SteadyTimer::registerTypes();
     FileWatcher::registerTypes();
     PathElider::registerTypes();
     ListModelItemProxy::registerTypes();
