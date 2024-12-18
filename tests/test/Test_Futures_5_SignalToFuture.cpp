@@ -121,4 +121,40 @@ TEST(UtilsQt, Futures_SignalToFuture_ReturnedValue)
     ASSERT_EQ(r3, std::make_tuple(QString("Test"), 12));
 }
 
+TEST(UtilsQt, Futures_SignalToFuture_Timeout)
+{
+    using Class = Futures_SignalToFuture_TestClass;
+    Class obj;
+
+    // Timeout trigger
+    auto f = signalToFuture(&obj, &Class::someSignal1, nullptr, 100);
+
+    qApp->processEvents();
+    qApp->processEvents();
+    ASSERT_FALSE(f.isFinished());
+    ASSERT_FALSE(f.isCanceled());
+
+    waitForFuture<QEventLoop>(createTimedFuture(200));
+
+    ASSERT_TRUE(f.isFinished());
+    ASSERT_TRUE(f.isCanceled());
+
+    // Timeout after signal
+    f = signalToFuture(&obj, &Class::someSignal1, nullptr, 100);
+    qApp->processEvents();
+    qApp->processEvents();
+    ASSERT_FALSE(f.isFinished());
+    ASSERT_FALSE(f.isCanceled());
+    obj.trigger1();
+    qApp->processEvents();
+    qApp->processEvents();
+    ASSERT_TRUE(f.isFinished());
+    ASSERT_FALSE(f.isCanceled());
+
+    waitForFuture<QEventLoop>(createTimedFuture(200));
+
+    ASSERT_TRUE(f.isFinished());
+    ASSERT_FALSE(f.isCanceled());
+}
+
 #include "Test_Futures_5_SignalToFuture.moc"
