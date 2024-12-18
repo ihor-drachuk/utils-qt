@@ -25,7 +25,7 @@ class SetterWithDeferredSignal
     NO_COPY(SetterWithDeferredSignal);
 public:
     SetterWithDeferredSignal(T& oldValue, const T2& newValue, const Signal& signal, bool* changedFlag = nullptr)
-        : m_value(oldValue),
+        : m_value(newValue),
           m_signal(signal)
     {
         m_isChanged = (oldValue != newValue);
