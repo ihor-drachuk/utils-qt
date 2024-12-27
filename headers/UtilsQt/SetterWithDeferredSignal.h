@@ -5,6 +5,7 @@
 #pragma once
 #include <any>
 #include <memory>
+#include <list>
 #include <type_traits>
 #include <utils-cpp/default_ctor_ops.h>
 
@@ -24,9 +25,10 @@ class SetterWithDeferredSignal
 {
     NO_COPY(SetterWithDeferredSignal);
 public:
-    SetterWithDeferredSignal(T& oldValue, const T2& newValue, const Signal& signal, bool* changedFlag = nullptr)
+    SetterWithDeferredSignal(T& oldValue, const T2& newValue, const Signal& signal, bool* changedFlag = nullptr, const std::list<std::any>& adjuncts = {})
         : m_value(newValue),
-          m_signal(signal)
+          m_signal(signal),
+          m_adjuncts(adjuncts)
     {
         m_isChanged = (oldValue != newValue);
 
@@ -39,7 +41,8 @@ public:
     SetterWithDeferredSignal(SetterWithDeferredSignal&& rhs) noexcept
         : m_value(std::move(rhs.m_value)),
           m_signal(std::move(rhs.m_signal)),
-          m_isChanged(rhs.m_isChanged)
+          m_isChanged(rhs.m_isChanged),
+          m_adjuncts(std::move(rhs.m_adjuncts))
     {
         rhs.m_isChanged = false;
     }
@@ -53,6 +56,7 @@ private:
     T m_value;
     Signal m_signal;
     bool m_isChanged {};
+    std::list<std::any> m_adjuncts;
 };
 
 template<typename T, typename T2, typename Signal>
@@ -68,21 +72,21 @@ SetterWithDeferredSignal<T, T2, Signal> MakeSetterWithDeferredSignal(T& oldValue
 }
 
 template<typename T, typename T2, typename Signal>
-std::any MakeSetterWithDeferredSignalAny(T& oldValue, const T2& newValue, const Signal& signal, bool* changedFlag = nullptr)
+std::any MakeSetterWithDeferredSignalAny(T& oldValue, const T2& newValue, const Signal& signal, bool* changedFlag = nullptr, const std::list<std::any>& adjuncts = {})
 {
-    return std::any(std::make_shared<SetterWithDeferredSignal<T, T2, Signal>>(oldValue, newValue, signal, changedFlag));
+    return std::any(std::make_shared<SetterWithDeferredSignal<T, T2, Signal>>(oldValue, newValue, signal, changedFlag, adjuncts));
 }
 
 template<typename T, typename T2, typename Object, typename Signal>
 auto MakeSetterWithDeferredSignal(T& oldValue, const T2& newValue, Object* object, const Signal& signal, bool* changedFlag = nullptr)
 {
-   return SetterWithDeferredSignal(oldValue, newValue, [object, signal](const T2& x){ (object->*signal)(x); }, changedFlag);
+    return SetterWithDeferredSignal(oldValue, newValue, [object, signal](const T2& x){ (object->*signal)(x); }, changedFlag);
 }
 
 template<typename T, typename T2, typename Object, typename Signal>
-std::any MakeSetterWithDeferredSignalAny(T& oldValue, const T2& newValue, Object* object, const Signal& signal, bool* changedFlag = nullptr)
+std::any MakeSetterWithDeferredSignalAny(T& oldValue, const T2& newValue, Object* object, const Signal& signal, bool* changedFlag = nullptr, const std::list<std::any>& adjuncts = {})
 {
-    auto ptr = new SetterWithDeferredSignal(oldValue, newValue, [object, signal](const T2& x){ (object->*signal)(x); }, changedFlag);
+    auto ptr = new SetterWithDeferredSignal(oldValue, newValue, [object, signal](const T2& x){ (object->*signal)(x); }, changedFlag, adjuncts);
     using SetterType = std::remove_cv_t<std::remove_reference_t<decltype(*ptr)>>;
     return std::any(std::shared_ptr<SetterType>(ptr));
 }
