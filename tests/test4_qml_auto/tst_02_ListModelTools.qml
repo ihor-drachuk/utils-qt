@@ -75,6 +75,13 @@ Item {
             compare(listModelTools.getData(1, "stringValue"), "str2");
             compare(listModelTools.getData(1, "intValue"), 22);
 
+            var allI = listModelTools.collectData("intValue");
+            compare(allI, [11, 22, 33, 44]);
+            var allS = listModelTools.collectData("stringValue");
+            compare(allS, ["str1", "str2", "str3", "str4"]);
+            var allIS = listModelTools.collectDataByRoles(["intValue", "stringValue"]);
+            compare(allIS, [{"stringValue": "str1", "intValue": 11}, {"stringValue": "str2", "intValue": 22}, {"stringValue": "str3", "intValue": 33}, {"stringValue": "str4", "intValue": 44}]);
+
             listModel.remove(1);
             compare(listModelTools.itemsCount, 3);
             compare(sBeforeRemoved.count, 1);
