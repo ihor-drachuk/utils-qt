@@ -168,6 +168,52 @@ void ListModelTools::setDataByRoles(int index, const QVariantMap& values)
     updBufferingCnt(-1);
 }
 
+QVariantList ListModelTools::collectData(const QString& role, int firstIndex, int lastIndex) const
+{
+    assert(impl().model);
+    assert(impl().model->columnCount() == 1);
+
+    if (firstIndex == -1)
+        firstIndex = 0;
+
+    if (lastIndex == -1)
+        lastIndex = impl().model->rowCount() - 1;
+
+    QVariantList result;
+    result.reserve(lastIndex - firstIndex + 1);
+
+    for (int i = firstIndex; i <= lastIndex; i++)
+        result.append(getData(i, role));
+
+    return result;
+}
+
+QVariantList ListModelTools::collectDataByRoles(const QStringList& roles, int firstIndex, int lastIndex) const
+{
+    assert(impl().model);
+    assert(impl().model->columnCount() == 1);
+
+    if (firstIndex == -1)
+        firstIndex = 0;
+
+    if (lastIndex == -1)
+        lastIndex = impl().model->rowCount() - 1;
+
+    QVariantList result;
+    result.reserve(lastIndex - firstIndex + 1);
+
+    const QStringList& rolesRef = roles.isEmpty() ?
+                                      impl().roles :
+                                      roles;
+
+    for (int i = firstIndex; i <= lastIndex; i++) {
+        QVariantMap map = getDataByRoles(i, rolesRef);
+        result.append(map);
+    }
+
+    return result;
+}
+
 int ListModelTools::roleNameToInt(const QString& role) const
 {
     if (!impl().model)
