@@ -370,7 +370,7 @@ bool ListModelTools::allowJsValues() const
 
 void ListModelTools::setModel(QAbstractItemModel* value)
 {
-    assert(!value || value->columnCount() == 1);
+    assert(!value || value->columnCount() <= 1);
 
     if (!qobject_cast<QAbstractItemModel*>(value)) {
         value = nullptr;
@@ -390,6 +390,12 @@ void ListModelTools::setModel(QAbstractItemModel* value)
     if (impl().model) {
         QObject::connect(impl().model, &QAbstractItemModel::modelAboutToBeReset, this, &ListModelTools::onBeforeModelReset);
         QObject::connect(impl().model, &QAbstractItemModel::modelReset, this, &ListModelTools::onModelReset);
+
+        QObject::connect(impl().model, &QAbstractItemModel::layoutAboutToBeChanged, this, &ListModelTools::onBeforeModelReset);
+        QObject::connect(impl().model, &QAbstractItemModel::layoutChanged, this, &ListModelTools::onModelReset);
+
+        QObject::connect(impl().model, &QAbstractItemModel::columnsAboutToBeInserted, this, &ListModelTools::onBeforeModelReset);
+        QObject::connect(impl().model, &QAbstractItemModel::columnsInserted, this, &ListModelTools::onModelReset);
 
         QObject::connect(impl().model, &QAbstractItemModel::rowsAboutToBeInserted, this, &ListModelTools::onBeforeRowsInserted);
         QObject::connect(impl().model, &QAbstractItemModel::rowsInserted, this, &ListModelTools::onRowsInserted);
