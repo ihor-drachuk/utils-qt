@@ -4,5 +4,6 @@
         <file>UtilsQt/Assert.qml</file>
         <file>UtilsQt/Rectangle2.qml</file>
         <file>UtilsQt/Repeater2.qml</file>
+        <file>UtilsQt/DisabledVis.qml</file>
     </qresource>
 </RCC>
