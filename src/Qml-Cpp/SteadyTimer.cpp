@@ -74,7 +74,7 @@ int SteadyTimer::interval() const
 
 void SteadyTimer::setInterval(int newValue)
 {
-    assert(newValue > 0);
+    assert(newValue >= 0);
 
     if (impl().interval == newValue)
         return;
@@ -135,13 +135,38 @@ void SteadyTimer::setActive(bool newValue)
 {
     if (impl().active == newValue)
         return;
+
+    if (newValue && impl().interval == 0) {
+        assert(!impl().repeat);
+
+        impl().active = true;
+        emit activeChanged(impl().active);
+
+        impl().active = false;
+        emit activeChanged(impl().active);
+
+        QMetaObject::invokeMethod(this, "timeout", Qt::QueuedConnection);
+        return;
+    }
+
     impl().active = newValue;
 
     if (newValue) {
-        if (impl().resolution > impl().interval && !impl().manuallySetResolution) {
-            impl().resolution = impl().interval;
-            impl().timer.setInterval(impl().resolution);
-            emit resolutionChanged(impl().resolution);
+        if (!impl().manuallySetResolution) {
+            auto newResolution = impl().resolution;
+
+            if (impl().resolution >= impl().interval) {
+                newResolution = impl().interval;
+
+            } else if (impl().resolution < 250) {
+                newResolution = std::min(250, impl().interval);
+            }
+
+            if (newResolution != impl().resolution) {
+                impl().resolution = newResolution;
+                impl().timer.setInterval(impl().resolution);
+                emit resolutionChanged(impl().resolution);
+            }
         }
 
         assert(impl().resolution <= impl().interval);

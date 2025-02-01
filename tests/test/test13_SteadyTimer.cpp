@@ -6,6 +6,7 @@
 #include <QEventLoop>
 #include <UtilsQt/Qml-Cpp/SteadyTimer.h>
 #include <UtilsQt/Futures/Utils.h>
+#include <UtilsQt/Futures/SignalToFuture.h>
 
 namespace {
 
@@ -103,4 +104,52 @@ TEST(UtilsQt, SteadyTimer_Repeat)
 
     UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(200 * TimeFactor));
     ASSERT_EQ(counter, 3);
+}
+
+TEST(UtilsQt, SteadyTimer_ZeroInterval)
+{
+    bool set = false;
+
+    SteadyTimer timer;
+    QObject::connect(&timer, &SteadyTimer::timeout, [&]{ set = true; });
+    auto f = UtilsQt::signalToFuture(&timer, &SteadyTimer::timeout, nullptr, 200);
+    timer.start(0);
+
+    ASSERT_FALSE(timer.active());  // Should immediately become inactive
+
+    UtilsQt::waitForFuture<QEventLoop>(f);
+    ASSERT_TRUE(set);
+}
+
+TEST(UtilsQt, SteadyTimer_AutoResolutionIncrease)
+{
+    SteadyTimer timer;
+
+    // First set a small interval to force resolution down
+    timer.start(50);
+    ASSERT_EQ(timer.resolution(), 50);
+    timer.stop();
+
+    // Test increase to 150ms
+    timer.start(150);
+    ASSERT_EQ(timer.resolution(), 150);  // Should increase to match new interval
+    timer.stop();
+
+    // Test increase to 250ms (default max)
+    timer.start(500);
+    ASSERT_EQ(timer.resolution(), 250);  // Should increase to default max
+    timer.stop();
+
+    // Verify timer still works with new resolution
+    bool set = false;
+    QObject::connect(&timer, &SteadyTimer::timeout, [&]{ set = true; });
+    timer.start(500 * TimeFactor);
+
+    ASSERT_FALSE(set);
+    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(450 * TimeFactor));
+    ASSERT_FALSE(set);
+    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(100 * TimeFactor));
+    ASSERT_TRUE(set);
+
+    ASSERT_FALSE(timer.active());
 }
