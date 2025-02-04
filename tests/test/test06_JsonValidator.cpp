@@ -53,6 +53,55 @@ TEST(UtilsQt, JsonValidator_basic)
     ASSERT_TRUE(lg3.hasError());
 }
 
+
+TEST(UtilsQt, JsonValidator_string)
+{
+    using namespace UtilsQt::JsonValidator;
+
+    auto validator =
+        RootValidator(
+          Object(
+              Field("field1", String()),
+              Field("field2", String(NonEmpty)),
+              Field("field3", String(Hex)),
+              Field("field4", String(Base64)),
+              Field("field5", String(IPv4))
+            )
+          );
+
+    ErrorInfo lg;
+    const QJsonObject original {
+        {"field1", "str"},
+        {"field2", "str"},
+        {"field3", "0x1a2b3c"},
+        {"field4", "dGVzdA=="},
+        {"field5", "127.0.12.255"}
+    };
+
+    QJsonObject test = original;
+    ASSERT_TRUE(validator->check(lg, test));
+
+    test = original;
+    test["field1"] = "";
+    ASSERT_TRUE(validator->check(lg, test));
+
+    test = original;
+    test["field2"] = "";
+    ASSERT_FALSE(validator->check(lg, test));
+
+    test = original;
+    test["field3"] = "0x1a2b3";
+    ASSERT_FALSE(validator->check(lg, test));
+
+    test = original;
+    test["field4"] = "dGVzdA=";
+    ASSERT_FALSE(validator->check(lg, test));
+
+    test = original;
+    test["field5"] = "127.0.12.256";
+    ASSERT_FALSE(validator->check(lg, test));
+}
+
 TEST(UtilsQt, JsonValidator_number)
 {
     using namespace UtilsQt::JsonValidator;

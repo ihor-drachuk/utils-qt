@@ -86,6 +86,8 @@ enum class _Exclusive { Exclusive };
 enum class _Optional { Optional };
 enum class _NonEmpty { NonEmpty };
 enum class _Hex { Hex };
+enum class _Base64 { Base64 };
+enum class _IPv4 { IPv4 };
 enum class _Integer { Integer };
 
 struct MinMaxValidator {
@@ -223,11 +225,24 @@ public:
           m_hex(true)
     { }
 
+    String(_Base64, const std::vector<ValidatorCPtr>& validators)
+        : Validator(validators),
+          m_base64(true)
+    { }
+
+    String(_IPv4, const std::vector<ValidatorCPtr>& validators)
+        : Validator(validators),
+          m_nonEmpty(true),
+          m_ipv4(true)
+    { }
+
     bool check(ContextData& ctx, ErrorInfo& logger, const QString& path, const QJsonValue& value) const override;
 
 private:
     bool m_nonEmpty { false };
     bool m_hex { false };
+    bool m_base64 { false };
+    bool m_ipv4 { false };
 };
 
 class Bool : public Validator
@@ -422,6 +437,8 @@ constexpr auto Exclusive = Internal::_Exclusive::Exclusive;
 constexpr auto Optional = Internal::_Optional::Optional;
 constexpr auto NonEmpty = Internal::_NonEmpty::NonEmpty;
 constexpr auto Hex = Internal::_Hex::Hex;
+constexpr auto Base64 = Internal::_Base64::Base64;
+constexpr auto IPv4 = Internal::_IPv4::IPv4;
 constexpr auto Integer = Internal::_Integer::Integer;
 using RootValidatorCPtr = Internal::RootValidatorCPtr;
 
@@ -489,6 +506,18 @@ template<typename... Ts>
 ValidatorCPtr String(Internal::_Hex hex, const Ts&... validators)
 {
     return std::make_shared<Internal::String>(hex, Internal::convertValidators(validators...));
+}
+
+template<typename... Ts>
+ValidatorCPtr String(Internal::_Base64 base64, const Ts&... validators)
+{
+    return std::make_shared<Internal::String>(base64, Internal::convertValidators(validators...));
+}
+
+template<typename... Ts>
+ValidatorCPtr String(Internal::_IPv4 ipv4, const Ts&... validators)
+{
+    return std::make_shared<Internal::String>(ipv4, Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
