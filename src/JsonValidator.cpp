@@ -4,8 +4,10 @@
 
 #include <UtilsQt/JsonValidator.h>
 
+#include <QRegularExpression>
 #include <QJsonDocument>
 #include <QMap>
+#include <QByteArray>
 #include <QDebug>
 #include <cassert>
 
@@ -195,11 +197,34 @@ bool String::check(ContextData& ctx, ErrorInfo& logger, const QString& path, con
 
         if (str.left(2) == "0x") {
             str = str.mid(2);
-            str.toLongLong(&hexOk, 16);
+
+            if (str.size() % 2 == 0) // Size should be even when '0x' prefix is present
+                str.toLongLong(&hexOk, 16);
         }
 
         if (!hexOk) {
-            logger.notifyError(path, "Expected HEX-number string, but isn't");
+            logger.notifyError(path, "Expected HEX-number string, but it isn't");
+            return false;
+        }
+    }
+
+    if (m_base64) {
+        const auto strBase64 = value.toString().toLatin1();
+
+        if (!strBase64.isEmpty()) {
+            const auto buffer = QByteArray::fromBase64(strBase64, QByteArray::Base64Option::AbortOnBase64DecodingErrors);
+
+            if (buffer.isEmpty()) {
+                logger.notifyError(path, "Expected Base64-encoded string, but it isn't");
+                return false;
+            }
+        }
+    }
+
+    if (m_ipv4) {
+        const static QRegularExpression re(R"(^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$)");
+        if (!re.match(value.toString()).hasMatch()) {
+            logger.notifyError(path, "Expected IPv4 address, but it doesn't match the pattern");
             return false;
         }
     }
