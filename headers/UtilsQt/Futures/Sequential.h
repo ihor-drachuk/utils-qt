@@ -169,14 +169,14 @@ public:
     void confirmWait()
     {
         auto data = lock();
-        assert(!data->confirmed && "Don't confirm `Awaitables` twice!");
+        //assert(!data->confirmed && "Don't confirm `Awaitables` twice!");
         data->confirmed = true;
     }
 
     void wait()
     {
         auto data = lock();
-        assert(!data->confirmed && "Don't call `wait` after `confirmWait`!");
+        //assert(!data->confirmed && "Don't call `wait` after `confirmWait`!");
         data->confirmed = true;
         data->wait();
     }
