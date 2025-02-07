@@ -1075,6 +1075,8 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
         ASSERT_TRUE(awaitables.isRunning());
         ASSERT_FALSE(flag);
         awaitables.wait();
+        awaitables.wait(); // Just test that it doesn't crash
+        awaitables.wait();
         ASSERT_TRUE(flag);
         ASSERT_EQ(f.resultCount(), 0);
         ASSERT_LE(duration, 150ms * TimeFactor);
