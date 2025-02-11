@@ -7,6 +7,7 @@
 #include <QMap>
 #include <QHash>
 #include <QSet>
+#include <QPointer>
 #include <algorithm>
 
 struct AugmentedModel::SourceRole
@@ -26,7 +27,7 @@ struct AugmentedModel::CalculatedRoleDetails
 
 struct AugmentedModel::impl_t
 {
-    QAbstractItemModel* srcModel {};
+    QPointer<QAbstractItemModel> srcModel;
     QList<QMetaObject::Connection> modelConnections;
     QMap<QString, int> srcModelRolesMap; // cached
 
@@ -68,7 +69,7 @@ void AugmentedModel::deinit()
 
     impl().ready = false;
     disconnectModel();
-    actualizeCache();
+    clearCache();
 }
 
 bool AugmentedModel::initable() const
@@ -79,6 +80,15 @@ bool AugmentedModel::initable() const
 bool AugmentedModel::ready() const
 {
     return impl().ready;
+}
+
+void AugmentedModel::clearCache()
+{
+    impl().srcModelRolesMap.clear();
+    impl().roleToCalcRolesIndex.clear();
+    impl().cachedRoles.clear();
+    impl().sourceRolesCache.clear();
+    impl().sourceRoleToCalculated.clear();
 }
 
 void AugmentedModel::actualizeCache()
@@ -145,6 +155,7 @@ void AugmentedModel::connectModel()
 {
     using namespace std::placeholders;
 
+    assert(impl().srcModel);
     assert(impl().modelConnections.isEmpty());
 
     auto save = [this](QMetaObject::Connection c) { impl().modelConnections.append(c); };

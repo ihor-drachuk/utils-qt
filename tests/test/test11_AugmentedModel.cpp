@@ -21,20 +21,11 @@ public:
         Age,
     };
 
-    TestModel(QObject* parent = nullptr): QAbstractListModel(parent) { }
-    ~TestModel() override { }
-
-    static TestModel& instance() {
-        static TestModel model;
-        static bool initialized = false;
-
-        if (!initialized) {
-            model.reset();
-            initialized = true;
-        }
-
-        return model;
+    TestModel(QObject* parent = nullptr): QAbstractListModel(parent) {
+        reset();
     }
+
+    ~TestModel() override { }
 
     void reset() {
         beginResetModel();
@@ -129,7 +120,9 @@ QList<QVariantList> extractData(const QAbstractItemModel* model) {
 
 TEST(UtilsQt, AugmentedModel_InitialTest)
 {
-    auto extractedTestData = extractData(&TestModel::instance());
+    TestModel testModel;
+
+    auto extractedTestData = extractData(&testModel);
     QList<QVariantList> correctTestData {
         {"Ivan", true, 23},
         {"Dimon", true, 31},
@@ -137,10 +130,10 @@ TEST(UtilsQt, AugmentedModel_InitialTest)
     };
     ASSERT_EQ(extractedTestData, correctTestData);
 
-    QSignalSpy spyDataChanged(&TestModel::instance(), &TestModel::dataChanged);
-    TestModel::instance().setData(TestModel::instance().index(1), 32, TestModel::Roles::Age);
+    QSignalSpy spyDataChanged(&testModel, &TestModel::dataChanged);
+    testModel.setData(testModel.index(1), 32, TestModel::Roles::Age);
     correctTestData[1][2] = 32;
-    extractedTestData = extractData(&TestModel::instance());
+    extractedTestData = extractData(&testModel);
     ASSERT_EQ(extractedTestData, correctTestData);
     ASSERT_EQ(spyDataChanged.count(), 1);
     ASSERT_EQ(spyDataChanged.last()[0].toModelIndex().row(), 1);
@@ -148,20 +141,20 @@ TEST(UtilsQt, AugmentedModel_InitialTest)
     ASSERT_EQ(spyDataChanged.last()[2].value<QVector<int>>().size(), 1);
     ASSERT_EQ(spyDataChanged.last()[2].value<QVector<int>>().at(0), TestModel::Roles::Age);
 
-    QSignalSpy spyInserted(&TestModel::instance(), &TestModel::rowsInserted);
-    TestModel::instance().addRow({"Sergii", true, 40});
+    QSignalSpy spyInserted(&testModel, &TestModel::rowsInserted);
+    testModel.addRow({"Sergii", true, 40});
     correctTestData.append(QVariantList{"Sergii", true, 40});
-    extractedTestData = extractData(&TestModel::instance());
+    extractedTestData = extractData(&testModel);
     ASSERT_EQ(extractedTestData, correctTestData);
     ASSERT_EQ(spyInserted.count(), 1);
 }
 
 TEST(UtilsQt, AugmentedModel_Transparent_Without_Calculated)
 {
-    TestModel::instance().reset();
+    TestModel testModel;
 
     AugmentedModel model;
-    model.setSourceModel(&TestModel::instance());
+    model.setSourceModel(&testModel);
 
     auto extractedTestData = extractData(&model);
     QList<QVariantList> correctTestData {
@@ -172,7 +165,7 @@ TEST(UtilsQt, AugmentedModel_Transparent_Without_Calculated)
     ASSERT_EQ(extractedTestData, correctTestData);
 
     QSignalSpy spyDataChanged(&model, &TestModel::dataChanged);
-    TestModel::instance().setData(model.index(1, 0, {}), 32, TestModel::Roles::Age);
+    testModel.setData(model.index(1, 0, {}), 32, TestModel::Roles::Age);
     correctTestData[1][2] = 32;
     extractedTestData = extractData(&model);
     ASSERT_EQ(extractedTestData, correctTestData);
@@ -183,24 +176,23 @@ TEST(UtilsQt, AugmentedModel_Transparent_Without_Calculated)
     ASSERT_EQ(spyDataChanged.last()[2].value<QVector<int>>().at(0), TestModel::Roles::Age);
 
     QSignalSpy spyInserted(&model, &TestModel::rowsInserted);
-    TestModel::instance().addRow({"Sergii", true, 40});
+    testModel.addRow({"Sergii", true, 40});
     correctTestData.append(QVariantList{"Sergii", true, 40});
     extractedTestData = extractData(&model);
     ASSERT_EQ(extractedTestData, correctTestData);
     ASSERT_EQ(spyInserted.count(), 1);
-
 }
 
-TEST(UtilsQt, AugmentedModel_Calculated)
+TEST(UtilsQt, AugmentedModel_Calculated_n_Destruction)
 {
-    TestModel::instance().reset();
+    std::unique_ptr<TestModel> testModel = std::make_unique<TestModel>();
 
     AugmentedModel model;
     auto updater = model.addCalculatedRole("increasedAge", {"age"}, [](const QVariantList& src) -> QVariant {
         assert(src.size() == 1);
         return src[0].toInt() + 1;
     });
-    model.setSourceModel(&TestModel::instance());
+    model.setSourceModel(testModel.get());
 
     auto extractedTestData = extractData(&model);
     QList<QVariantList> correctTestData {
@@ -212,7 +204,7 @@ TEST(UtilsQt, AugmentedModel_Calculated)
 
     // Source change
     QSignalSpy spyDataChanged(&model, &TestModel::dataChanged);
-    TestModel::instance().setData(model.index(1, 0, {}), 40, TestModel::Roles::Age);
+    testModel->setData(model.index(1, 0, {}), 40, TestModel::Roles::Age);
     correctTestData[1][2] = 40;
     correctTestData[1][3] = 41;
     extractedTestData = extractData(&model);
@@ -224,7 +216,7 @@ TEST(UtilsQt, AugmentedModel_Calculated)
     ASSERT_EQ(spyDataChanged.last()[2].value<QVector<int>>().at(0), TestModel::Roles::Age);
     ASSERT_EQ(spyDataChanged.last()[2].value<QVector<int>>().at(1), TestModel::Roles::Age + 1);
 
-    TestModel::instance().setData(model.index(1, 0, {}), "Ivan_", TestModel::Roles::Name);
+    testModel->setData(model.index(1, 0, {}), "Ivan_", TestModel::Roles::Name);
     correctTestData[1][0] = "Ivan_";
     extractedTestData = extractData(&model);
     ASSERT_EQ(extractedTestData, correctTestData);
@@ -236,7 +228,7 @@ TEST(UtilsQt, AugmentedModel_Calculated)
 
     // Insertion
     QSignalSpy spyInserted(&model, &TestModel::rowsInserted);
-    TestModel::instance().addRow({"Sergii", true, 40});
+    testModel->addRow({"Sergii", true, 40});
     correctTestData.append(QVariantList{"Sergii", true, 40, 41});
     extractedTestData = extractData(&model);
     ASSERT_EQ(extractedTestData, correctTestData);
@@ -257,10 +249,15 @@ TEST(UtilsQt, AugmentedModel_Calculated)
     ASSERT_EQ(spyDataChanged.last()[1].toModelIndex().row(), 3);
     ASSERT_EQ(spyDataChanged.last()[2].value<QVector<int>>().size(), 1);
     ASSERT_EQ(spyDataChanged.last()[2].value<QVector<int>>().at(0), TestModel::Roles::Age + 1);
+
+    // Destruction
+    testModel.reset();
 }
 
 TEST(UtilsQt, AugmentedModel_Calculated_2)
 {
+    TestModel testModel;
+
     AugmentedModel model;
     model.addCalculatedRole("increasedAge", {"age", TestModel::Roles::Male}, [](const QVariantList& src) -> QVariant {
         assert(src.size() == 2);
@@ -272,9 +269,9 @@ TEST(UtilsQt, AugmentedModel_Calculated_2)
         assert(src.size() == 1);
         return src[0].toString() + "2";
     });
-    model.setSourceModel(&TestModel::instance());
+    model.setSourceModel(&testModel);
 
-    TestModel::instance().reset();
+    testModel.reset();
 
     auto extractedTestData = extractData(&model);
     QList<QVariantList> correctTestData {
@@ -286,7 +283,7 @@ TEST(UtilsQt, AugmentedModel_Calculated_2)
 
     // Source change
     QSignalSpy spyDataChanged(&model, &TestModel::dataChanged);
-    TestModel::instance().setData(model.index(1, 0, {}), 40, TestModel::Roles::Age);
+    testModel.setData(model.index(1, 0, {}), 40, TestModel::Roles::Age);
     correctTestData[1][2] = 40;
     correctTestData[1][3] = 40;
     extractedTestData = extractData(&model);
@@ -298,7 +295,7 @@ TEST(UtilsQt, AugmentedModel_Calculated_2)
     ASSERT_EQ(spyDataChanged.last()[2].value<QVector<int>>().at(0), TestModel::Roles::Age);
     ASSERT_EQ(spyDataChanged.last()[2].value<QVector<int>>().at(1), TestModel::Roles::Age + 1);
 
-    TestModel::instance().setData(model.index(1, 0, {}), false, TestModel::Roles::Male);
+    testModel.setData(model.index(1, 0, {}), false, TestModel::Roles::Male);
     correctTestData[1][1] = false;
     correctTestData[1][2] = 40;
     correctTestData[1][3] = 41;
@@ -311,7 +308,7 @@ TEST(UtilsQt, AugmentedModel_Calculated_2)
     ASSERT_EQ(spyDataChanged.last()[2].value<QVector<int>>().at(0), TestModel::Roles::Male);
     ASSERT_EQ(spyDataChanged.last()[2].value<QVector<int>>().at(1), TestModel::Roles::Age + 1);
 
-    TestModel::instance().setData(model.index(1, 0, {}), "Nastya", TestModel::Roles::Name);
+    testModel.setData(model.index(1, 0, {}), "Nastya", TestModel::Roles::Name);
     correctTestData[1][0] = "Nastya";
     correctTestData[1][4] = "Nastya2";
     extractedTestData = extractData(&model);
