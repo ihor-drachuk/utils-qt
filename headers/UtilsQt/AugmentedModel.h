@@ -47,6 +47,7 @@ private:
     bool ready() const;
     void verifyReadyFlag() const;
     void actualizeCache();
+    void clearCache();
     bool isCalculatedRole(int role) const;
     void updateCalculatedRole(const QModelIndex& topLeft, const QModelIndex& bottomRight, int role);
 
