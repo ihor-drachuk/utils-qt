@@ -38,58 +38,63 @@
   readable and maintainable code.
 
   Schematic example:
-  QFuture<L> f = UtilsQt::Sequential(this)
-    .start([]()                                  -> QFuture<T>    { ... })
-    .then([](AsyncResult<T>, SequentialMediator) -> QFuture<G>    { ... })
-    .then([](AsyncResult<G>)                     -> QFuture<void> { ... })
-    .then([](AsyncResult<void>)                  -> QFuture<L>    { ... })
-    .execute();
+   /--
+  |  QFuture<L> f = UtilsQt::Sequential(this)
+  |      .start([]()                                  -> QFuture<T>    { ... })
+  |      .then([](AsyncResult<T>, SequentialMediator) -> QFuture<G>    { ... })
+  |      .then([](AsyncResult<G>)                     -> QFuture<void> { ... })
+  |      .then([](AsyncResult<void>)                  -> QFuture<L>    { ... })
+  |      .execute();
+   \--
 
   Common usage example:
-   /
+   /--
+  |  UtilsQt::Awaitables savedAwaitables; // Usually a member of the context (of `this`).
+  |                                       // Guarantees live `this` during running async operations.
+  |
   |  auto f = UtilsQt::Sequential(this)
-  |  .start([](const SequentialMediator& c) -> QFuture<int> {
-  |      return UtilsQt::createReadyFuture(123);
-  |  })
-  |  .then([](const AsyncResult<int>& result) {
-  |      result.tryRethrow(); // Propagate exceptions, if we want.
+  |      .start([](const SequentialMediator& c) -> QFuture<int> {
+  |          return UtilsQt::createReadyFuture(123);
+  |      })
+  |      .then([](const AsyncResult<int>& result) {
+  |          result.tryRethrow(); // Propagate exceptions, if we want.
   |
-  |      if (result.isCanceled()) {
-  |          return QFuture<void>(); // Propagate cancellation, if we want.
-  |      }
-  |
-  |      return UtilsQt::createReadyFuture(QString::number(result.value()));
-  |  }
-  |  .then([](const AsyncResult<QString>& result, SequentialMediator& sm) {
-  |      result.tryRethrow(); // Propagate exceptions, if we want.
-  |
-  |      if (result.isCanceled()) {
-  |          return QFuture<void>(); // Propagate cancellation, if we want.
-  |      }
-  |
-  |      Promise<int> promise(true);
-  |
-  |      // Long-running operation
-  |      auto fThr = QtConcurrent::run([promise, sm, result](){
-  |          int x = result.value().toInt();
-  |
-  |          while (x < 1000000 && !c.isCancelRequested()) {
-  |              x++;
+  |          if (result.isCanceled()) {
+  |              return QFuture<void>(); // Propagate cancellation, if we want.
   |          }
   |
-  |          if (sm.isCancelRequested()) {
-  |              p.cancel();
-  |          } else {
-  |              p.finish(x);
+  |          return UtilsQt::createReadyFuture(QString::number(result.value()));
+  |      }
+  |      .then([](const AsyncResult<QString>& result, SequentialMediator& sm) {
+  |          result.tryRethrow(); // Propagate exceptions, if we want.
+  |
+  |          if (result.isCanceled()) {
+  |              return QFuture<void>(); // Propagate cancellation, if we want.
   |          }
-  |      });
   |
-  |      sm.registerAwaitable(fThr);
+  |          Promise<int> promise(true);
   |
-  |      return promise.future();
-  |  })
-  |  .execute(savedAwaitables);
-  \
+  |          // Long-running operation
+  |          auto fThr = QtConcurrent::run([promise, sm, result](){
+  |              int x = result.value().toInt();
+  |
+  |              while (x < 1000000 && !sm.isCancelRequested()) {
+  |                  x++;
+  |              }
+  |
+  |              if (sm.isCancelRequested()) {
+  |                  promise.cancel();
+  |              } else {
+  |                  promise.finish(x);
+  |              }
+  |          });
+  |
+  |          sm.registerAwaitable(fThr);
+  |
+  |          return promise.future();
+  |      })
+  |      .execute(savedAwaitables);
+  \--
 
   If a future from one handler is canceled, an empty AsyncResult is passed to next handler. This
   does not cancel the entire chain by default, allowing users to produce non-canceled futures in the sequence.
