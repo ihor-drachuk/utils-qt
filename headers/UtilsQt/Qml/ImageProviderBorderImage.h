@@ -15,7 +15,7 @@
 // Image {
 //     //anchors.fill: parent  (optional)
 //
-//     source: "image://UtilsQt-BorderImage/path=...&orientation=...&top=...&bottom=...&left=...&right=..."
+//     source: "image://UtilsQt-BorderImage/path=...&orientation=...&top=...&bottom=...&left=...&right=...&fill=..."
 //     sourceSize: Qt.size(width, height)
 // }
 //
@@ -23,6 +23,7 @@
 //  - 'path' is the path to the image asset. E.g.: "path=:/path/to/qrc-image.png"
 //  - 'orientation' is the orientation of the image. E.g.: "horizontal" or "vertical"
 //  - 'top', 'bottom', 'left', and 'right' are the border sizes in pixels (optional, default to 0)
+//  - 'fill' is the fill mode. E.g.: "stretch" or "tile" (optional, default to "stretch")
 
 class ImageProviderBorderImage : public QQuickImageProvider
 {
