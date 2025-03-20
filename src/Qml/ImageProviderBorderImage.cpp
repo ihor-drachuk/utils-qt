@@ -14,7 +14,7 @@ static QMap<QString, QString> parseParams(const QString &id)
 {
     QMap<QString, QString> params;
 
-    static const QSet<QString> allowedKeys = {"path", "top", "bottom", "left", "right", "width", "height", "orientation"};
+    static const QSet<QString> allowedKeys = {"path", "top", "bottom", "left", "right", "width", "height", "orientation", "fill"};
 
     const QStringList list = id.split('&', Qt::SkipEmptyParts);
     for (const QString &pair : list) {
@@ -53,6 +53,7 @@ QImage ImageProviderBorderImage::requestImage(const QString& id, QSize* size, co
     const int finalWidth = requestedSize.width();
     const int finalHeight = requestedSize.height();
     const QString orientation = params.value("orientation", "vertical").toLower();
+    const QString fillMode = params.value("fill", "stretch").toLower();
 
     // Optional border parameters (defaulting to 0 if missing)
     const int top = params.contains("top") ? params.value("top").toInt() : 0;
@@ -132,6 +133,20 @@ QImage ImageProviderBorderImage::requestImage(const QString& id, QSize* size, co
     // Center:
     QRect tgtCenter(leftScaled, topScaled, finalWidth - leftScaled - rightScaled, finalHeight - topScaled - bottomScaled);
 
+    // Lambda for drawing a region with the chosen fill mode (used for edges and center).
+    auto drawRegion = [&](const QRect& target, const QRect& src) {
+        if (!src.isEmpty() && !target.isEmpty()) {
+            if (fillMode == "tile") {
+                QPixmap tilePixmap = QPixmap::fromImage(scaledImage.copy(src));
+                painter.drawTiledPixmap(target, tilePixmap);
+            } else if (fillMode == "stretch") {
+                painter.drawImage(target, scaledImage, src);
+            } else {
+                assert(false && "Unsupported fill mode");
+            }
+        }
+    };
+
     // --- Draw each region with proper scaling ---
     // Corners: drawn as-is.
     if (!srcTopLeft.isEmpty() && !tgtTopLeft.isEmpty())
@@ -144,18 +159,13 @@ QImage ImageProviderBorderImage::requestImage(const QString& id, QSize* size, co
         painter.drawImage(tgtBottomRight, scaledImage, srcBottomRight);
 
     // Edges: scaled in one dimension.
-    if (!srcTopEdge.isEmpty() && !tgtTopEdge.isEmpty())
-        painter.drawImage(tgtTopEdge, scaledImage, srcTopEdge);
-    if (!srcBottomEdge.isEmpty() && !tgtBottomEdge.isEmpty())
-        painter.drawImage(tgtBottomEdge, scaledImage, srcBottomEdge);
-    if (!srcLeftEdge.isEmpty() && !tgtLeftEdge.isEmpty())
-        painter.drawImage(tgtLeftEdge, scaledImage, srcLeftEdge);
-    if (!srcRightEdge.isEmpty() && !tgtRightEdge.isEmpty())
-        painter.drawImage(tgtRightEdge, scaledImage, srcRightEdge);
+    drawRegion(tgtTopEdge, srcTopEdge);
+    drawRegion(tgtBottomEdge, srcBottomEdge);
+    drawRegion(tgtLeftEdge, srcLeftEdge);
+    drawRegion(tgtRightEdge, srcRightEdge);
 
     // Center: scaled in both dimensions.
-    if (!srcCenter.isEmpty() && !tgtCenter.isEmpty())
-        painter.drawImage(tgtCenter, scaledImage, srcCenter);
+    drawRegion(tgtCenter, srcCenter);
 
     painter.end();
 
