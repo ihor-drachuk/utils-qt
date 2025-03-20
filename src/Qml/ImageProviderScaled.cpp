@@ -20,21 +20,23 @@ QImage ImageProviderScaled::requestImage(const QString& id,
 {
     // TODO: Log id, requestedSize, errors inside
     assert(size);
-    assert(requestedSize.isValid());
+
+    if (requestedSize.width() <= 0 || requestedSize.height() <= 0) {
+        QImage stub(1, 1, QImage::Format::Format_ARGB32);
+        stub.fill(QColor::fromRgbF(0.5, 0.5, 0.5));
+        *size = stub.size();
+        return stub;
+    }
 
     const auto sourceSize = QmlUtils::instance().imageSize(id);
     assert(sourceSize.isValid() && !sourceSize.isNull());
     *size = sourceSize;
 
-    if (requestedSize.width() > 0 && requestedSize.height() > 0) {
-        const auto path = QmlUtils::instance().normalizePath(id);
-        const QImage image(path);
-        assert(!image.isNull());
+    const auto path = QmlUtils::instance().normalizePath(id);
+    const QImage image(path);
+    assert(!image.isNull());
 
-        return image.scaled(requestedSize,
-                            Qt::AspectRatioMode::IgnoreAspectRatio,
-                            Qt::TransformationMode::SmoothTransformation);
-    } else {
-        return QImage(1, 1, QImage::Format::Format_ARGB32);
-    }
+    return image.scaled(requestedSize,
+                        Qt::AspectRatioMode::IgnoreAspectRatio,
+                        Qt::TransformationMode::SmoothTransformation);
 }
