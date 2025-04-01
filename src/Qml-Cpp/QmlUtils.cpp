@@ -196,7 +196,7 @@ QColor QmlUtils::colorMakeAccent(const QColor& color, double factor) const
 
     if (hsva.alphaF() <= 0.5) {
         // Accent via less transparency
-        return colorChangeAlpha(color, color.alphaF() + 0.5 * factor);
+        return colorChangeAlpha(color, alpha2);
 
     } else if (hsva.valueF() <= 0.5) {
         // Accent via value (lighter) + less transparency
