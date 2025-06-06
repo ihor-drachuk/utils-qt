@@ -4,6 +4,7 @@
 
 #pragma once
 #include <UtilsQt/Futures/Utils.h>
+#include <UtilsQt/Futures/Traits.h>
 #include <UtilsQt/invoke_method.h>
 
 // TODO:  Add support of QFuture<void> sequences.
@@ -32,22 +33,6 @@
 */
 
 namespace FutureUtilsInternals {
-
-template <typename T>
-struct ExpandQFuture { };
-
-template <typename T>
-struct ExpandQFuture<QFuture<T>>
-{
-    using value_type = T;
-};
-
-template<typename T>
-struct IsQFuture : public std::false_type { };
-
-template <template<typename> typename F, typename T>
-struct IsQFuture<F<T>> : public std::is_same<F<T>, QFuture<T>> {};
-
 
 struct Context {
     Context (QObject* context, Qt::ConnectionType connectionType)
@@ -140,8 +125,8 @@ public:
 
     // QFuture<T> --> std::optional<T> --> QFuture<Next>
     template<typename Callable, typename Ret = typename std::invoke_result<Callable, std::optional<T>>::type,
-             typename std::enable_if<IsQFuture<Ret>::value>::type* = nullptr,
-             typename RetFutureType = typename ExpandQFuture<Ret>::value_type>
+             typename std::enable_if<UtilsQt::IsQFuture<Ret>::value>::type* = nullptr,
+             typename RetFutureType = typename UtilsQt::QFutureUnwrap<Ret>::type>
     FutureResult<RetFutureType> then(Callable&& callable) {
         getContext()->needInternalHandler = false;
 

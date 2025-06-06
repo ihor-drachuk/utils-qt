@@ -13,6 +13,7 @@
 #include <variant>
 
 #include <UtilsQt/Futures/Utils.h>
+#include <UtilsQt/Futures/Traits.h>
 
 #include <utils-cpp/default_ctor_ops.h>
 #include <utils-cpp/threadid.h>
@@ -407,18 +408,6 @@ struct AsyncResult<void> : public AsyncResultBase<VoidType>
 {
     using AsyncResultBase<VoidType>::AsyncResultBase;
 };
-
-template<typename T>
-struct QFutureUnwrap { };
-
-template<typename T>
-struct QFutureUnwrap<QFuture<T>> { using type = T; };
-
-template<typename T>
-struct IsQFuture : std::false_type { };
-
-template<typename T>
-struct IsQFuture<QFuture<T>> : std::true_type { };
 
 enum SequentialOptions
 {
