@@ -17,4 +17,10 @@ struct IsQFuture : std::false_type {};
 template<typename T>
 struct IsQFuture<QFuture<T>> : std::true_type {};
 
+template<typename T>
+struct QFutureUnwrap { };
+
+template<typename T>
+struct QFutureUnwrap<QFuture<T>> { using type = T; };
+
 } // namespace UtilsQt
