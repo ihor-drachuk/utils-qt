@@ -221,14 +221,16 @@ public:
 
     Promise(const Promise<T>&) = default;
     Promise(Promise<T>&&) noexcept = default;
-    ~Promise() = default;
+    ~Promise() noexcept = default;
     Promise<T>& operator= (const Promise<T>&) = default;
     Promise<T>& operator= (Promise<T>&&) noexcept = default;
 
     Promise& start()
     {
         assert(!isStarted());
+        assert(!isCanceled());
         m_interface.reportStarted();
+        assert(isStarted());
         return *this;
     }
 
@@ -237,7 +239,7 @@ public:
     typename std::enable_if<std::is_same<X, void>::value && std::is_same<X, T>::value, Promise&>::type
     finish()
     {
-        assert(isStarted());
+        assert(isStarted() || isCanceled());
         assert(!isFinished());
 
         m_interface.reportFinished();
@@ -249,7 +251,7 @@ public:
     typename std::enable_if<!std::is_same<X, void>::value && std::is_same<X, T>::value, Promise&>::type
     finish(const X& result)
     {
-        assert(isStarted());
+        assert(isStarted() || isCanceled());
         assert(!isFinished());
 
         m_interface.reportResult(result);
@@ -259,7 +261,7 @@ public:
 
     Promise& finishWithException(const std::exception_ptr& e)
     {
-        assert(isStarted());
+        assert(isStarted() || isCanceled());
         assert(!isFinished());
 
         m_interface.reportException(QExceptionPtr(e));
