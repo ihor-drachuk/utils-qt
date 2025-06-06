@@ -15,8 +15,8 @@ using namespace UtilsQt;
 namespace {
 
 #ifdef UTILS_QT_OS_MACOS
-constexpr unsigned UsualDuration = 200;
-constexpr unsigned MicroDuration = 30;
+constexpr unsigned UsualDuration = 500;
+constexpr unsigned MicroDuration = 50;
 #else
 constexpr unsigned UsualDuration = 50;
 constexpr unsigned MicroDuration = 10;

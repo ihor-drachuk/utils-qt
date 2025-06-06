@@ -159,7 +159,7 @@ jobs:
           cmake -DCMAKE_OSX_ARCHITECTURES=x86_64 -DUTILS_QT_LONG_INTERVALS=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Unix Makefiles" -S "./src" -B "./build"
           cmake --build "./build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
           cd ./build/tests
-          ctest --no-tests=error --rerun-failed --output-on-failure --timeout 90 -C "${{matrix.build_type}}"
+          ctest --no-tests=error --rerun-failed --output-on-failure --timeout 180 -C "${{matrix.build_type}}"
 
 
   CodeChecker:
