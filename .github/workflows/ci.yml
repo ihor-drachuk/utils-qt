@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           GTEST_SEARCH_MODE=$([[ "${{ matrix.test_libs }}" == "tl_missing" ]] && echo "Skip" || echo "Force")
-          
+
           cmake -DUTILS_QT_LONG_INTERVALS=ON -DUTILS_QT_NO_GUI_TESTS=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DUTILS_QT_GTEST_SEARCH_MODE:STRING=$GTEST_SEARCH_MODE -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Unix Makefiles" -S "./src" -B "./build"
           cmake --build "./build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
           cd ./build/tests
@@ -88,7 +88,7 @@ jobs:
           arch: ${{ matrix.qt_arch }}
           dir: ${{github.workspace}}/qt
           cache: true
-          setup-python: false
+          setup-python: true
 
       - name: "Add Qt to PATH"
         if: ${{ matrix.qt != 'qt_no' }}
