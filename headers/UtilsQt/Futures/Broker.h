@@ -21,10 +21,16 @@
  * The Broker class acts as an intermediary between QFuture producers and consumers, enabling
  * dynamic replacement of the underlying source QFuture without disrupting the consumer.
  *
+ * Also allows delayed setting of the source QFuture, which can be useful in scenarios where
+ * the source is not known/selected at the time of the consumer's request.
+ *
+ * Allows to disconnect from the source future and cancel it without disrupting the consumer.
+ *
  * Use cases:
  * - Dynamic task switching where the computation source can change.
  * - Decoupling producers from consumers in complex async workflows.
  * - New request can replace the old one while the old one is still running without disrupting the consumer.
+ * - Delayed decision of which async task to execute to fulfill the request.
  */
 
 namespace UtilsQt {
@@ -40,7 +46,7 @@ struct BrokerData
     BrokerData(Promise<T>&& promise): dstPromise(std::move(promise)) { }
 
     Promise<T> dstPromise;
-    QFuture<T> srcFuture;
+    std::optional<QFuture<T>> optSrcFuture;
 
     QFutureWatcher<T> srcWatcher;
     QFutureWatcher<T> dstWatcher;
@@ -62,93 +68,119 @@ template<typename T>
 class Broker : public BrokerBase
 {
 public:
-    using BrokerBase::BrokerBase;
+    Broker();
+    Broker(const QFuture<T>& f);
     ~Broker() override = default;
 
-    void bind(const QFuture<T>& f);
-    void bindOrReplace(const QFuture<T>& f);
+    void rebind(const QFuture<T>& f);
+    void reset();
 
-    bool hasFuture() const { return m_optData.has_value(); } // Can be finished or running.
-    bool hasRunningFuture() const { return m_optData.has_value() && !m_optData->srcFuture.isFinished(); }
-    bool isCanceled() const { return m_optData.has_value() && (m_optData->dstPromise.isCanceled() || m_optData->srcFuture.isCanceled()); }
+    bool hasRunningFuture() const { return m_data->optSrcFuture && !m_data->optSrcFuture->isFinished(); }
+    bool isCanceled() const { return m_data->dstPromise.isCanceled() || (m_data->optSrcFuture && m_data->optSrcFuture->isCanceled()); }
 
-    QFuture<T> future() const { assert(hasFuture()); return m_optData->dstPromise.future(); }
+    QFuture<T> future() const { return m_data->dstPromise.future(); }
 
 private:
-    std::optional<Internal::BrokerData<T>> m_optData;
+    void rebind(const std::optional<QFuture<T>>& optSrcFuture);
+
+private:
+    std::unique_ptr<Internal::BrokerData<T>> m_data { std::make_unique<Internal::BrokerData<T>>() };
 };
 
 template<typename T>
-inline void Broker<T>::bind(const QFuture<T>& f)
+inline Broker<T>::Broker()
 {
-    assert(!hasRunningFuture() || isCanceled());
-    bindOrReplace(f);
+    rebind(std::nullopt);
 }
 
 template<typename T>
-inline void Broker<T>::bindOrReplace(const QFuture<T>& f)
+inline Broker<T>::Broker(const QFuture<T>& f)
+{
+    rebind(f);
+}
+
+template<typename T>
+inline void Broker<T>::rebind(const QFuture<T>& f)
+{
+    rebind(std::make_optional(f));
+}
+
+template<typename T>
+inline void Broker<T>::reset()
+{
+    rebind(std::nullopt);
+}
+
+template<typename T>
+inline void Broker<T>::rebind(const std::optional<QFuture<T>>& optSrcFuture)
 {
     // If finished or canceled - clear state
-    if (hasFuture() && (m_optData->dstPromise.isFinished() || m_optData->dstPromise.isCanceled()))
-        m_optData.reset();
+    if (m_data->dstPromise.isFinished() || m_data->dstPromise.isCanceled())
+        m_data.reset();
 
-    // Cancel existing future, destroy irrelevant objects (and disconnect from irrelevant signals)
-    if (m_optData) {
-        if (!m_optData->srcFuture.isFinished())
-            m_optData->srcFuture.cancel();
+    // Destroy irrelevant objects (and disconnect from irrelevant signals), cancel previous source future
+    if (m_data) {
+        auto optOldSrcFuture = m_data->optSrcFuture;
 
-        Promise<T> promise = std::move(m_optData->dstPromise);
-        m_optData.emplace(std::move(promise));
+        Promise<T> promise = std::move(m_data->dstPromise);
+        m_data = std::make_unique<Internal::BrokerData<T>>(std::move(promise));
+
+        if (optOldSrcFuture && !optOldSrcFuture->isFinished())
+            optOldSrcFuture->cancel();
     }
 
     // Connect to the new future
-    if (!m_optData)
-        m_optData.emplace();
+    if (!m_data)
+        m_data = std::make_unique<Internal::BrokerData<T>>();
 
-    m_optData->srcFuture = f;
+    m_data->optSrcFuture = optSrcFuture;
 
-    QObject::connect(&m_optData->srcWatcher, &QFutureWatcher<T>::started, [this]() {
-        assert(m_optData);
-        auto& dstPromise = m_optData->dstPromise;
+    if (m_data->optSrcFuture) {
+        QObject::connect(&m_data->srcWatcher, &QFutureWatcher<T>::started, [this]() {
+            assert(m_data);
+            auto& dstPromise = m_data->dstPromise;
 
-        if (!dstPromise.isStarted() && !dstPromise.isCanceled())
-            dstPromise.start();
-    });
+            if (!dstPromise.isStarted() && !dstPromise.isCanceled())
+                dstPromise.start();
+        });
 
-    QObject::connect(&m_optData->srcWatcher, &QFutureWatcher<T>::finished, [this]() {
-        assert(m_optData);
-        auto& srcFuture = m_optData->srcFuture;
-        auto& dstPromise = m_optData->dstPromise;
+        QObject::connect(&m_data->srcWatcher, &QFutureWatcher<T>::finished, [this]() {
+            assert(m_data);
+            assert(m_data->optSrcFuture);
+            auto& srcFuture = *m_data->optSrcFuture;
+            auto& dstPromise = m_data->dstPromise;
 
-        if (srcFuture.isCanceled()) {
-            try {
-                srcFuture.waitForFinished();
-                dstPromise.cancel();
-            } catch (...) {
+            if (srcFuture.isCanceled()) {
+                try {
+                    srcFuture.waitForFinished();
+                    dstPromise.cancel();
+                } catch (...) {
+                    if (!dstPromise.isStarted() && !dstPromise.isCanceled())
+                        dstPromise.start();
+
+                    dstPromise.finishWithException(std::current_exception());
+                }
+            } else {
                 if (!dstPromise.isStarted() && !dstPromise.isCanceled())
                     dstPromise.start();
 
-                dstPromise.finishWithException(std::current_exception());
+                if constexpr (std::is_void_v<T>) {
+                    dstPromise.finish();
+                } else {
+                    dstPromise.finish(srcFuture.result());
+                }
             }
-        } else {
-            if (!dstPromise.isStarted() && !dstPromise.isCanceled())
-                dstPromise.start();
+        });
 
-            if constexpr (std::is_void_v<T>) {
-                dstPromise.finish();
-            } else {
-                dstPromise.finish(srcFuture.result());
-            }
-        }
-    });
+        QObject::connect(&m_data->dstWatcher, &QFutureWatcher<T>::canceled, [this]() {
+            assert(m_data);
+            assert(m_data->optSrcFuture);
+            m_data->optSrcFuture->cancel();
+        });
 
-    QObject::connect(&m_optData->dstWatcher, &QFutureWatcher<T>::canceled, [this]() {
-        assert(m_optData);
-        m_optData->srcFuture.cancel();
-    });
-
-    m_optData->srcWatcher.setFuture(m_optData->srcFuture);
-    m_optData->dstWatcher.setFuture(m_optData->dstPromise.future());
+        m_data->srcWatcher.setFuture(*m_data->optSrcFuture);
+        m_data->dstWatcher.setFuture(m_data->dstPromise.future());
+    }
 }
 
 } // namespace UtilsQt

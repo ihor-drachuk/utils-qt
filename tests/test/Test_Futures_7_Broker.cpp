@@ -62,20 +62,109 @@ static bool sameOperation(const QFuture<T>& lhs, const QFuture<T>& rhs)
 TEST(UtilsQt, Futures_Broker_InitialState)
 {
     Broker<int> broker;
-    ASSERT_FALSE(broker.hasFuture());
     ASSERT_FALSE(broker.hasRunningFuture());
+}
+
+TEST(UtilsQt, Futures_Broker_ConstructorWithFuture)
+{
+    // Test constructor with ready future
+    {
+        Broker<int> broker(createReadyFuture(42));
+        ASSERT_FALSE(broker.hasRunningFuture()); // Ready future is already finished
+
+        auto destFuture = broker.future();
+        waitForFuture<QEventLoop>(destFuture);
+
+        ASSERT_TRUE(destFuture.isFinished());
+        ASSERT_FALSE(destFuture.isCanceled());
+        ASSERT_EQ(destFuture.result(), 42);
+    }
+
+    // Test constructor with running future
+    {
+        Broker<int> broker(createTimedFuture(UsualDuration, 123));
+        ASSERT_TRUE(broker.hasRunningFuture());
+
+        auto destFuture = broker.future();
+        ASSERT_FALSE(destFuture.isFinished());
+
+        waitForFuture<QEventLoop>(destFuture);
+
+        ASSERT_TRUE(destFuture.isFinished());
+        ASSERT_FALSE(destFuture.isCanceled());
+        ASSERT_EQ(destFuture.result(), 123);
+        ASSERT_FALSE(broker.hasRunningFuture());
+    }
+
+    // Test constructor with void future
+    {
+        Broker<void> broker(createReadyFuture());
+        ASSERT_FALSE(broker.hasRunningFuture());
+
+        auto destFuture = broker.future();
+        waitForFuture<QEventLoop>(destFuture);
+
+        ASSERT_TRUE(destFuture.isFinished());
+        ASSERT_FALSE(destFuture.isCanceled());
+    }
+}
+
+TEST(UtilsQt, Futures_Broker_DefaultConstructorFutureAvailability)
+{
+    // Test that default constructor provides a future even without source
+    Broker<int> broker;
+
+    // Future should be available immediately
+    auto destFuture = broker.future();
+
+    // But it should not be started/finished yet since no source is bound
+    ASSERT_FALSE(destFuture.isStarted());
+    ASSERT_FALSE(destFuture.isFinished());
+    ASSERT_FALSE(broker.hasRunningFuture());
+
+    // Now bind a source and verify the same future gets the result
+    broker.rebind(createReadyFuture(84));
+
+    // Should still be the same future object
+    auto sameFuture = broker.future();
+    ASSERT_TRUE(sameOperation(destFuture, sameFuture));
+
+    waitForFuture<QEventLoop>(destFuture);
+    ASSERT_TRUE(destFuture.isFinished());
+    ASSERT_FALSE(destFuture.isCanceled());
+    ASSERT_EQ(destFuture.result(), 84);
+}
+
+TEST(UtilsQt, Futures_Broker_ConstructorWithExceptionFuture)
+{
+    Broker<int> broker(createExceptionFuture<int>(MyException()));
+
+    auto destFuture = broker.future();
+    waitForFuture<QEventLoop>(destFuture);
+
+    ASSERT_TRUE(destFuture.isFinished());
+    ASSERT_TRUE(destFuture.isCanceled()); // Exception futures are always canceled
+    ASSERT_EQ(getFutureState(destFuture), FutureState::Exception);
+    ASSERT_THROW(destFuture.result(), MyException);
+
+    // Test that we can rebind after constructor exception
+    broker.rebind(createReadyFuture(456));
+    auto newDestFuture = broker.future();
+    waitForFuture<QEventLoop>(newDestFuture);
+
+    ASSERT_TRUE(newDestFuture.isFinished());
+    ASSERT_FALSE(newDestFuture.isCanceled());
+    ASSERT_EQ(newDestFuture.result(), 456);
 }
 
 TEST(UtilsQt, Futures_Broker_BasicBinding_Int)
 {
     Broker<int> broker;
 
-    ASSERT_FALSE(broker.hasFuture());
     ASSERT_FALSE(broker.hasRunningFuture());
 
-    broker.bind(createReadyFuture(42));
+    broker.rebind(createReadyFuture(42));
 
-    ASSERT_TRUE(broker.hasFuture());
     ASSERT_FALSE(broker.hasRunningFuture()); // Ready future is already finished
 
     auto destFuture = broker.future();
@@ -90,12 +179,10 @@ TEST(UtilsQt, Futures_Broker_BasicBinding_Void)
 {
     Broker<void> broker;
 
-    ASSERT_FALSE(broker.hasFuture());
     ASSERT_FALSE(broker.hasRunningFuture());
 
-    broker.bind(createReadyFuture());
+    broker.rebind(createReadyFuture());
 
-    ASSERT_TRUE(broker.hasFuture());
     ASSERT_FALSE(broker.hasRunningFuture());
 
     auto destFuture = broker.future();
@@ -109,7 +196,7 @@ TEST(UtilsQt, Futures_Broker_BasicBinding_String)
 {
     Broker<QString> broker;
 
-    broker.bind(createReadyFuture(QString("Hello World")));
+    broker.rebind(createReadyFuture(QString("Hello World")));
 
     auto destFuture = broker.future();
     waitForFuture<QEventLoop>(destFuture);
@@ -123,9 +210,8 @@ TEST(UtilsQt, Futures_Broker_DelayedBinding)
 {
     Broker<int> broker;
 
-    broker.bind(createTimedFuture(UsualDuration, 123));
+    broker.rebind(createTimedFuture(UsualDuration, 123));
 
-    ASSERT_TRUE(broker.hasFuture());
     ASSERT_TRUE(broker.hasRunningFuture());
 
     auto destFuture = broker.future();
@@ -144,7 +230,7 @@ TEST(UtilsQt, Futures_Broker_ReplaceFinishedFuture)
     Broker<int> broker;
 
     // First bind and wait for completion
-    broker.bind(createReadyFuture(42));
+    broker.rebind(createReadyFuture(42));
     auto destFuture1 = broker.future();
     waitForFuture<QEventLoop>(destFuture1);
 
@@ -152,7 +238,7 @@ TEST(UtilsQt, Futures_Broker_ReplaceFinishedFuture)
     ASSERT_EQ(destFuture1.result(), 42);
 
     // Replace with new future
-    broker.bindOrReplace(createReadyFuture(84));
+    broker.rebind(createReadyFuture(84));
 
     // Should get new future
     auto destFuture2 = broker.future();
@@ -169,12 +255,12 @@ TEST(UtilsQt, Futures_Broker_ReplaceRunningFuture)
 
     // Bind a long-running future
     auto sourceFuture1 = createTimedFuture(UsualDuration, 42);
-    broker.bind(sourceFuture1);
+    broker.rebind(sourceFuture1);
 
     ASSERT_TRUE(broker.hasRunningFuture());
 
     // Replace before it finishes
-    broker.bindOrReplace(createReadyFuture(84));
+    broker.rebind(createReadyFuture(84));
 
     // Original source should be canceled
     waitForFuture<QEventLoop>(createTimedFuture(MicroDuration));
@@ -192,7 +278,7 @@ TEST(UtilsQt, Futures_Broker_CancellationFromSource)
 {
     Broker<int> broker;
 
-    broker.bind(createTimedCanceledFuture<int>(UsualDuration));
+    broker.rebind(createTimedCanceledFuture<int>(UsualDuration));
 
     auto destFuture = broker.future();
     waitForFuture<QEventLoop>(destFuture);
@@ -207,7 +293,7 @@ TEST(UtilsQt, Futures_Broker_CancellationFromDestination)
     Broker<int> broker;
 
     auto sourceFuture = createTimedFuture(UsualDuration, 42);
-    broker.bind(sourceFuture);
+    broker.rebind(sourceFuture);
 
     auto destFuture = broker.future();
     ASSERT_FALSE(destFuture.isCanceled());
@@ -230,7 +316,7 @@ TEST(UtilsQt, Futures_Broker_ExceptionHandling)
 {
     Broker<int> broker;
 
-    broker.bind(createExceptionFuture<int>(MyException()));
+    broker.rebind(createExceptionFuture<int>(MyException()));
 
     auto destFuture = broker.future();
     waitForFuture<QEventLoop>(destFuture);
@@ -241,7 +327,7 @@ TEST(UtilsQt, Futures_Broker_ExceptionHandling)
     ASSERT_THROW(destFuture.result(), MyException);
 
     // Test binding a new future after exception
-    broker.bind(createTimedFuture(UsualDuration, 123));
+    broker.rebind(createTimedFuture(UsualDuration, 123));
     auto newDestFuture = broker.future();
     waitForFuture<QEventLoop>(newDestFuture);
 
@@ -254,7 +340,7 @@ TEST(UtilsQt, Futures_Broker_TimedExceptionHandling)
 {
     Broker<int> broker;
 
-    broker.bind(createTimedExceptionFuture<int>(UsualDuration, MyException()));
+    broker.rebind(createTimedExceptionFuture<int>(UsualDuration, MyException()));
 
     auto destFuture = broker.future();
     waitForFuture<QEventLoop>(destFuture);
@@ -265,7 +351,7 @@ TEST(UtilsQt, Futures_Broker_TimedExceptionHandling)
     ASSERT_THROW(destFuture.result(), MyException);
 
     // Test binding a new future after timed exception
-    broker.bind(createTimedFuture(UsualDuration, 456));
+    broker.rebind(createTimedFuture(UsualDuration, 456));
     auto newDestFuture = broker.future();
     waitForFuture<QEventLoop>(newDestFuture);
 
@@ -279,19 +365,19 @@ TEST(UtilsQt, Futures_Broker_MultipleReplacements)
     Broker<QString> broker;
 
     // First future
-    broker.bind(createReadyFuture(QString("First")));
+    broker.rebind(createReadyFuture(QString("First")));
     auto future1 = broker.future();
     waitForFuture<QEventLoop>(future1);
     ASSERT_EQ(future1.result(), QString("First"));
 
     // Second future
-    broker.bind(createReadyFuture(QString("Second")));
+    broker.rebind(createReadyFuture(QString("Second")));
     auto future2 = broker.future();
     waitForFuture<QEventLoop>(future2);
     ASSERT_EQ(future2.result(), QString("Second"));
 
     // Third future
-    broker.bind(createReadyFuture(QString("Third")));
+    broker.rebind(createReadyFuture(QString("Third")));
     auto future3 = broker.future();
     waitForFuture<QEventLoop>(future3);
     ASSERT_EQ(future3.result(), QString("Third"));
@@ -307,19 +393,19 @@ TEST(UtilsQt, Futures_Broker_TimedMultipleReplacements)
     Broker<QString> broker;
 
     // First timed future
-    broker.bind(createTimedFuture(UsualDuration, QString("First")));
+    broker.rebind(createTimedFuture(UsualDuration, QString("First")));
     auto future1 = broker.future();
     waitForFuture<QEventLoop>(createTimedFuture(MicroDuration));
     ASSERT_FALSE(future1.isFinished());
 
     // Second timed future
-    broker.bindOrReplace(createTimedFuture(UsualDuration, QString("Second")));
+    broker.rebind(createTimedFuture(UsualDuration, QString("Second")));
     auto future2 = broker.future();
     waitForFuture<QEventLoop>(createTimedFuture(MicroDuration));
     ASSERT_FALSE(future2.isFinished());
 
     // Third timed future
-    broker.bindOrReplace(createTimedFuture(UsualDuration, QString("Third")));
+    broker.rebind(createTimedFuture(UsualDuration, QString("Third")));
     auto future3 = broker.future();
     waitForFuture<QEventLoop>(createTimedFuture(MicroDuration));
     ASSERT_FALSE(future3.isFinished());
@@ -346,30 +432,25 @@ TEST(UtilsQt, Futures_Broker_StateTransitions)
     Broker<int> broker;
 
     // Initial state
-    ASSERT_FALSE(broker.hasFuture());
     ASSERT_FALSE(broker.hasRunningFuture());
 
     // Bind running future
-    broker.bind(createTimedFuture(UsualDuration, 42));
-    ASSERT_TRUE(broker.hasFuture());
+    broker.rebind(createTimedFuture(UsualDuration, 42));
     ASSERT_TRUE(broker.hasRunningFuture());
 
     // Wait for completion
     auto future1 = broker.future();
     waitForFuture<QEventLoop>(future1);
     ASSERT_EQ(future1.result(), 42);
-    ASSERT_TRUE(broker.hasFuture());
     ASSERT_FALSE(broker.hasRunningFuture()); // Finished but still has future
 
     // Replace finished future
-    broker.bind(createTimedFuture(MicroDuration, 84));
-    ASSERT_TRUE(broker.hasFuture());
+    broker.rebind(createTimedFuture(MicroDuration, 84));
     ASSERT_TRUE(broker.hasRunningFuture()); // New running future
 
     auto future2 = broker.future();
     waitForFuture<QEventLoop>(future2);
     ASSERT_EQ(future2.result(), 84);
-    ASSERT_TRUE(broker.hasFuture());
     ASSERT_FALSE(broker.hasRunningFuture());
 }
 
@@ -378,7 +459,7 @@ TEST(UtilsQt, Futures_Broker_CancellationDuringReplacement)
     Broker<int> broker;
 
     // Start with a long-running future
-    broker.bind(createTimedFuture(UsualDuration, 42));
+    broker.rebind(createTimedFuture(UsualDuration, 42));
     auto destFuture1 = broker.future();
 
     // Cancel the destination
@@ -386,7 +467,7 @@ TEST(UtilsQt, Futures_Broker_CancellationDuringReplacement)
     ASSERT_TRUE(destFuture1.isCanceled());
 
     // Now replace with a new future
-    broker.bind(createReadyFuture(84));
+    broker.rebind(createReadyFuture(84));
 
     // Should get a new future after replacement, as previous one is canceled
     auto destFuture2 = broker.future();
@@ -407,11 +488,7 @@ TEST(UtilsQt, Futures_Broker_RepeatedBindingSameType)
         const auto value = i * 10;
         auto sourceFuture = createReadyFuture(value);
 
-        if (i == 0) {
-            broker.bind(sourceFuture);
-        } else {
-            broker.bindOrReplace(sourceFuture);
-        }
+        broker.rebind(sourceFuture);
 
         auto destFuture = broker.future();
         waitForFuture<QEventLoop>(destFuture);
@@ -427,13 +504,13 @@ TEST(UtilsQt, Futures_Broker_ExceptionInReplacedFuture)
     Broker<int> broker;
 
     // Start with a normal future
-    broker.bind(createReadyFuture(42));
+    broker.rebind(createReadyFuture(42));
     auto future1 = broker.future();
     waitForFuture<QEventLoop>(future1);
     ASSERT_EQ(future1.result(), 42);
 
     // Replace with exception future
-    broker.bindOrReplace(createExceptionFuture<int>(MyException()));
+    broker.rebind(createExceptionFuture<int>(MyException()));
     auto future2 = broker.future();
     waitForFuture<QEventLoop>(future2);
 
@@ -447,7 +524,7 @@ TEST(UtilsQt, Futures_Broker_ContextDestruction)
 {
     auto broker = std::make_unique<Broker<int>>();
 
-    broker->bind(createTimedFuture(UsualDuration, 42));
+    broker->rebind(createTimedFuture(UsualDuration, 42));
     auto destFuture = broker->future();
 
     // Destroy context
@@ -464,14 +541,14 @@ TEST(UtilsQt, Futures_Broker_VoidFutureOperations)
     Broker<void> broker;
 
     // Test with multiple void futures
-    broker.bind(createReadyFuture());
+    broker.rebind(createReadyFuture());
     auto future1 = broker.future();
     waitForFuture<QEventLoop>(future1);
     ASSERT_TRUE(future1.isFinished());
     ASSERT_FALSE(future1.isCanceled());
 
     // Replace with timed void future
-    broker.bind(createTimedFuture(UsualDuration));
+    broker.rebind(createTimedFuture(UsualDuration));
     auto future2 = broker.future();
     waitForFuture<QEventLoop>(future2);
     ASSERT_TRUE(future2.isFinished());
@@ -479,7 +556,7 @@ TEST(UtilsQt, Futures_Broker_VoidFutureOperations)
 
     // Test replacement of unfinished future
     auto sourceFuture = createTimedFuture(UsualDuration);
-    broker.bind(sourceFuture);
+    broker.rebind(sourceFuture);
     auto future3 = broker.future();
 
     // Verify futures are not finished yet
@@ -487,7 +564,7 @@ TEST(UtilsQt, Futures_Broker_VoidFutureOperations)
     ASSERT_FALSE(sourceFuture.isFinished());
 
     // Replace before completion
-    broker.bindOrReplace(createTimedFuture(MicroDuration));
+    broker.rebind(createTimedFuture(MicroDuration));
     auto future4 = broker.future();
     ASSERT_TRUE(sameOperation(future4, future3));
     qApp->processEvents();
@@ -500,14 +577,14 @@ TEST(UtilsQt, Futures_Broker_VoidFutureOperations)
     ASSERT_FALSE(future4.isCanceled());
 
     // Replace with canceled void future
-    broker.bindOrReplace(createTimedCanceledFuture<void>(UsualDuration));
+    broker.rebind(createTimedCanceledFuture<void>(UsualDuration));
     auto future5 = broker.future();
     waitForFuture<QEventLoop>(future5);
     ASSERT_TRUE(future5.isFinished());
     ASSERT_TRUE(future5.isCanceled());
 
     // Test exception handling with void futures
-    broker.bindOrReplace(createExceptionFuture<void>(MyException()));
+    broker.rebind(createExceptionFuture<void>(MyException()));
     auto future6 = broker.future();
     waitForFuture<QEventLoop>(future6);
     ASSERT_TRUE(future6.isFinished());
@@ -516,7 +593,7 @@ TEST(UtilsQt, Futures_Broker_VoidFutureOperations)
     ASSERT_THROW(future6.waitForFinished(), MyException);
 
     // Test timed exception handling
-    broker.bindOrReplace(createTimedExceptionFuture<void>(UsualDuration, MyException()));
+    broker.rebind(createTimedExceptionFuture<void>(UsualDuration, MyException()));
     auto future7 = broker.future();
     waitForFuture<QEventLoop>(future7);
     ASSERT_TRUE(future7.isFinished());
@@ -525,9 +602,236 @@ TEST(UtilsQt, Futures_Broker_VoidFutureOperations)
     ASSERT_THROW(future7.waitForFinished(), MyException);
 
     // Replace exception future with normal future
-    broker.bindOrReplace(createReadyFuture());
+    broker.rebind(createReadyFuture());
     auto future8 = broker.future();
     waitForFuture<QEventLoop>(future8);
     ASSERT_TRUE(future8.isFinished());
     ASSERT_FALSE(future8.isCanceled());
+}
+
+TEST(UtilsQt, Futures_Broker_Reset_AfterBinding)
+{
+    Broker<int> broker;
+
+    // Bind a ready future
+    broker.rebind(createReadyFuture(42));
+    ASSERT_FALSE(broker.hasRunningFuture()); // Ready future is already finished
+
+    auto destFuture1 = broker.future();
+    waitForFuture<QEventLoop>(destFuture1);
+    ASSERT_TRUE(destFuture1.isFinished());
+    ASSERT_EQ(destFuture1.result(), 42);
+
+    // Reset the broker
+    broker.reset();
+    ASSERT_FALSE(broker.hasRunningFuture());
+
+    // Future should be available but not started/finished
+    auto destFuture2 = broker.future();
+    ASSERT_FALSE(destFuture2.isStarted());
+    ASSERT_FALSE(destFuture2.isFinished());
+
+    // Should be a different future object
+    ASSERT_FALSE(sameOperation(destFuture1, destFuture2));
+}
+
+TEST(UtilsQt, Futures_Broker_Reset_DuringRunning)
+{
+    Broker<int> broker;
+
+    // Bind a long-running future
+    auto sourceFuture = createTimedFuture(UsualDuration, 123);
+    broker.rebind(sourceFuture);
+    ASSERT_TRUE(broker.hasRunningFuture());
+
+    auto destFuture1 = broker.future();
+    ASSERT_FALSE(destFuture1.isFinished());
+
+    // Reset while future is running
+    broker.reset();
+    ASSERT_FALSE(broker.hasRunningFuture());
+
+    // Original source should be canceled
+    qApp->processEvents();
+    qApp->processEvents();
+    ASSERT_TRUE(sourceFuture.isCanceled());
+
+    // Get future after reset - should be the same future object since the destination promise
+    // was not finished or canceled before the reset, so it gets reused
+    auto destFuture2 = broker.future();
+    ASSERT_TRUE(sameOperation(destFuture1, destFuture2));
+    ASSERT_FALSE(destFuture2.isStarted());
+    ASSERT_FALSE(destFuture2.isFinished());
+}
+
+TEST(UtilsQt, Futures_Broker_Reset_VoidFuture)
+{
+    Broker<void> broker;
+
+    // Bind a void future
+    broker.rebind(createTimedFuture(UsualDuration));
+    ASSERT_TRUE(broker.hasRunningFuture());
+
+    auto destFuture1 = broker.future();
+    ASSERT_FALSE(destFuture1.isFinished());
+
+    // Reset
+    broker.reset();
+    ASSERT_FALSE(broker.hasRunningFuture());
+
+    // Get future after reset - should be the same future object since the destination promise
+    // was not finished or canceled before the reset, so it gets reused
+    auto destFuture2 = broker.future();
+    ASSERT_TRUE(sameOperation(destFuture1, destFuture2));
+    ASSERT_FALSE(destFuture2.isStarted());
+    ASSERT_FALSE(destFuture2.isFinished());
+}
+
+TEST(UtilsQt, Futures_Broker_Reset_MultipleResets)
+{
+    Broker<QString> broker;
+
+    // First binding and reset
+    broker.rebind(createReadyFuture(QString("First")));
+    auto future1 = broker.future();
+    waitForFuture<QEventLoop>(future1);
+    ASSERT_EQ(future1.result(), QString("First"));
+
+    broker.reset();
+    auto future2 = broker.future();
+    ASSERT_FALSE(future2.isStarted());
+    ASSERT_FALSE(sameOperation(future1, future2));
+
+    // Second binding and reset
+    broker.rebind(createReadyFuture(QString("Second")));
+    auto future3 = broker.future();
+    ASSERT_TRUE(sameOperation(future2, future3)); // Should reuse the same future
+    waitForFuture<QEventLoop>(future3);
+    ASSERT_EQ(future3.result(), QString("Second"));
+
+    broker.reset();
+    auto future4 = broker.future();
+    ASSERT_FALSE(future4.isStarted());
+    ASSERT_FALSE(sameOperation(future3, future4));
+
+    // Third binding after multiple resets
+    broker.rebind(createReadyFuture(QString("Third")));
+    auto future5 = broker.future();
+    ASSERT_TRUE(sameOperation(future4, future5));
+    waitForFuture<QEventLoop>(future5);
+    ASSERT_EQ(future5.result(), QString("Third"));
+}
+
+TEST(UtilsQt, Futures_Broker_Reset_AfterException)
+{
+    Broker<int> broker;
+
+    // Bind exception future
+    broker.rebind(createExceptionFuture<int>(MyException()));
+    auto destFuture1 = broker.future();
+    waitForFuture<QEventLoop>(destFuture1);
+
+    ASSERT_TRUE(destFuture1.isFinished());
+    ASSERT_TRUE(destFuture1.isCanceled());
+    ASSERT_EQ(getFutureState(destFuture1), FutureState::Exception);
+
+    // Reset after exception
+    broker.reset();
+    ASSERT_FALSE(broker.hasRunningFuture());
+
+    // Should get a new unstarted future
+    auto destFuture2 = broker.future();
+    ASSERT_FALSE(destFuture2.isStarted());
+    ASSERT_FALSE(destFuture2.isFinished());
+    ASSERT_FALSE(sameOperation(destFuture1, destFuture2));
+
+    // Should be able to bind normally after reset
+    broker.rebind(createReadyFuture(456));
+    auto destFuture3 = broker.future();
+    ASSERT_TRUE(sameOperation(destFuture2, destFuture3));
+    waitForFuture<QEventLoop>(destFuture3);
+    ASSERT_TRUE(destFuture3.isFinished());
+    ASSERT_FALSE(destFuture3.isCanceled());
+    ASSERT_EQ(destFuture3.result(), 456);
+}
+
+TEST(UtilsQt, Futures_Broker_Reset_AfterCancellation)
+{
+    Broker<int> broker;
+
+    // Bind and cancel
+    broker.rebind(createTimedFuture(UsualDuration, 42));
+    auto destFuture1 = broker.future();
+    destFuture1.cancel();
+
+    waitForFuture<QEventLoop>(destFuture1);
+    ASSERT_TRUE(destFuture1.isFinished());
+    ASSERT_TRUE(destFuture1.isCanceled());
+
+    // Reset after cancellation
+    broker.reset();
+    ASSERT_FALSE(broker.hasRunningFuture());
+
+    // Should get a new unstarted future
+    auto destFuture2 = broker.future();
+    ASSERT_FALSE(destFuture2.isStarted());
+    ASSERT_FALSE(destFuture2.isFinished());
+    ASSERT_FALSE(sameOperation(destFuture1, destFuture2));
+
+    // Should work normally after reset
+    broker.rebind(createReadyFuture(789));
+    auto destFuture3 = broker.future();
+    ASSERT_TRUE(sameOperation(destFuture2, destFuture3));
+    waitForFuture<QEventLoop>(destFuture3);
+    ASSERT_TRUE(destFuture3.isFinished());
+    ASSERT_FALSE(destFuture3.isCanceled());
+    ASSERT_EQ(destFuture3.result(), 789);
+}
+
+TEST(UtilsQt, Futures_Broker_Reset_InitialState)
+{
+    Broker<int> broker;
+
+    // Reset on initial state (should be no-op)
+    auto destFuture1 = broker.future();
+    ASSERT_FALSE(destFuture1.isStarted());
+    ASSERT_FALSE(destFuture1.isFinished());
+
+    broker.reset();
+    ASSERT_FALSE(broker.hasRunningFuture());
+
+    // Should get the same future after reset since the destination promise
+    // was neither finished nor canceled before the reset
+    auto destFuture2 = broker.future();
+    ASSERT_TRUE(sameOperation(destFuture1, destFuture2));
+    ASSERT_FALSE(destFuture2.isStarted());
+    ASSERT_FALSE(destFuture2.isFinished());
+}
+
+TEST(UtilsQt, Futures_Broker_Reset_BindAfterReset)
+{
+    Broker<int> broker;
+
+    // Reset without prior binding
+    broker.reset();
+    auto destFuture1 = broker.future();
+    ASSERT_FALSE(destFuture1.isStarted());
+
+    // Bind after reset
+    broker.rebind(createReadyFuture(999));
+    auto destFuture2 = broker.future();
+    ASSERT_TRUE(sameOperation(destFuture1, destFuture2)); // Should reuse the same future
+
+    waitForFuture<QEventLoop>(destFuture2);
+    ASSERT_TRUE(destFuture2.isFinished());
+    ASSERT_FALSE(destFuture2.isCanceled());
+    ASSERT_EQ(destFuture2.result(), 999);
+
+    // Reset again and verify state - since destFuture2 is finished,
+    // a new future should be created
+    broker.reset();
+    auto destFuture3 = broker.future();
+    ASSERT_FALSE(destFuture3.isStarted());
+    ASSERT_FALSE(destFuture3.isFinished());
+    ASSERT_FALSE(sameOperation(destFuture2, destFuture3));
 }
