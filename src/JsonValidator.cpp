@@ -22,7 +22,11 @@ bool MinMaxValidatorInt::check(const QJsonValue& v) const {
     if (!v.isDouble())
         return false;
 
-    const auto value = v.toInt();
+    bool ok;
+    const auto value = v.toVariant().toLongLong(&ok);
+
+    if (!ok)
+        return false;
 
     if (min && value < *min)
         return false;
@@ -254,9 +258,16 @@ bool Number::check(ContextData& ctx, ErrorInfo& logger, const QString& path, con
     }
 
     if (m_isIntegerExpected) {
+        bool ok;
         const auto v1 = value.toDouble();
-        const auto v2 = value.toInt();
-        if (!qFuzzyCompare(v1, v2)) {
+        const auto v2 = value.toVariant().toLongLong(&ok);
+
+        if (!ok) {
+            logger.notifyError(path, QStringLiteral("Expected integer value, but it is not (%1)").arg(value.toString()));
+            return false;
+        }
+
+        if (!qFuzzyCompare(v1, static_cast<double>(v2))) {
             logger.notifyError(path, QStringLiteral("Expected integer value, but it is not (%1)").arg(v1));
             return false;
         }

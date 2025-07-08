@@ -8,6 +8,7 @@
 #include <QJsonValue>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QJsonDocument>
 #include <QList>
 
 TEST(UtilsQt, JsonValidator_basic)
@@ -154,6 +155,81 @@ TEST(UtilsQt, JsonValidator_number)
     test["field_int_2__7"] = 3.5;
     ASSERT_FALSE(validator->check(lg, test));
     test["field_int_2__7"] = 3;
+}
+
+TEST(UtilsQt, JsonValidator_number_64bit)
+{
+    using namespace UtilsQt::JsonValidator;
+
+    // Test with 64-bit integer ranges that exceed 32-bit limits
+    const int64_t largeMin = 5000000000LL;  // > INT32_MAX (2147483647)
+    const int64_t largeMax = 9000000000LL;  // Much larger than INT32_MAX
+
+    auto validator =
+          RootValidator(
+            Object(
+              Field("field_large_int", Number(Integer, {largeMin}, {largeMax})),
+              Field("field_large_int_min", Number(Integer, {largeMin}, {})),
+              Field("field_large_int_max", Number(Integer, {}, {largeMax}))
+            )
+          );
+
+    ErrorInfo lg;
+
+    // Test valid large integers using JSON parsing
+    const QString validJson = R"({
+        "field_large_int": 7000000000,
+        "field_large_int_min": 6000000000,
+        "field_large_int_max": 8000000000
+    })";
+
+    auto validDoc = QJsonDocument::fromJson(validJson.toUtf8());
+    auto validTest = validDoc.object();
+    ASSERT_TRUE(validator->check(lg, validTest));
+
+    // Test boundary values using JSON parsing
+    const QString boundaryJson = R"({
+        "field_large_int": 5000000000,
+        "field_large_int_min": 5000000000,
+        "field_large_int_max": 9000000000
+    })";
+
+    auto boundaryDoc = QJsonDocument::fromJson(boundaryJson.toUtf8());
+    auto boundaryTest = boundaryDoc.object();
+    ASSERT_TRUE(validator->check(lg, boundaryTest));
+
+    // Test values below minimum using JSON parsing
+    const QString belowMinJson = R"({
+        "field_large_int": 4999999999,
+        "field_large_int_min": 6000000000,
+        "field_large_int_max": 8000000000
+    })";
+
+    auto belowMinDoc = QJsonDocument::fromJson(belowMinJson.toUtf8());
+    auto belowMinTest = belowMinDoc.object();
+    ASSERT_FALSE(validator->check(lg, belowMinTest));
+
+    // Test values above maximum using JSON parsing
+    const QString aboveMaxJson = R"({
+        "field_large_int": 9000000001,
+        "field_large_int_min": 6000000000,
+        "field_large_int_max": 8000000000
+    })";
+
+    auto aboveMaxDoc = QJsonDocument::fromJson(aboveMaxJson.toUtf8());
+    auto aboveMaxTest = aboveMaxDoc.object();
+    ASSERT_FALSE(validator->check(lg, aboveMaxTest));
+
+    // Test that floating point values still fail for integer type
+    const QString floatJson = R"({
+        "field_large_int": 7000000000.5,
+        "field_large_int_min": 6000000000,
+        "field_large_int_max": 8000000000
+    })";
+
+    auto floatDoc = QJsonDocument::fromJson(floatJson.toUtf8());
+    auto floatTest = floatDoc.object();
+    ASSERT_FALSE(validator->check(lg, floatTest));
 }
 
 TEST(UtilsQt, JsonValidator_array)
