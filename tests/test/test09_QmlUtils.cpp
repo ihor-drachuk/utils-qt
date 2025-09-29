@@ -5,6 +5,12 @@
 #include <gtest/gtest.h>
 
 #include <QVector>
+#include <QQmlEngine>
+#include <QJSEngine>
+#include <QJSValue>
+#include <QEventLoop>
+#include <QTimer>
+#include <QSignalSpy>
 #include <UtilsQt/Qml-Cpp/QmlUtils.h>
 
 namespace {
@@ -114,6 +120,44 @@ TEST_P(QmlUtils_ColorChangeAlpha, Test)
 }
 
 } // namespace
+
+// CallLater tests
+TEST(QmlUtils, CallLater_ErrorConditions)
+{
+    auto& qmlUtils = QmlUtils::instance();
+
+    // Test with non-callable QJSValue
+    QJSEngine jsEngine;
+    QJSValue nonCallable = jsEngine.newObject();
+
+    // These should not crash and should print warnings
+    qmlUtils.callOnce(nonCallable, 100, QmlUtils::CallOnceMode::RestartOnCall);
+    qmlUtils.callOnce(QJSValue(), 100, QmlUtils::CallOnceMode::ContinueOnCall);
+
+    // Test with invalid timeout
+    QJSValue validFunc = jsEngine.evaluate("(function() { console.log('test'); })");
+    qmlUtils.callOnce(validFunc, 0, QmlUtils::CallOnceMode::RestartOnCall);
+    qmlUtils.callOnce(validFunc, -100, QmlUtils::CallOnceMode::ContinueOnCall);
+}
+
+TEST(QmlUtils, CallLater_BasicValidation)
+{
+    auto& qmlUtils = QmlUtils::instance();
+    QJSEngine jsEngine;
+
+    // Create a callable function
+    QJSValue callableFunc = jsEngine.evaluate("(function() { return 42; })");
+    ASSERT_TRUE(callableFunc.isCallable());
+
+    // These should not crash (though they may not execute without proper QML engine setup)
+    qmlUtils.callOnce(callableFunc, 50, QmlUtils::CallOnceMode::RestartOnCall);
+    qmlUtils.callOnce(callableFunc, 100, QmlUtils::CallOnceMode::ContinueOnCall);
+
+    // Wait briefly to ensure no crashes
+    QEventLoop loop;
+    QTimer::singleShot(10, &loop, &QEventLoop::quit);
+    loop.exec();
+}
 
 INSTANTIATE_TEST_SUITE_P(
     Test,

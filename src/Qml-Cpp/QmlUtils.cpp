@@ -15,11 +15,17 @@
 #include <QGuiApplication>
 #include <QUrl>
 #include <QClipboard>
+#include <QJSEngine>
+#include <QJSValue>
+#include <QTimer>
+#include <QVector>
+#include <optional>
 #ifdef UTILS_QT_OS_WIN
 #include <qt_windows.h>
 #endif
 
 #include <UtilsQt/qvariant_traits.h>
+#include <UtilsQt/invoke_method.h>
 
 namespace {
     template<size_t N> constexpr size_t length(char const (&)[N]) { return N-1; }
@@ -34,6 +40,20 @@ namespace {
     constexpr int qrcPrefixLen = length(qrcPrefix);
     const char qrcPrefixReplacement[] = ":/";
     //constexpr int qrcPrefixReplacementLen = length(qrcPrefixReplacement);
+
+    struct CallOnceInfo {
+        QJSValue func;
+        std::shared_ptr<QTimer> timer;
+    };
+
+    std::optional<QVector<CallOnceInfo>::iterator> findPendingCall(QVector<CallOnceInfo>& pendingCalls, const QJSValue& func)
+    {
+        for (auto it = pendingCalls.begin(); it != pendingCalls.end(); ++it)
+            if (it->func.strictlyEquals(func))
+                return it;
+
+        return std::nullopt;
+    }
 }
 
 
@@ -44,6 +64,8 @@ struct QmlUtils::impl_t
     bool systemRequired { false };
 #endif
     int keyModifiers {};
+    QJSEngine* jsEngine { nullptr };
+    QVector<CallOnceInfo> pendingCalls;
 };
 
 
@@ -55,9 +77,10 @@ QmlUtils& QmlUtils::instance()
 
 void QmlUtils::registerTypes()
 {
-    qmlRegisterSingletonType<QmlUtils>("UtilsQt", 1, 0, "QmlUtils", [] (QQmlEngine *engine, QJSEngine *) -> QObject* {
+    qmlRegisterSingletonType<QmlUtils>("UtilsQt", 1, 0, "QmlUtils", [] (QQmlEngine* engine, QJSEngine* jsEngine) -> QObject* {
         auto ret = &QmlUtils::instance();
         engine->setObjectOwnership(ret, QQmlEngine::CppOwnership);
+        ret->impl().jsEngine = jsEngine;
         return ret;
     });
 }
@@ -416,6 +439,59 @@ void QmlUtils::resetCursor(QQuickItem* item)
 QPoint QmlUtils::cursorPosition()
 {
     return QCursor::pos();
+}
+
+void QmlUtils::callOnce(const QJSValue& func, int timeoutMs, CallOnceMode mode)
+{
+    if (!func.isCallable()) {
+        qWarning() << "QmlUtils::callOnce - provided function is not callable";
+        return;
+    }
+
+    if (timeoutMs <= 0) {
+        qWarning() << "QmlUtils::callOnce - timeout must be positive";
+        return;
+    }
+
+    if (!impl().jsEngine) {
+        qWarning() << "QmlUtils::callOnce - JS engine not available";
+        return;
+    }
+
+    auto optExistingCall = findPendingCall(impl().pendingCalls, func);
+    if (optExistingCall) {
+        if (mode == CallOnceMode::RestartOnCall)
+            (*optExistingCall)->timer->start(timeoutMs);
+
+        return;
+    }
+
+    // Otherwise - schedule a new call.
+    impl().pendingCalls.push_back({});
+    auto& callInfo = impl().pendingCalls.back();
+    callInfo.func = func;
+    callInfo.timer = std::make_shared<QTimer>();
+    callInfo.timer->setSingleShot(true);
+    callInfo.timer->setInterval(timeoutMs);
+
+    QObject::connect(callInfo.timer.get(), &QTimer::timeout, this, [this, func]() {
+        auto optIt = findPendingCall(impl().pendingCalls, func);
+        if (optIt) {
+            auto& callInfo = **optIt;
+
+            assert(callInfo.func.isCallable());
+            const auto result = callInfo.func.call();
+            if (result.isError())
+                qWarning() << "QmlUtils::callOnce - Error executing function:" << result.toString();
+
+            UtilsQt::invokeMethod(this, [this, func]() {
+                if (auto optIt = findPendingCall(impl().pendingCalls, func))
+                    impl().pendingCalls.erase(*optIt);
+            }, Qt::QueuedConnection);
+        }
+    });
+
+    callInfo.timer->start();
 }
 
 #ifdef UTILS_QT_OS_WIN
