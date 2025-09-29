@@ -13,6 +13,7 @@
 #include <utils-cpp/pimpl.h>
 
 class QQuickItem;
+class QJSValue;
 
 struct PathDetails
 {
@@ -35,6 +36,12 @@ class QmlUtils : public QObject
     Q_OBJECT
     NO_COPY_MOVE(QmlUtils);
 public:
+    enum class CallOnceMode {
+        RestartOnCall,      // Restart timeout when same function is called again
+        ContinueOnCall      // Continue existing timeout, ignore subsequent calls
+    };
+    Q_ENUM(CallOnceMode)
+
     static QmlUtils& instance();
     static void registerTypes();
 
@@ -104,6 +111,10 @@ public:
     Q_INVOKABLE void setDefaultCursor(QQuickItem* item, Qt::CursorShape cursorShape);
     Q_INVOKABLE void resetCursor(QQuickItem* item);
     Q_INVOKABLE QPoint cursorPosition();
+
+    // Call utils
+    // Notice! 'callOnce' can work only with static functions or saved lambdas. NOT INLINE LAMBDAS!
+    Q_INVOKABLE void callOnce(const QJSValue& func, int timeoutMs, CallOnceMode mode = CallOnceMode::ContinueOnCall);
 
 signals:
     void keyPressed(Qt::Key key);
