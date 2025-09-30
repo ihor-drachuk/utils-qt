@@ -420,6 +420,15 @@ void QmlUtils::minimizeWindow(QObject* win)
     window->setWindowStates(flags);
 }
 
+bool QmlUtils::isWindowVisible(QObject* win, QVariant /*unusedVisibility*/)
+{
+    auto window = qobject_cast<QQuickWindow*>(win);
+    assert(window);
+
+    const auto visibility = window->visibility();
+    return visibility == QWindow::Windowed || visibility == QWindow::Maximized || visibility == QWindow::FullScreen;
+}
+
 void QmlUtils::setCustomCursor(QQuickItem* item, const QString& file, const QPoint& hotPoint)
 {
     QCursor cursor = QCursor(QPixmap(file), hotPoint.x(), hotPoint.y());

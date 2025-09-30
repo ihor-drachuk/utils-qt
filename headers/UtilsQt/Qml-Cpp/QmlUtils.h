@@ -3,12 +3,14 @@
  * Contact:  ihor-drachuk-libs@pm.me  */
 
 #pragma once
-#include <QObject>
 #include <QColor>
-#include <QSize>
-#include <QPoint>
 #include <QList>
+#include <QObject>
+#include <QPoint>
+#include <QSize>
 #include <QStringList>
+#include <QVariant>
+
 #include <utils-cpp/default_ctor_ops.h>
 #include <utils-cpp/pimpl.h>
 
@@ -105,6 +107,7 @@ public:
     // Window
     Q_INVOKABLE void showWindow(QObject* win);
     Q_INVOKABLE void minimizeWindow(QObject* win);
+    Q_INVOKABLE bool isWindowVisible(QObject* win, QVariant /*unusedVisibility*/ = {});
 
     // Cursor
     Q_INVOKABLE void setCustomCursor(QQuickItem* item, const QString& file, const QPoint& hotPoint);
