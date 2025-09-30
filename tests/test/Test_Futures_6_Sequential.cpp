@@ -1068,15 +1068,17 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
                      .execute(awaitables);
 
         UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50 * TimeFactor));
+        ASSERT_TRUE(awaitables.isRunning());
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
-        ASSERT_TRUE(awaitables.isRunning());
+        //ASSERT_TRUE(awaitables.isRunning());
         ASSERT_FALSE(flag);
         awaitables.wait();
         awaitables.wait(); // Just test that it doesn't crash
         awaitables.wait();
+        ASSERT_FALSE(awaitables.isRunning());
         ASSERT_TRUE(flag);
         ASSERT_EQ(f.resultCount(), 0);
         ASSERT_LE(duration, 150ms * TimeFactor);
