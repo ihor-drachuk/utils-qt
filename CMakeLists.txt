@@ -15,9 +15,9 @@ if (NOT TARGET utils-cpp)
     add_subdirectory(3rd-party/utils-cpp)
 endif()
 
-find_package(Qt6 COMPONENTS Core Quick QUIET)
+find_package(Qt6 COMPONENTS Core Qml Quick QUIET)
 if (NOT Qt6_FOUND)
-    find_package(Qt5 5.15 REQUIRED COMPONENTS Core Quick)
+    find_package(Qt5 5.15 REQUIRED COMPONENTS Core Qml Quick)
 endif()
 
 FILE(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp src/*.qrc src/*.h headers/*.h)
@@ -76,8 +76,15 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 # --- ---
 
-target_link_libraries(utils-qt PUBLIC Qt::Core Qt::Quick utils-cpp)
+target_link_libraries(utils-qt PUBLIC Qt::Core Qt::Qml Qt::Quick utils-cpp)
 target_include_directories(utils-qt PUBLIC headers)
+
+# Enable private Qt headers for QQmlPropertyValueInterceptor
+if(Qt6_FOUND)
+    target_include_directories(utils-qt PRIVATE ${Qt6Qml_PRIVATE_INCLUDE_DIRS})
+else()
+    target_include_directories(utils-qt PRIVATE ${Qt5Qml_PRIVATE_INCLUDE_DIRS})
+endif()
 
 if (UTILS_QT_NO_GUI_TESTS)
     target_compile_definitions(utils-qt PUBLIC UTILS_QT_NO_GUI_TESTS)

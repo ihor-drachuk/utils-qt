@@ -20,6 +20,7 @@
 #include <UtilsQt/Qml-Cpp/QmlUtils.h>
 #include <UtilsQt/Qml-Cpp/Geometry/Geometry.h>
 #include <UtilsQt/Qml-Cpp/Geometry/Polygon.h>
+#include <UtilsQt/Qml-Cpp/FilterBehavior.h>
 #include <UtilsQt/MergedListModel.h>
 #include <UtilsQt/PlusOneProxyModel.h>
 
@@ -48,6 +49,7 @@ void registerAll(QQmlEngine& engine)
     QmlUtils::registerTypes();
     Geometry::registerTypes();
     Polygon::registerTypes();
+    FilterBehavior::registerTypes();
     MergedListModel::registerTypes();
     PlusOneProxyModel::registerTypes();
 }
