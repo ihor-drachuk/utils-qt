@@ -7,6 +7,7 @@
 #include <QTimer>
 #include <optional>
 #include <private/qqmlproperty_p.h>
+#include <private/qqmlbinding_p.h>
 
 struct FilterBehavior::impl_t
 {
@@ -42,22 +43,20 @@ void FilterBehavior::setTarget(const QQmlProperty& property)
 
 void FilterBehavior::write(const QVariant& value)
 {
-    impl().optPendingValue = value;
+    // Try to force update of 'when' property binding
+    QQmlProperty whenProp(this, "when");
+    if (whenProp.isValid())
+        if (auto binding = dynamic_cast<QQmlBinding*>(QQmlPropertyPrivate::binding(whenProp)))
+            binding->update();
 
-    QTimer::singleShot(0, this, [this]() {
-        if (!impl().optPendingValue) return;
-
-        auto value = *impl().optPendingValue;
+    if (impl().when && impl().delay > 0) {
+        impl().optPendingValue = value;
+        impl().timer.start(impl().delay);
+    } else {
+        impl().timer.stop();
         impl().optPendingValue.reset();
-
-        if (impl().when && impl().delay > 0) {
-            impl().optPendingValue = value;
-            impl().timer.start(impl().delay);
-        } else {
-            impl().timer.stop();
-            applyValue(value);
-        }
-    });
+        applyValue(value);
+    }
 }
 
 int FilterBehavior::delay() const
