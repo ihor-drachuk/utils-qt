@@ -128,7 +128,6 @@ Item {
             compare(testObj.filteredBool, true);
 
             testObj.rawBool = false;
-            wait(1);
             compare(testObj.filteredBool, false); // Immediate
         }
 
@@ -144,7 +143,6 @@ Item {
 
             // Cancel by setting false
             testObj.rawBool = false;
-            wait(1);
             compare(testObj.filteredBool, false); // Applied immediately
 
             wait(160 * root.timeMultiplier); // Wait more than original delay
@@ -163,7 +161,6 @@ Item {
 
             // Cancel by value that doesn't match condition
             testObj.rawInt = 7;
-            wait(1);
             compare(testObj.filteredInt, 7); // Applied immediately
 
             wait(160 * root.timeMultiplier);
@@ -190,13 +187,11 @@ Item {
 
         function test_05_zero_delay() {
             zeroDelayTest.raw = true;
-            wait(1);
             compare(zeroDelayTest.filtered, true); // Immediate even with when=true
         }
 
         function test_06_external_condition() {
             externalCondTest.raw = 10;
-            wait(1);
             compare(externalCondTest.filtered, 10); // Immediate (editMode=false)
 
             externalCondTest.editMode = true;
@@ -214,7 +209,6 @@ Item {
             // Change condition during pending
             dynamicCondTest.condition = false;
             dynamicCondTest.raw = 15;
-            wait(1);
             compare(dynamicCondTest.filtered, 15); // Should apply immediately now
         }
 
@@ -225,7 +219,6 @@ Item {
             compare(stringTest.filtered, "hello");
 
             stringTest.raw = "hi";
-            wait(1);
             compare(stringTest.filtered, "hi"); // Immediate (length <= 3)
         }
 
@@ -243,7 +236,6 @@ Item {
             wait(60 * root.timeMultiplier);
             testObj.rawInt = 7;  // Cancel all, apply immediately
 
-            wait(1);
             compare(testObj.filteredInt, 7);
             wait(160 * root.timeMultiplier);
             compare(testObj.filteredInt, 7); // Still 7
@@ -258,7 +250,6 @@ Item {
 
             multipleTest.raw = 15;
             compare(multipleTest.filtered1, 5);  // Delayed (15 > 10)
-            wait(1);
             compare(multipleTest.filtered2, 15); // Immediate (15 <= 20)
 
             wait(160 * root.timeMultiplier);
