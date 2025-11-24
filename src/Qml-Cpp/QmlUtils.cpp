@@ -5,6 +5,8 @@
 #include <UtilsQt/Qml-Cpp/QmlUtils.h>
 
 #include <QCursor>
+#include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QQmlEngine>
 #include <QImageReader>
@@ -383,6 +385,26 @@ bool QmlUtils::urlFileExists(const QUrl& url) const
 bool QmlUtils::localFileExists(const QString& fileName) const
 {
     return QFile::exists(fileName);
+}
+
+QStringList QmlUtils::listFiles(const QString& path, const QStringList& nameFilters, bool recursive) const
+{
+    QDir dir(normalizePath(path));
+    QDir::Filters filters = QDir::Files | QDir::NoSymLinks | QDir::Readable | QDir::NoDotAndDotDot;
+
+    QDirIterator it(dir.absolutePath(),
+                    nameFilters,
+                    filters,
+                    recursive ? QDirIterator::Subdirectories : QDirIterator::NoIteratorFlags);
+
+    QStringList result;
+    while (it.hasNext()) {
+        it.next();
+        result.append(it.filePath());
+    }
+
+    result.sort(Qt::CaseInsensitive);
+    return result;
 }
 
 void QmlUtils::showWindow(QObject* win)

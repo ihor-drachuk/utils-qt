@@ -72,6 +72,7 @@ public:
     Q_INVOKABLE QString extractFileName(const QString& filePath) const;
     Q_INVOKABLE bool urlFileExists(const QUrl& url) const;
     Q_INVOKABLE bool localFileExists(const QString& fileName) const;
+    Q_INVOKABLE QStringList listFiles(const QString& path, const QStringList& nameFilters = {}, bool recursive = false) const;
 
     // Images
     Q_INVOKABLE bool isImage(const QString& fileName) const;
