@@ -296,7 +296,8 @@ public:
         return unsubscribeGuard;
     }
 
-    void registerAwaitable(QFuture<void> f)
+    template<typename T>
+    void registerAwaitable(QFuture<T> f)
     {
         registerAwaitable([f]() mutable { f.waitForFinished(); },
                           [f]() { return f.isFinished(); });
