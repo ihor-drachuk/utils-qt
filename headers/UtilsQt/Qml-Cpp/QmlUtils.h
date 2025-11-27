@@ -10,6 +10,7 @@
 #include <QSize>
 #include <QStringList>
 #include <QVariant>
+#include <chrono>
 
 #include <utils-cpp/default_ctor_ops.h>
 #include <utils-cpp/pimpl.h>
@@ -30,6 +31,15 @@ struct PathDetails
     Location location {};
     bool isAbsolute {};
 };
+
+struct QUTimePoint
+{
+    Q_GADGET
+public:
+    std::chrono::steady_clock::time_point tp;
+};
+
+Q_DECLARE_METATYPE(QUTimePoint)
 
 // codechecker_intentional [cppcoreguidelines-virtual-class-destructor]
 // This is a singleton instance
@@ -119,6 +129,11 @@ public:
     // Call utils
     // Notice! 'callOnce' can work only with static functions or saved lambdas. NOT INLINE LAMBDAS!
     Q_INVOKABLE void callOnce(const QJSValue& func, int timeoutMs, CallOnceMode mode = CallOnceMode::ContinueOnCall);
+
+    // Time
+    Q_INVOKABLE QUTimePoint currentTimePoint() const;
+    Q_INVOKABLE double timePointDiffMs(const QUTimePoint& start) const;
+    Q_INVOKABLE QString timePointDiff(const QUTimePoint& start) const;
 
 signals:
     void keyPressed(Qt::Key key);

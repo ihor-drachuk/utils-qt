@@ -525,6 +525,89 @@ void QmlUtils::callOnce(const QJSValue& func, int timeoutMs, CallOnceMode mode)
     callInfo.timer->start();
 }
 
+QUTimePoint QmlUtils::currentTimePoint() const
+{
+    return QUTimePoint{std::chrono::steady_clock::now()};
+}
+
+double QmlUtils::timePointDiffMs(const QUTimePoint& start) const
+{
+    auto now = std::chrono::steady_clock::now();
+    auto diff = now - start.tp;
+    return std::chrono::duration<double, std::milli>(diff).count();
+}
+
+QString QmlUtils::timePointDiff(const QUTimePoint& start) const
+{
+    auto now = std::chrono::steady_clock::now();
+    auto diff = now - start.tp;
+    auto diffAbs = (diff < std::chrono::steady_clock::duration::zero()) ? -diff : diff;
+
+    QString result;
+    QString sign = (diff < std::chrono::steady_clock::duration::zero()) ? "-" : "";
+
+    if (diffAbs >= std::chrono::hours(24)) {
+        // Days, hours (if != 0)
+        const auto days = std::chrono::duration_cast<std::chrono::hours>(diffAbs).count() / 24;
+        const auto hours = std::chrono::duration_cast<std::chrono::hours>(diffAbs).count() - days * 24;
+
+        result = QString("%1%2d").arg(sign).arg(days);
+        if (hours > 0) {
+            result += QString(" %1h").arg(hours);
+        }
+
+    } else if (diffAbs >= std::chrono::hours(1)) {
+        // HH:MM:SS
+        const auto hours = std::chrono::duration_cast<std::chrono::hours>(diffAbs).count();
+        const auto minutes = std::chrono::duration_cast<std::chrono::minutes>(diffAbs).count() - hours * 60;
+        const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(diffAbs).count() - hours * 3600 - minutes * 60;
+
+        result = QString("%1%2h:%3m:%4s")
+                     .arg(sign)
+                     .arg(hours)
+                     .arg(minutes, 2, 10, QChar('0'))
+                     .arg(seconds, 2, 10, QChar('0'));
+
+    } else if (diffAbs >= std::chrono::minutes(1)) {
+        // MM:SS
+        const auto minutes = std::chrono::duration_cast<std::chrono::minutes>(diffAbs).count();
+        const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(diffAbs).count() - minutes * 60;
+
+        result = QString("%1%2m:%3s")
+                     .arg(sign)
+                     .arg(minutes)
+                     .arg(seconds, 2, 10, QChar('0'));
+
+    } else if (diffAbs >= std::chrono::seconds(1)) {
+        // SS.000 sec
+        const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(diffAbs).count();
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(diffAbs).count() - seconds * 1000;
+
+        result = QString("%1%2.%3 sec")
+                     .arg(sign)
+                     .arg(seconds)
+                     .arg(ms, 3, 10, QChar('0'));
+
+    } else if (diffAbs >= std::chrono::milliseconds(10)) {
+        // N ms
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(diffAbs).count();
+
+        result = QString("%1%2 ms").arg(sign).arg(ms);
+
+    } else {
+        // N.000 ms
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(diffAbs).count();
+        const auto us = std::chrono::duration_cast<std::chrono::microseconds>(diffAbs).count() - ms * 1000;
+
+        result = QString("%1%2.%3 ms")
+                     .arg(sign)
+                     .arg(ms)
+                     .arg(us, 3, 10, QChar('0'));
+    }
+
+    return result;
+}
+
 #ifdef UTILS_QT_OS_WIN
 bool QmlUtils::displayRequired() const
 {
