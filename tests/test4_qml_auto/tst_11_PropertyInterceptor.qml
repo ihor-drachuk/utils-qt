@@ -6,7 +6,7 @@
 //     Usage examples
 // ----------------------
 //
-// Example 1: Log property changes or measure performance
+// Example: Log property changes or measure performance
 //  /
 // |  Loader {
 // |    id: loader
@@ -24,18 +24,6 @@
 // |    }
 // |  }
 //  \
-//
-// Example 2: Track value changes
-//  /
-// |  property int counter: 0
-// |
-// |  PropertyInterceptor on counter {
-// |    onAfterUpdated: (oldValue, newValue) => {
-// |      console.log("Counter updated: " + oldValue + " -> " + newValue)
-// |    }
-// |  }
-//  \
-
 
 import QtQuick 2.15
 import QtTest 1.15
