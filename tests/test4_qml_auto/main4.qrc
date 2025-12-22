@@ -12,5 +12,6 @@
         <file>tst_09_CallOnce.qml</file>
         <file>tst_10_FilterBehavior.qml</file>
         <file>tst_11_PropertyInterceptor.qml</file>
+        <file>tst_12_MaskItems.qml</file>
     </qresource>
 </RCC>
