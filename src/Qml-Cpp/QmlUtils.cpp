@@ -658,6 +658,9 @@ QmlUtils::QmlUtils()
     auto app = QGuiApplication::instance();
     Q_ASSERT(app);
     app->installEventFilter(this);
+
+    // Forward focus window changes to QML
+    connect(qApp, &QGuiApplication::focusWindowChanged, this, &QmlUtils::focusWindowChanged);
 }
 
 QmlUtils::~QmlUtils()
