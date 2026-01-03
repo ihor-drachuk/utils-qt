@@ -138,6 +138,7 @@ public:
 signals:
     void keyPressed(Qt::Key key);
     void keyReleased(Qt::Key key);
+    void focusWindowChanged(QObject* window);
 
 // --- Properties support ---
 public:
