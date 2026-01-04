@@ -451,6 +451,20 @@ bool QmlUtils::isWindowVisible(QObject* win, QVariant /*unusedVisibility*/)
     return visibility == QWindow::Windowed || visibility == QWindow::Maximized || visibility == QWindow::FullScreen;
 }
 
+bool QmlUtils::isWindowForeground(QObject* win)
+{
+    auto window = qobject_cast<QQuickWindow*>(win);
+    assert(window);
+
+#ifdef UTILS_QT_OS_WIN
+    HWND foreground = GetForegroundWindow();
+    HWND winId = (HWND)(void*)window->winId();
+    return foreground == winId;
+#else
+    return window->isActive();
+#endif
+}
+
 void QmlUtils::setCustomCursor(QQuickItem* item, const QString& file, const QPoint& hotPoint)
 {
     QCursor cursor = QCursor(QPixmap(file), hotPoint.x(), hotPoint.y());

@@ -119,6 +119,7 @@ public:
     Q_INVOKABLE void showWindow(QObject* win);
     Q_INVOKABLE void minimizeWindow(QObject* win);
     Q_INVOKABLE bool isWindowVisible(QObject* win, QVariant /*unusedVisibility*/ = {});
+    Q_INVOKABLE bool isWindowForeground(QObject* win);
 
     // Cursor
     Q_INVOKABLE void setCustomCursor(QQuickItem* item, const QString& file, const QPoint& hotPoint);
