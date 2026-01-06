@@ -48,11 +48,12 @@ class QmlUtils : public QObject
     Q_OBJECT
     NO_COPY_MOVE(QmlUtils);
 public:
-    enum class CallOnceMode {
-        RestartOnCall,      // Restart timeout when same function is called again
-        ContinueOnCall      // Continue existing timeout, ignore subsequent calls
+    enum class CallDelayedMode {
+        Once_RestartOnCall,  // Call once, restart timeout when same function is called again
+        Once_ContinueOnCall, // Call once, continue existing timeout, ignore subsequent calls
+        RegularDelayed       // Each call is scheduled independently
     };
-    Q_ENUM(CallOnceMode)
+    Q_ENUM(CallDelayedMode)
 
     static QmlUtils& instance();
     static void registerTypes();
@@ -128,8 +129,10 @@ public:
     Q_INVOKABLE QPoint cursorPosition();
 
     // Call utils
-    // Notice! 'callOnce' can work only with static functions or saved lambdas. NOT INLINE LAMBDAS!
-    Q_INVOKABLE void callOnce(const QJSValue& func, int timeoutMs, CallOnceMode mode = CallOnceMode::ContinueOnCall);
+    // Notice! 'Once_*' modes can work only with static functions or saved lambdas. NOT INLINE LAMBDAS!
+    // RegularDelayed mode can work with any function.
+    Q_INVOKABLE void callDelayed(QObject* context, const QJSValue& func, int timeoutMs, CallDelayedMode mode = CallDelayedMode::RegularDelayed);
+    Q_INVOKABLE void callOnce(QObject* context, const QJSValue& func, int timeoutMs, bool restartOnCall = true);
 
     // Time
     Q_INVOKABLE QUTimePoint currentTimePoint() const;
