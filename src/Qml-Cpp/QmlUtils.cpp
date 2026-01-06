@@ -28,6 +28,8 @@
 
 #include <UtilsQt/qvariant_traits.h>
 #include <UtilsQt/invoke_method.h>
+#include <utils-cpp/container_utils.h>
+#include <utils-cpp/safe_integers.h>
 
 namespace {
     template<size_t N> constexpr size_t length(char const (&)[N]) { return N-1; }
@@ -43,18 +45,18 @@ namespace {
     const char qrcPrefixReplacement[] = ":/";
     //constexpr int qrcPrefixReplacementLen = length(qrcPrefixReplacement);
 
-    struct CallOnceInfo {
+    struct PendingCallInfo {
+        QObject* context {}; // may be null
         QJSValue func;
         std::shared_ptr<QTimer> timer;
+        bool deleteScheduled { false };
     };
 
-    std::optional<QVector<CallOnceInfo>::iterator> findPendingCall(QVector<CallOnceInfo>& pendingCalls, const QJSValue& func)
+    auto findPendingCall(QVector<PendingCallInfo>& pendingCalls, const QJSValue& func, bool deleteScheduled = false)
     {
-        for (auto it = pendingCalls.begin(); it != pendingCalls.end(); ++it)
-            if (it->func.strictlyEquals(func))
-                return it;
-
-        return std::nullopt;
+        return utils_cpp::find_if_ref(pendingCalls, [&func, deleteScheduled](const PendingCallInfo& info) {
+            return info.func.strictlyEquals(func) && info.deleteScheduled == deleteScheduled;
+        });
     }
 }
 
@@ -67,7 +69,7 @@ struct QmlUtils::impl_t
 #endif
     int keyModifiers {};
     QJSEngine* jsEngine { nullptr };
-    QVector<CallOnceInfo> pendingCalls;
+    QVector<PendingCallInfo> pendingCalls;
 };
 
 
@@ -486,57 +488,84 @@ QPoint QmlUtils::cursorPosition()
     return QCursor::pos();
 }
 
-void QmlUtils::callOnce(const QJSValue& func, int timeoutMs, CallOnceMode mode)
+void QmlUtils::callDelayed(QObject* context, const QJSValue& func, int timeoutMs, CallDelayedMode mode)
 {
     if (!func.isCallable()) {
-        qWarning() << "QmlUtils::callOnce - provided function is not callable";
+        qWarning() << "QmlUtils::callDelayed - provided function is not callable";
         return;
     }
 
     if (timeoutMs <= 0) {
-        qWarning() << "QmlUtils::callOnce - timeout must be positive";
+        qWarning() << "QmlUtils::callDelayed - timeout must be positive";
         return;
     }
 
     if (!impl().jsEngine) {
-        qWarning() << "QmlUtils::callOnce - JS engine not available";
+        qWarning() << "QmlUtils::callDelayed - JS engine not available";
         return;
     }
 
-    auto optExistingCall = findPendingCall(impl().pendingCalls, func);
-    if (optExistingCall) {
-        if (mode == CallOnceMode::RestartOnCall)
-            (*optExistingCall)->timer->start(timeoutMs);
+    if (mode != CallDelayedMode::RegularDelayed) {
+        auto optExistingCall = findPendingCall(impl().pendingCalls, func);
+        if (optExistingCall) {
+            if (mode == CallDelayedMode::Once_RestartOnCall)
+                optExistingCall->timer->start(timeoutMs);
 
-        return;
+            return;
+        }
     }
 
     // Otherwise - schedule a new call.
     impl().pendingCalls.push_back({});
     auto& callInfo = impl().pendingCalls.back();
+    callInfo.context = context;
     callInfo.func = func;
     callInfo.timer = std::make_shared<QTimer>();
     callInfo.timer->setSingleShot(true);
     callInfo.timer->setInterval(timeoutMs);
 
+    if (callInfo.context) {
+        QObject::connect(callInfo.context, &QObject::destroyed, this, [this, func]() {
+            auto optCallInfo = findPendingCall(impl().pendingCalls, func);
+            if (optCallInfo) {
+                optCallInfo->deleteScheduled = true;
+                optCallInfo->timer->stop();
+
+                UtilsQt::invokeMethod(this, [this, func]() {
+                    if (auto optCallInfo = findPendingCall(impl().pendingCalls, func, true))
+                        impl().pendingCalls.removeAt(s(optCallInfo.index()));
+                }, Qt::QueuedConnection);
+            }
+        });
+    }
+
     QObject::connect(callInfo.timer.get(), &QTimer::timeout, this, [this, func]() {
-        auto optIt = findPendingCall(impl().pendingCalls, func);
-        if (optIt) {
-            auto& callInfo = **optIt;
-
-            assert(callInfo.func.isCallable());
-            const auto result = callInfo.func.call();
+        auto optCallInfo = findPendingCall(impl().pendingCalls, func);
+        if (optCallInfo) {
+            assert(optCallInfo->func.isCallable());
+            const auto result = optCallInfo->func.call();
             if (result.isError())
-                qWarning() << "QmlUtils::callOnce - Error executing function:" << result.toString();
+                qWarning() << "QmlUtils::callDelayed - Error executing function:" << result.toString();
 
-            UtilsQt::invokeMethod(this, [this, func]() {
-                if (auto optIt = findPendingCall(impl().pendingCalls, func))
-                    impl().pendingCalls.erase(*optIt);
-            }, Qt::QueuedConnection);
+            // Re-find after call() because pendingCalls vector may have been reallocated
+            if (auto optCallInfo2 = findPendingCall(impl().pendingCalls, func)) {
+                optCallInfo2->deleteScheduled = true;
+
+                UtilsQt::invokeMethod(this, [this, func]() {
+                    if (auto optCallInfo = findPendingCall(impl().pendingCalls, func, true))
+                        impl().pendingCalls.removeAt(s(optCallInfo.index()));
+                }, Qt::QueuedConnection);
+            }
         }
     });
 
     callInfo.timer->start();
+}
+
+void QmlUtils::callOnce(QObject* context, const QJSValue& func, int timeoutMs, bool restartOnCall)
+{
+    callDelayed(context, func, timeoutMs, restartOnCall ? CallDelayedMode::Once_RestartOnCall :
+                                                          CallDelayedMode::Once_ContinueOnCall);
 }
 
 QUTimePoint QmlUtils::currentTimePoint() const

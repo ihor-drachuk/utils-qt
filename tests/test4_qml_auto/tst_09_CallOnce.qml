@@ -31,6 +31,12 @@ Item {
         callTimes.push(Date.now());
     }
 
+    // Dynamic component for context destruction tests
+    Component {
+        id: dynamicItemComponent
+        Item { }
+    }
+
     TestCase {
         name: "callOnceTest"
 
@@ -39,7 +45,7 @@ Item {
         }
 
         function test_00_basicCall() {
-            QmlUtils.callOnce(testCallback, 100 * root.timeMultiplier);
+            QmlUtils.callOnce(null, testCallback, 100 * root.timeMultiplier);
             compare(callCount, 0);
 
             wait(200 * root.timeMultiplier);
@@ -47,7 +53,7 @@ Item {
         }
 
         function test_01_callWithParameters() {
-            QmlUtils.callOnce(function() { testCallbackWithValue(42); }, 100 * root.timeMultiplier);
+            QmlUtils.callOnce(null, function() { testCallbackWithValue(42); }, 100 * root.timeMultiplier);
             compare(callCount, 0);
             compare(lastCallValue, 0);
 
@@ -59,11 +65,11 @@ Item {
         function test_02_restartOnCall_mode() {
             var startTime = Date.now();
 
-            QmlUtils.callOnce(testCallback, 200 * root.timeMultiplier, QmlUtils.RestartOnCall);
+            QmlUtils.callOnce(null, testCallback, 200 * root.timeMultiplier, true);
             wait(100 * root.timeMultiplier);
             compare(callCount, 0);
 
-            QmlUtils.callOnce(testCallback, 200 * root.timeMultiplier, QmlUtils.RestartOnCall);
+            QmlUtils.callOnce(null, testCallback, 200 * root.timeMultiplier, true);
             wait(150 * root.timeMultiplier);
             compare(callCount, 0);
 
@@ -78,11 +84,11 @@ Item {
         function test_03_continueOnCall_mode() {
             var startTime = Date.now();
 
-            QmlUtils.callOnce(testCallback, 200 * root.timeMultiplier, QmlUtils.ContinueOnCall);
+            QmlUtils.callOnce(null, testCallback, 200 * root.timeMultiplier, false);
             wait(100 * root.timeMultiplier);
             compare(callCount, 0);
 
-            QmlUtils.callOnce(testCallback, 200 * root.timeMultiplier, QmlUtils.ContinueOnCall);
+            QmlUtils.callOnce(null, testCallback, 200 * root.timeMultiplier, false);
             wait(150 * root.timeMultiplier);
             compare(callCount, 1);
 
@@ -97,8 +103,8 @@ Item {
         function test_04_multipleFunctions() {
             var counter1 = 0, counter2 = 0;
 
-            QmlUtils.callOnce(function() { counter1++; }, 100 * root.timeMultiplier);
-            QmlUtils.callOnce(function() { counter2++; }, 200 * root.timeMultiplier);
+            QmlUtils.callOnce(null, function() { counter1++; }, 100 * root.timeMultiplier);
+            QmlUtils.callOnce(null, function() { counter2++; }, 200 * root.timeMultiplier);
 
             compare(counter1, 0);
             compare(counter2, 0);
@@ -117,8 +123,8 @@ Item {
             var value2 = "second";
             var results = [];
 
-            QmlUtils.callOnce(function() { results.push(value1); }, 100 * root.timeMultiplier);
-            QmlUtils.callOnce(function() { results.push(value2); }, 200 * root.timeMultiplier);
+            QmlUtils.callOnce(null, function() { results.push(value1); }, 100 * root.timeMultiplier);
+            QmlUtils.callOnce(null, function() { results.push(value2); }, 200 * root.timeMultiplier);
 
             wait(300 * root.timeMultiplier);
             compare(results.length, 2);
@@ -129,13 +135,13 @@ Item {
         function test_06_errorHandling() {
             var errorThrown = false;
 
-            QmlUtils.callOnce(function() { throw new Error("Test error"); }, 50 * root.timeMultiplier);
+            QmlUtils.callOnce(null, function() { throw new Error("Test error"); }, 50 * root.timeMultiplier);
             wait(150 * root.timeMultiplier);
             // Error should be caught and logged, execution continues
         }
 
         function test_07_veryShortTimeout() {
-            QmlUtils.callOnce(testCallback, 1);
+            QmlUtils.callOnce(null, testCallback, 1);
             wait(50 * root.timeMultiplier);
             compare(callCount, 1);
         }
@@ -143,18 +149,22 @@ Item {
         function test_08_sequentialCalls() {
             var sequence = [];
 
-            QmlUtils.callOnce(function() {
+            var innerCallback = function() {
+                sequence.push(2);
+            };
+
+            var outerCallback = function() {
                 sequence.push(1);
-                QmlUtils.callOnce(function() {
-                    sequence.push(2);
-                }, 100 * root.timeMultiplier);
-            }, 100 * root.timeMultiplier);
+                QmlUtils.callOnce(null, innerCallback, 100 * root.timeMultiplier);
+            };
+
+            QmlUtils.callOnce(null, outerCallback, 100 * root.timeMultiplier);
 
             wait(150 * root.timeMultiplier);
             compare(sequence.length, 1);
             compare(sequence[0], 1);
 
-            wait(100 * root.timeMultiplier);
+            wait(150 * root.timeMultiplier);
             compare(sequence.length, 2);
             compare(sequence[1], 2);
         }
@@ -168,7 +178,7 @@ Item {
             const MinimalCount = Math.floor(N * Delay / Timeout);
 
             for (var i = 0; i < N; i++) {
-                QmlUtils.callOnce(function() { localCallCount++; }, Timeout, QmlUtils.RestartOnCall);
+                QmlUtils.callOnce(null, function() { localCallCount++; }, Timeout, true);
                 wait(Delay);
             }
 
@@ -181,7 +191,7 @@ Item {
             var func = function() { localCallCount++; };
 
             for (i = 0; i < N; i++) {
-                QmlUtils.callOnce(func, Timeout, QmlUtils.RestartOnCall);
+                QmlUtils.callOnce(null, func, Timeout, true);
                 wait(Delay);
             }
 
@@ -197,7 +207,7 @@ Item {
             resetCounters();
 
             for (i = 0; i < N; i++) {
-                QmlUtils.callOnce(testCallback, Timeout, QmlUtils.RestartOnCall);
+                QmlUtils.callOnce(null, testCallback, Timeout, true);
                 wait(Delay);
             }
 
@@ -206,6 +216,107 @@ Item {
             wait(WaitTime);
             compare(callCount, 1);
             wait(WaitTime);
+            compare(callCount, 1);
+        }
+
+        function test_10_contextDestruction() {
+            // Create a dynamic item to use as context
+            var dynamicItem = dynamicItemComponent.createObject(root);
+            verify(dynamicItem !== null);
+
+            var called = false;
+            QmlUtils.callOnce(dynamicItem, function() { called = true; }, 200 * root.timeMultiplier);
+
+            wait(50 * root.timeMultiplier);
+            compare(called, false);
+
+            // Destroy the context before timeout
+            dynamicItem.destroy();
+            wait(50 * root.timeMultiplier); // Allow destruction to process
+
+            // Wait for the original timeout to pass
+            wait(200 * root.timeMultiplier);
+
+            // Function should NOT have been called since context was destroyed
+            compare(called, false);
+        }
+
+        function test_11_contextWithNullWorks() {
+            // Verify that null context works (no context tracking, backward compatible)
+            var called = false;
+            QmlUtils.callOnce(null, function() { called = true; }, 100 * root.timeMultiplier);
+
+            wait(200 * root.timeMultiplier);
+            compare(called, true);
+        }
+
+        function test_12_contextValidCallExecutes() {
+            // Create a dynamic item to use as context
+            var dynamicItem = dynamicItemComponent.createObject(root);
+            verify(dynamicItem !== null);
+
+            var called = false;
+            QmlUtils.callOnce(dynamicItem, function() { called = true; }, 100 * root.timeMultiplier);
+
+            wait(200 * root.timeMultiplier);
+
+            // Function should have been called since context is still alive
+            compare(called, true);
+
+            dynamicItem.destroy();
+        }
+
+        function test_13_newCallAfterContextDestroyed() {
+            // Test that after context is destroyed (entry marked for deletion),
+            // a new callOnce with same function is NOT treated as duplicate.
+            var dynamicItem = dynamicItemComponent.createObject(root);
+            verify(dynamicItem !== null);
+
+            var callCount = 0;
+            var func = function() { callCount++; };
+
+            // First call with context
+            QmlUtils.callOnce(dynamicItem, func, 200 * root.timeMultiplier);
+
+            wait(50 * root.timeMultiplier);
+            compare(callCount, 0);
+
+            // Destroy context - entry is marked for deletion, deferred delete scheduled
+            dynamicItem.destroy();
+
+            // Wait for destruction to be processed (destroy() schedules deletion, doesn't happen immediately)
+            wait(10);
+
+            // Now call again with same func - should create a NEW entry since old one is marked
+            QmlUtils.callOnce(null, func, 100 * root.timeMultiplier);
+
+            // Wait for the second call to execute
+            wait(200 * root.timeMultiplier);
+
+            // The second call should have executed (first was cancelled)
+            compare(callCount, 1);
+        }
+
+        function test_14_deferredDeletionSafety() {
+            // Test that deferred deletion doesn't cause issues with rapid create/destroy cycles
+            var callCount = 0;
+            var func = function() { callCount++; };
+
+            for (var i = 0; i < 5; i++) {
+                var item = dynamicItemComponent.createObject(root);
+                QmlUtils.callOnce(item, func, 50 * root.timeMultiplier);
+                item.destroy();
+            }
+
+            // Wait for all destructions to be processed
+            wait(10);
+
+            // Final call without context - should create new entry since all previous are marked
+            QmlUtils.callOnce(null, func, 50 * root.timeMultiplier);
+
+            wait(200 * root.timeMultiplier);
+
+            // Only the final call should have executed
             compare(callCount, 1);
         }
     }
