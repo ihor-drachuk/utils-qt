@@ -17,6 +17,7 @@
 #include <QGuiApplication>
 #include <QUrl>
 #include <QClipboard>
+#include <QSysInfo>
 #include <QJSEngine>
 #include <QJSValue>
 #include <QTimer>
@@ -142,6 +143,11 @@ QString QmlUtils::clipboardGetText() const
 QString QmlUtils::getEnvironmentVariable(const QString& name) const
 {
     return QString::fromLatin1(qgetenv(name.toLatin1().constData()));
+}
+
+QString QmlUtils::machineUniqueId() const
+{
+    return QSysInfo::machineUniqueId();
 }
 
 PathDetails QmlUtils::analyzePath(const QString& str) const

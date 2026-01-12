@@ -73,6 +73,9 @@ public:
     // Env. variables
     Q_INVOKABLE QString getEnvironmentVariable(const QString& name) const;
 
+    // System info
+    Q_INVOKABLE QString machineUniqueId() const;
+
     // Path
     Q_INVOKABLE PathDetails analyzePath(const QString& str) const;
     Q_INVOKABLE QString toUrl(const QString& str) const;
