@@ -200,7 +200,7 @@ public:
             doCancel();
     }
 
-    QFuture<Target> targetFuture() { return m_targetFutureInterface.future(); };
+    QFuture<Target> targetFuture() { return m_targetFutureInterface.future(); }
 
 private:
     void handleFinished(const SourceFuture& future) {
