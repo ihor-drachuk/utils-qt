@@ -9,6 +9,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/ihor-drachuk/utils-qt/actions/workflows/ci.yml"><img src="https://github.com/ihor-drachuk/utils-qt/actions/workflows/ci.yml/badge.svg" alt="Build"></a>
   <a href="https://github.com/ihor-drachuk/utils-qt/blob/master/License.txt"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/C%2B%2B-17-blue.svg" alt="C++17">
   <img src="https://img.shields.io/badge/Qt-5.15%20|%206.x-green.svg" alt="Qt">
