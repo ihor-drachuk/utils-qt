@@ -8,6 +8,7 @@
 #include <QFutureWatcher>
 #include <QTimer>
 #include <optional>
+#include <type_traits>
 #include <utils-cpp/copy_move.h>
 
 /*            Reminder
@@ -250,7 +251,7 @@ private:
 } // namespace RetryingFutureInternal
 
 template<typename AsyncCall,
-         typename RT = std::result_of_t<AsyncCall()>,
+         typename RT = std::invoke_result_t<AsyncCall>,
          typename PT = typename RetryingFutureInternal::QFutureUnwrapper<RT>::Type,
          typename Helper = RetryingFutureInternal::ContextHelper<RetryingResult<PT>>,
          typename ResultValidator = decltype(Helper::getDefaultValidator())
