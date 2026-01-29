@@ -27,6 +27,7 @@ constexpr auto MaxWaitTimeout = std::chrono::milliseconds(10000);
 constexpr auto WorkLoopDuration = std::chrono::milliseconds(200);
 
 // Helper for reliable synchronization: wait until atomic flag becomes true
+// Uses Qt event loop to allow signal/slot delivery during wait
 // This is non-invasive observation - we just wait for the code to reach a state
 template<typename Clock = std::chrono::steady_clock>
 bool waitForFlag(const std::atomic<bool>& flag,
@@ -34,7 +35,8 @@ bool waitForFlag(const std::atomic<bool>& flag,
 {
     const auto deadline = Clock::now() + timeout;
     while (!flag.load(std::memory_order_acquire) && Clock::now() < deadline) {
-        QThread::currentThread()->msleep(5);
+        // Process Qt events to allow signal/slot delivery (needed for Sequential callbacks)
+        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(10));
     }
     return flag.load(std::memory_order_acquire);
 }
@@ -46,7 +48,8 @@ bool waitForCounter(const std::atomic<int>& counter, int expected,
 {
     const auto deadline = Clock::now() + timeout;
     while (counter.load(std::memory_order_acquire) < expected && Clock::now() < deadline) {
-        QThread::currentThread()->msleep(5);
+        // Process Qt events to allow signal/slot delivery
+        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(10));
     }
     return counter.load(std::memory_order_acquire) >= expected;
 }
