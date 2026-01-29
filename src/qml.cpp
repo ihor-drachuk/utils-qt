@@ -24,6 +24,7 @@
 #include <UtilsQt/Qml-Cpp/MaskInverter.h>
 #include <UtilsQt/Qml-Cpp/MaskInvertedRoundedRect.h>
 #include <UtilsQt/Qml-Cpp/PropertyInterceptor.h>
+#include <UtilsQt/Qml-Cpp/ValueSequenceWatcher.h>
 #include <UtilsQt/MergedListModel.h>
 #include <UtilsQt/PlusOneProxyModel.h>
 
@@ -54,6 +55,7 @@ void registerAll(QQmlEngine& engine)
     Polygon::registerTypes();
     FilterBehavior::registerTypes();
     PropertyInterceptor::registerTypes();
+    ValueSequenceWatcher::registerTypes();
     MergedListModel::registerTypes();
     PlusOneProxyModel::registerTypes();
     MaskInverter::registerTypes();
