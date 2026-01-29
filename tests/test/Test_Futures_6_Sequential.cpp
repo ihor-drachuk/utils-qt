@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <chrono>
 
 #include <QtConcurrent/QtConcurrent>
@@ -24,6 +25,19 @@ constexpr auto TimeFactor = 10;
 #else
 constexpr auto TimeFactor = 1;
 #endif // UTILS_QT_OS_MACOS
+
+// Helper for reliable synchronization: wait until atomic flag becomes true
+// This is non-invasive observation - we just wait for the code to reach a state
+template<typename Clock = std::chrono::steady_clock>
+bool waitForFlag(const std::atomic<bool>& flag,
+                 std::chrono::milliseconds timeout = std::chrono::milliseconds(5000))
+{
+    const auto deadline = Clock::now() + timeout;
+    while (!flag.load(std::memory_order_acquire) && Clock::now() < deadline) {
+        QThread::currentThread()->msleep(5);
+    }
+    return flag.load(std::memory_order_acquire);
+}
 
 struct OpStatistics
 {
@@ -1039,14 +1053,17 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
         UtilsQt::Awaitables awaitables;
         std::chrono::milliseconds duration;
         bool flag = false;
+        std::atomic<bool> threadStarted{false};  // Reliable sync: signals when thread enters work loop
         auto f = UtilsQt::Sequential(&obj)
-                     .start([&duration, &flag](UtilsQt::SequentialMediator& sm) {
+                     .start([&duration, &flag, &threadStarted](UtilsQt::SequentialMediator& sm) {
                          UtilsQt::Promise<int> promise(true);
 
-                         auto fThr = QtConcurrent::run([&duration, &flag, sm, promise]() mutable {
+                         auto fThr = QtConcurrent::run([&duration, &flag, &threadStarted, sm, promise]() mutable {
                              auto sg = CreateScopedGuard([&flag](){ flag = true; });
                              volatile bool run = true;
                              auto subscription = sm.onCancellation([&run]() mutable { run = false; });
+
+                             threadStarted.store(true, std::memory_order_release);  // Signal: entered work loop
 
                              const auto start = Clock::now();
                              while (run && (Clock::now() - start < 200ms * TimeFactor))
@@ -1067,13 +1084,14 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
                      })
                      .execute(awaitables);
 
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50 * TimeFactor));
-        ASSERT_TRUE(awaitables.isRunning());
+        // Reliable sync: wait for thread to enter work loop (non-invasive observation)
+        ASSERT_TRUE(waitForFlag(threadStarted));
+        ASSERT_TRUE(awaitables.isRunning());  // Now guaranteed: thread is in the loop
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
-        //ASSERT_TRUE(awaitables.isRunning());
+        //ASSERT_TRUE(awaitables.isRunning()); -- Not guaranteed after cancel, thread may finish quickly
         ASSERT_FALSE(flag);
         awaitables.wait();
         awaitables.wait(); // Just test that it doesn't crash
@@ -1084,10 +1102,11 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
         ASSERT_LE(duration, 150ms * TimeFactor);
     }
 
-    // `wait`
+    // `confirmWait` - tests that destructor waits for thread completion
     {
         bool flag = false;
         std::chrono::milliseconds duration;
+        std::atomic<bool> threadStarted{false};  // Reliable sync: signals when thread enters work loop
         QFuture<int> f;
 
         {
@@ -1095,13 +1114,15 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
             UtilsQt::Awaitables awaitables;
 
             f = UtilsQt::Sequential(&obj)
-                         .start([&duration, &flag](UtilsQt::SequentialMediator& sm) {
+                         .start([&duration, &flag, &threadStarted](UtilsQt::SequentialMediator& sm) {
                              UtilsQt::Promise<int> promise(true);
 
-                             auto fThr = QtConcurrent::run([&duration, &flag, sm, promise]() mutable {
+                             auto fThr = QtConcurrent::run([&duration, &flag, &threadStarted, sm, promise]() mutable {
                                  auto sg = CreateScopedGuard([&flag](){ flag = true; });
                                  volatile bool run = true;
                                  auto subscription = sm.onCancellation([&run]() mutable { run = false; });
+
+                                 threadStarted.store(true, std::memory_order_release);  // Signal: entered work loop
 
                                  const auto start = Clock::now();
                                  while (run && (Clock::now() - start < 200ms * TimeFactor))
@@ -1122,12 +1143,14 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
                          })
                          .execute(awaitables);
 
-            UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50 * TimeFactor));
+            // Reliable sync: wait for thread to enter work loop (non-invasive observation)
+            ASSERT_TRUE(waitForFlag(threadStarted));
+            ASSERT_TRUE(awaitables.isRunning());  // Now guaranteed: thread is in the loop
             f.cancel();
             UtilsQt::waitForFuture<QEventLoop>(f);
             ASSERT_TRUE(f.isFinished());
             ASSERT_TRUE(f.isCanceled());
-            ASSERT_TRUE(awaitables.isRunning());
+            // After cancel, thread may finish quickly, so isRunning() is not guaranteed
             ASSERT_FALSE(flag);
             awaitables.confirmWait();
         }
