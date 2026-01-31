@@ -3,6 +3,7 @@
  * Contact:  ihor-drachuk-libs@pm.me  */
 
 #include <gtest/gtest.h>
+#include <chrono>
 #include <QEventLoop>
 #include <QStandardPaths>
 #include <QFile>
@@ -14,17 +15,20 @@
 #include <UtilsQt/Futures/SignalToFuture.h>
 #include <UtilsQt/Qml-Cpp/FileWatcher.h>
 
+#include "internal/TestWaitHelpers.h"
+
 using namespace UtilsQt;
 
 namespace {
 
 // Maximum time to wait for file system events (generous for slow CI/macOS)
-constexpr int FileChangeTimeout = 5000;
+constexpr auto FileChangeTimeout = std::chrono::milliseconds(5000);
 
 // Helper to wait for FileWatcher::fileChanged signal with timeout
-bool waitForFileChange(FileWatcher& fw, int timeoutMs = FileChangeTimeout)
+bool waitForFileChange(FileWatcher& fw, std::chrono::milliseconds timeout = FileChangeTimeout)
 {
-    auto f = signalToFuture(&fw, &FileWatcher::fileChanged, nullptr, timeoutMs);
+    auto f = signalToFuture(&fw, &FileWatcher::fileChanged, nullptr,
+                            static_cast<int>(timeout.count()));
     waitForFuture<QEventLoop>(f);
     return !f.isCanceled();
 }
