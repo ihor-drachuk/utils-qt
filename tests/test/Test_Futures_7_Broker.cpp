@@ -4,6 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+
 #include <UtilsQt/Futures/Broker.h>
 #include <UtilsQt/Futures/Utils.h>
 #include <QCoreApplication>
@@ -11,11 +13,12 @@
 #include <QString>
 
 using namespace UtilsQt;
+using namespace std::chrono_literals;
 
 namespace {
 
 // Duration for "running" futures - long enough to test state transitions
-constexpr unsigned FutureDuration = 200;
+constexpr auto FutureDuration = 200ms;
 
 class MyException : public std::exception
 {
@@ -440,7 +443,7 @@ TEST(UtilsQt, Futures_Broker_StateTransitions)
     ASSERT_FALSE(broker.hasRunningFuture()); // Finished but still has future
 
     // Replace finished future
-    broker.rebind(createTimedFuture(50, 84));
+    broker.rebind(createTimedFuture(50ms, 84));
     ASSERT_TRUE(broker.hasRunningFuture()); // New running future
 
     auto future2 = broker.future();
@@ -559,7 +562,7 @@ TEST(UtilsQt, Futures_Broker_VoidFutureOperations)
     ASSERT_FALSE(sourceFuture.isFinished());
 
     // Replace before completion
-    broker.rebind(createTimedFuture(50));
+    broker.rebind(createTimedFuture(50ms));
     auto future4 = broker.future();
     ASSERT_TRUE(sameOperation(future4, future3));
     qApp->processEvents();

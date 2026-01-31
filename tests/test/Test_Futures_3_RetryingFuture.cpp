@@ -4,6 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+
 #include <UtilsQt/Futures/RetryingFuture.h>
 #include <UtilsQt/Futures/Utils.h>
 #include <QTimer>
@@ -13,6 +15,7 @@
 #include "internal/LifetimeTracker.h"
 
 using namespace UtilsQt;
+using namespace std::chrono_literals;
 
 TEST(UtilsQt, Futures_RetryingFuture_Basic_Bool)
 {
@@ -21,7 +24,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Basic_Bool)
 
     auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<bool> {
                                         count--;
-                                        return createTimedFuture(50, true);
+                                        return createTimedFuture(50ms, true);
                                     });
 
     waitForFuture<QEventLoop>(future);
@@ -37,7 +40,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Basic_Int)
 
     auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<int> {
                                         count--;
-                                        return createTimedFuture(100, 52);
+                                        return createTimedFuture(100ms, 52);
                                     });
 
     waitForFuture<QEventLoop>(future);
@@ -54,8 +57,8 @@ TEST(UtilsQt, Futures_RetryingFuture_Retried)
     auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<bool> {
                                         count--;
                                         if (count == 0)
-                                            return createTimedFuture(48, true);
-                                        return createTimedCanceledFuture<bool>(26);
+                                            return createTimedFuture(48ms, true);
+                                        return createTimedCanceledFuture<bool>(26ms);
                                     });
 
     waitForFuture<QEventLoop>(future);
@@ -71,8 +74,8 @@ TEST(UtilsQt, Futures_RetryingFuture_Retried_Canceled)
     auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<bool> {
                                         count--;
                                         if (count == 0)
-                                            return createTimedFuture(48, true);
-                                        return createTimedCanceledFuture<bool>(26);
+                                            return createTimedFuture(48ms, true);
+                                        return createTimedCanceledFuture<bool>(26ms);
                                        }, [](auto){ return ValidatorDecision::Cancel; }, 1);
 
     waitForFuture<QEventLoop>(future);
@@ -87,7 +90,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Retried_Canceled_2)
 
     auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<bool> {
                                         count--;
-                                        return createTimedCanceledFuture<bool>(14);
+                                        return createTimedCanceledFuture<bool>(14ms);
                                     });
 
     waitForFuture<QEventLoop>(future);
@@ -103,8 +106,8 @@ TEST(UtilsQt, Futures_RetryingFuture_Validator)
     auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<int> {
                                         count--;
                                         if (count == 0)
-                                            return createTimedFuture(21, 48);
-                                        return createTimedFuture(27, 52);
+                                            return createTimedFuture(21ms, 48);
+                                        return createTimedFuture(27ms, 52);
                                     },
                                     [](const std::optional<int>& result) -> ValidatorDecision {
                                         return result.value_or(-1) == 48 ? ValidatorDecision::ResultIsValid :
@@ -126,8 +129,8 @@ TEST(UtilsQt, Futures_RetryingFuture_Validator_Instant)
     auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<int> {
                                         count--;
                                         if (count == 0)
-                                            return createTimedFuture(21, 48);
-                                        return createTimedFuture(27, 52);
+                                            return createTimedFuture(21ms, 48);
+                                        return createTimedFuture(27ms, 52);
                                     },
                                     [](const std::optional<int>& result) -> ValidatorDecision {
                                         return result.value_or(-1) == 48 ? ValidatorDecision::ResultIsValid :
@@ -149,7 +152,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Validator_Canceled)
 
     auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<bool> {
                                         count--;
-                                        return createTimedFuture(14, false);
+                                        return createTimedFuture(14ms, false);
                                     },
                                     [](const std::optional<bool>& result) -> ValidatorDecision {
                                         return result.value_or(false) ? ValidatorDecision::ResultIsValid :
@@ -172,8 +175,8 @@ TEST(UtilsQt, Futures_RetryingFuture_Cancel_Target)
     auto future = createRetryingFutureRR(&context, [&count]() -> QFuture<int> {
                                         count--;
                                         if (count == 0)
-                                            return createTimedFuture(21, 48);
-                                        return createTimedFuture(27, 52);
+                                            return createTimedFuture(21ms, 48);
+                                        return createTimedFuture(27ms, 52);
                                     },
                                     [](const std::optional<int>& result) -> ValidatorDecision {
                                         return result.value_or(-1) == 48 ? ValidatorDecision::ResultIsValid :
@@ -201,8 +204,8 @@ TEST(UtilsQt, Futures_RetryingFuture_Context)
         future = createRetryingFutureRR(&context, [&count]() -> QFuture<int> {
                                        count--;
                                        if (count == 0)
-                                           return createTimedFuture(21, 48);
-                                       return createTimedFuture(27, 52);
+                                           return createTimedFuture(21ms, 48);
+                                       return createTimedFuture(27ms, 52);
                                    },
                                    [](const std::optional<int>& result) -> ValidatorDecision {
                                        return result.value_or(-1) == 48 ? ValidatorDecision::ResultIsValid :
@@ -224,7 +227,7 @@ TEST(UtilsQt, Futures_RetryingFuture_Lifetime)
     LifetimeTracker tracker;
 
     ASSERT_EQ(tracker.count(), 1);
-    auto f = createRetryingFutureRR(nullptr, [tracker](){ (void)tracker; return createTimedFuture(10); });
+    auto f = createRetryingFutureRR(nullptr, [tracker](){ (void)tracker; return createTimedFuture(10ms); });
     ASSERT_EQ(tracker.count(), 2);
 
     waitForFuture<QEventLoop>(f);
@@ -245,7 +248,7 @@ TEST(UtilsQt, Futures_RetryingFuture_PreciseResultValidation)
     };
 
     {
-        auto future = createRetryingFutureRR(nullptr, []() { return createTimedFuture(27, 52); }, validator);
+        auto future = createRetryingFutureRR(nullptr, []() { return createTimedFuture(27ms, 52); }, validator);
 
         waitForFuture<QEventLoop>(future);
         ASSERT_EQ(future.result().result, 52);
@@ -253,7 +256,7 @@ TEST(UtilsQt, Futures_RetryingFuture_PreciseResultValidation)
     }
 
     {
-        auto future = createRetryingFutureRR(nullptr, []() { return createTimedFuture(27, 101); }, validator);
+        auto future = createRetryingFutureRR(nullptr, []() { return createTimedFuture(27ms, 101); }, validator);
 
         waitForFuture<QEventLoop>(future);
         ASSERT_EQ(future.result().result, 101);
@@ -262,7 +265,7 @@ TEST(UtilsQt, Futures_RetryingFuture_PreciseResultValidation)
 
     {
         int result = 102;
-        auto future = createRetryingFutureRR(nullptr, [&result]() { return createTimedFuture(27, result--); }, validator);
+        auto future = createRetryingFutureRR(nullptr, [&result]() { return createTimedFuture(27ms, result--); }, validator);
 
         waitForFuture<QEventLoop>(future);
         ASSERT_EQ(future.result().result, 100);

@@ -4,6 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+
 #include <UtilsQt/Futures/Utils.h>
 #include <UtilsQt/Futures/futureutils_sequential.h>
 #include <UtilsQt/Futures/Converter.h>
@@ -12,6 +14,7 @@
 #include <QEventLoop>
 
 using namespace UtilsQt;
+using namespace std::chrono_literals;
 
 
 TEST(UtilsQt, Futures_CancellationChain_Convert)
@@ -22,7 +25,7 @@ TEST(UtilsQt, Futures_CancellationChain_Convert)
     });
 
     f.cancel();
-    waitForFuture<QEventLoop>(createTimedFuture(1));
+    waitForFuture<QEventLoop>(createTimedFuture(1ms));
 
     ASSERT_TRUE(promise.isCanceled());
 
@@ -44,7 +47,7 @@ TEST(UtilsQt, Futures_CancellationChain_Merge)
     auto f = UtilsQt::mergeFuturesAll(&ctx, futures);
 
     f.cancel();
-    waitForFuture<QEventLoop>(createTimedFuture(1));
+    waitForFuture<QEventLoop>(createTimedFuture(1ms));
 
     ASSERT_TRUE(p1.isCanceled());
     ASSERT_TRUE(p2.isCanceled());
@@ -65,7 +68,7 @@ TEST(UtilsQt, Futures_CancellationChain_RetryingFutureRR)
         nullptr,
         [&calls]() -> QFuture<int> {
             calls++;
-            return UtilsQt::createTimedFuture(27, 52);
+            return UtilsQt::createTimedFuture(27ms, 52);
         },
         [](const std::optional<int>& result) -> ValidatorDecision {
             return result.value_or(-1) == 48 ? ValidatorDecision::ResultIsValid : ValidatorDecision::NeedRetry;
@@ -87,7 +90,7 @@ TEST(UtilsQt, Futures_CancellationChain_RetryingFuture)
         nullptr,
         [&calls]() -> QFuture<int> {
             calls++;
-            return UtilsQt::createTimedFuture(27, 52);
+            return UtilsQt::createTimedFuture(27ms, 52);
         },
         [](const std::optional<int>& result) -> ValidatorDecision {
             return result.value_or(-1) == 48 ? ValidatorDecision::ResultIsValid : ValidatorDecision::NeedRetry;

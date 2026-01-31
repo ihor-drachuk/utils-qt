@@ -22,11 +22,12 @@
 
 using TestHelpers::waitForFlag;
 using TestHelpers::waitForCounter;
+using namespace std::chrono_literals;
 
 namespace {
 
 // Default work loop duration when thread needs to simulate ongoing work
-constexpr auto WorkLoopDuration = std::chrono::milliseconds(200);
+constexpr auto WorkLoopDuration = 200ms;
 
 struct OpStatistics
 {
@@ -163,8 +164,8 @@ TEST(UtilsQt, Futures_Sequential_DelayedResult)
 {
     QObject obj;
     auto f = UtilsQt::Sequential(&obj)
-                 .start([](){ return UtilsQt::createTimedFuture(10, 123); })
-                 .then([](const UtilsQt::AsyncResult<int>& r){ r.tryRethrow(); return UtilsQt::createTimedFuture(20, QString::number(r.value())); })
+                 .start([](){ return UtilsQt::createTimedFuture(10ms, 123); })
+                 .then([](const UtilsQt::AsyncResult<int>& r){ r.tryRethrow(); return UtilsQt::createTimedFuture(20ms, QString::number(r.value())); })
                  .execute();
 
     UtilsQt::waitForFuture<QEventLoop>(f);
@@ -404,8 +405,8 @@ TEST(UtilsQt, Futures_Sequential_ExternalCancellation)
 
     QObject obj;
     auto f = UtilsQt::Sequential(&obj)
-                 .start([&](const UtilsQt::SequentialMediator& sm){ calls++; if (sm.isCancelRequested()) cancels++; return UtilsQt::createTimedFuture(50, 15); })
-                 .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::SequentialMediator& sm){ calls++; if (sm.isCancelRequested()) cancels++; r.tryRethrow(); return UtilsQt::createTimedFuture(50, QString::number(r.value())); })
+                 .start([&](const UtilsQt::SequentialMediator& sm){ calls++; if (sm.isCancelRequested()) cancels++; return UtilsQt::createTimedFuture(50ms, 15); })
+                 .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::SequentialMediator& sm){ calls++; if (sm.isCancelRequested()) cancels++; r.tryRethrow(); return UtilsQt::createTimedFuture(50ms, QString::number(r.value())); })
                  .execute();
 
     f.cancel();
@@ -727,8 +728,8 @@ TEST(UtilsQt, Futures_Sequential_LoosingContext)
     int cancels {};
 
     auto f = UtilsQt::Sequential(obj.get())
-                 .start([&](const UtilsQt::SequentialMediator& sm){ calls++; if (sm.isCancelRequested()) cancels++; return UtilsQt::createTimedFuture(50, 15); })
-                 .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::SequentialMediator& sm){ calls++; if (sm.isCancelRequested()) cancels++; r.tryRethrow(); return UtilsQt::createTimedFuture(50, QString::number(r.value())); })
+                 .start([&](const UtilsQt::SequentialMediator& sm){ calls++; if (sm.isCancelRequested()) cancels++; return UtilsQt::createTimedFuture(50ms, 15); })
+                 .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::SequentialMediator& sm){ calls++; if (sm.isCancelRequested()) cancels++; r.tryRethrow(); return UtilsQt::createTimedFuture(50ms, QString::number(r.value())); })
                  .execute();
 
     obj.reset();
@@ -744,8 +745,8 @@ TEST(UtilsQt, Futures_Sequential_LoosingContext)
 TEST(UtilsQt, Futures_Sequential_MissingContext)
 {
     auto f = UtilsQt::Sequential(nullptr)
-                 .start([](){ return UtilsQt::createTimedFuture(10, 123); })
-                 .then([](const UtilsQt::AsyncResult<int>& r){ r.tryRethrow(); return UtilsQt::createTimedFuture(20, QString::number(r.value())); })
+                 .start([](){ return UtilsQt::createTimedFuture(10ms, 123); })
+                 .then([](const UtilsQt::AsyncResult<int>& r){ r.tryRethrow(); return UtilsQt::createTimedFuture(20ms, QString::number(r.value())); })
                  .execute();
 
     UtilsQt::waitForFuture<QEventLoop>(f);
@@ -768,7 +769,7 @@ TEST(UtilsQt, Futures_Sequential_InternalCancellation)
                      if (sm.isCancelRequested())
                          cancels++;
 
-                     return UtilsQt::createTimedCanceledFuture<int>(50);
+                     return UtilsQt::createTimedCanceledFuture<int>(50ms);
                  })
                  .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::SequentialMediator& sm) {
                      calls++;
@@ -782,7 +783,7 @@ TEST(UtilsQt, Futures_Sequential_InternalCancellation)
 
                      } else {
                         r.tryRethrow();
-                         return UtilsQt::createTimedFuture(50, QString::number(r.value()));
+                         return UtilsQt::createTimedFuture(50ms, QString::number(r.value()));
                      }
                  })
                  .execute();
@@ -822,7 +823,7 @@ TEST(UtilsQt, Futures_Sequential_Exception)
                          exceptionResults++;
 
                      r.tryRethrow();
-                     return UtilsQt::createTimedFuture(50, QString::number(r.value()));
+                     return UtilsQt::createTimedFuture(50ms, QString::number(r.value()));
                  })
                  .execute();
 
@@ -857,7 +858,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Cancellation)
                      if (sm.isCancelRequested())
                          cancels++;
 
-                     return UtilsQt::createTimedCanceledFuture<int>(50);
+                     return UtilsQt::createTimedCanceledFuture<int>(50ms);
                  })
                  .then([&](const UtilsQt::AsyncResult<int>& r, const UtilsQt::SequentialMediator& sm) {
                      calls++;
@@ -871,7 +872,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Cancellation)
 
                      } else {
                          r.tryRethrow();
-                         return UtilsQt::createTimedFuture(50, QString::number(r.value()));
+                         return UtilsQt::createTimedFuture(50ms, QString::number(r.value()));
                      }
                  })
                  .execute();
@@ -911,7 +912,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Exception_1)
                          exceptionResults++;
 
                      r.tryRethrow();
-                     return UtilsQt::createTimedFuture(50, QString::number(r.value()));
+                     return UtilsQt::createTimedFuture(50ms, QString::number(r.value()));
                  })
                  .execute();
 
@@ -959,7 +960,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Exception_2)
                          exceptionResults++;
 
                      r.tryRethrow();
-                     return UtilsQt::createTimedFuture(50, QString::number(r.value()));
+                     return UtilsQt::createTimedFuture(50ms, QString::number(r.value()));
                  })
                  .execute();
 
@@ -1009,7 +1010,7 @@ TEST(UtilsQt, Futures_Sequential_Options_Exception_3)
                      r.tryRethrow();
 
                      throw MyException();
-                     //return UtilsQt::createTimedFuture(50, QString::number(r.value()));
+                     //return UtilsQt::createTimedFuture(50ms, QString::number(r.value()));
                  })
                  .execute();
 

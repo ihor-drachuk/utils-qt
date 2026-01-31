@@ -3,6 +3,7 @@
  * Contact:  ihor-drachuk-libs@pm.me  */
 
 #include <gtest/gtest.h>
+#include <chrono>
 #include <UtilsQt/OnProperty.h>
 #include <UtilsQt/Futures/Utils.h>
 #include <QTimer>
@@ -10,6 +11,7 @@
 #include <QEventLoop>
 
 using namespace UtilsQt;
+using namespace std::chrono_literals;
 
 class TestObject : public QObject
 {
@@ -65,7 +67,7 @@ TEST(UtilsQt, onProperty_initial)
         {
             triggeredCount++;
         },
-        100,
+        100ms,
         [&](auto){ cancelledCount++; });
 
         ASSERT_EQ(triggeredCount, 1);
@@ -118,7 +120,7 @@ TEST(UtilsQt, onProperty_once)
             triggeredCount++;
             loop.quit();
         },
-        700,
+        700ms,
         [&](auto){ cancelledCount++; });
         loop.exec();
 
@@ -133,7 +135,7 @@ TEST(UtilsQt, onProperty_once)
         ASSERT_LE(elapsed, 2000) << "Triggered too late";
 
         // Wait a bit more and verify no additional triggers
-        waitForFuture<QEventLoop>(createTimedFuture(200));
+        waitForFuture<QEventLoop>(createTimedFuture(200ms));
         ASSERT_EQ(triggeredCount, 1);
         ASSERT_EQ(cancelledCount, 0);
     }
@@ -163,7 +165,7 @@ TEST(UtilsQt, onProperty_once)
         ASSERT_LE(elapsed, 2000) << "Triggered too late";
 
         // Wait a bit more and verify no additional triggers
-        waitForFuture<QEventLoop>(createTimedFuture(200));
+        waitForFuture<QEventLoop>(createTimedFuture(200ms));
         ASSERT_EQ(triggeredCount, 1);
     }
 }
@@ -181,7 +183,7 @@ TEST(UtilsQt, onProperty_multiple)
 
     // Wait for multiple triggers (binary mode: toggles 0->1->0->1...)
     // Timer fires every 100ms, so in ~800ms we should see several triggers
-    waitForFuture<QEventLoop>(createTimedFuture(800));
+    waitForFuture<QEventLoop>(createTimedFuture(800ms));
 
     // Should have triggered multiple times (at least 3 times in 800ms with 100ms interval)
     ASSERT_GE(triggeredCount, 2) << "Too few triggers";
@@ -191,7 +193,7 @@ TEST(UtilsQt, onProperty_multiple)
     delete context; context = nullptr;
 
     // After context destruction, no more triggers
-    waitForFuture<QEventLoop>(createTimedFuture(400));
+    waitForFuture<QEventLoop>(createTimedFuture(400ms));
     ASSERT_EQ(savedCount, triggeredCount);
 }
 
@@ -215,14 +217,14 @@ TEST(UtilsQt, onProperty_cancelled)
             triggeredCount++;
             elapsed = elapsedTimer.elapsed();
         },
-        150,
+        150ms,
         [&](UtilsQt::CancelReason value){
             reason = value;
             elapsed = elapsedTimer.elapsed();
         }
         );
 
-        waitForFuture<QEventLoop>(createTimedFuture(500));
+        waitForFuture<QEventLoop>(createTimedFuture(500ms));
 
         if (stopTimer) {
             ASSERT_EQ(triggeredCount, 0);
@@ -268,7 +270,7 @@ TEST(UtilsQt, onProperty_future)
         QObject context;
         TestObject testObject;
 
-        auto f = onPropertyFuture(&testObject, &TestObject::counter, &TestObject::counterChanged, 3, UtilsQt::Comparison::Equal, &context, 20);
+        auto f = onPropertyFuture(&testObject, &TestObject::counter, &TestObject::counterChanged, 3, UtilsQt::Comparison::Equal, &context, 20ms);
 
         ASSERT_FALSE(f.isFinished());
         QEventLoop loop;

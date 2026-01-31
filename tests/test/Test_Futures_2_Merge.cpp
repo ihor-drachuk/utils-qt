@@ -3,6 +3,7 @@
  * Contact:  ihor-drachuk-libs@pm.me  */
 
 #include <gtest/gtest.h>
+#include <chrono>
 #include <UtilsQt/Futures/Utils.h>
 #include <UtilsQt/Futures/Merge.h>
 #include <QEventLoop>
@@ -10,6 +11,7 @@
 #include <string>
 
 using namespace UtilsQt;
+using namespace std::chrono_literals;
 
 TEST(UtilsQt, Futures_Merge_TypesTest)
 {
@@ -73,7 +75,7 @@ TEST(UtilsQt, Futures_Merge)
     }
 
     {
-        auto f1 = createTimedFuture<int>(10, 123);
+        auto f1 = createTimedFuture<int>(10ms, 123);
         auto f2 = createCanceledFuture<int>();
         auto r1 = mergeFuturesAny(nullptr, MergeFlags::IgnoreNullContext, f1, f2);
         auto r2 = mergeFuturesAll(nullptr, MergeFlags::IgnoreNullContext, f1, f2);
@@ -87,8 +89,8 @@ TEST(UtilsQt, Futures_Merge)
     }
 
     {
-        auto f1 = createTimedFuture<int>(50, 123);
-        auto f2 = createTimedCanceledFuture<int>(5);
+        auto f1 = createTimedFuture<int>(50ms, 123);
+        auto f2 = createTimedCanceledFuture<int>(5ms);
         auto r1 = mergeFuturesAny(nullptr, MergeFlags::IgnoreNullContext, f1, f2);
         auto r2 = mergeFuturesAll(nullptr, MergeFlags::IgnoreNullContext, f1, f2);
 
@@ -100,8 +102,8 @@ TEST(UtilsQt, Futures_Merge)
     }
 
     {
-        auto f1 = createTimedFuture<int>(50, 123);
-        auto f2 = createTimedFuture<std::string>(5, "Test");
+        auto f1 = createTimedFuture<int>(50ms, 123);
+        auto f2 = createTimedFuture<std::string>(5ms, "Test");
         auto r = mergeFuturesAny(nullptr, MergeFlags::IgnoreNullContext, f1, f2);
 
         waitForFuture<QEventLoop>(r);
@@ -116,8 +118,8 @@ TEST(UtilsQt, Futures_Merge)
 
 
     {
-        auto f1 = createTimedFuture<int>(50, 123);
-        auto f2 = createTimedFuture<std::string>(5, "Test");
+        auto f1 = createTimedFuture<int>(50ms, 123);
+        auto f2 = createTimedFuture<std::string>(5ms, "Test");
         auto r = mergeFuturesAll(nullptr, MergeFlags::IgnoreNullContext, f1, f2);
 
         waitForFuture<QEventLoop>(r);
@@ -132,8 +134,8 @@ TEST(UtilsQt, Futures_Merge)
 
 
     { // std::tuple
-        auto f1 = createTimedFuture<int>(50, 123);
-        auto f2 = createTimedFuture<std::string>(5, "Test");
+        auto f1 = createTimedFuture<int>(50ms, 123);
+        auto f2 = createTimedFuture<std::string>(5ms, "Test");
         const auto futures = std::make_tuple(f1, f2);
         auto r = mergeFuturesAll(nullptr, MergeFlags::IgnoreNullContext, futures);
 
@@ -151,8 +153,8 @@ TEST(UtilsQt, Futures_Merge)
 TEST(UtilsQt, Futures_Merge_Container)
 {
     {
-        auto f1 = createTimedFuture<int>(10, 123);
-        auto f2 = createTimedFuture<int>(20, 124);
+        auto f1 = createTimedFuture<int>(10ms, 123);
+        auto f2 = createTimedFuture<int>(20ms, 124);
         auto r = mergeFuturesAll(nullptr, MergeFlags::IgnoreNullContext, std::vector{f1, f2});
 
         waitForFuture<QEventLoop>(r);
@@ -168,8 +170,8 @@ TEST(UtilsQt, Futures_Merge_Context)
 
     {
         QObject ctx;
-        auto f1 = createTimedFuture<int>(50, 123);
-        auto f2 = createTimedFuture<std::string>(100, "Test");
+        auto f1 = createTimedFuture<int>(50ms, 123);
+        auto f2 = createTimedFuture<std::string>(100ms, "Test");
         result = mergeFuturesAny(&ctx, f1, f2);
         ASSERT_FALSE(result.isCanceled());
     }
@@ -182,8 +184,8 @@ TEST(UtilsQt, Futures_Merge_TargetCancellation)
     {
         QFuture<void> result;
 
-        auto f1 = createTimedFuture<int>(50, 123);
-        auto f2 = createTimedFuture<std::string>(100, "Test");
+        auto f1 = createTimedFuture<int>(50ms, 123);
+        auto f2 = createTimedFuture<std::string>(100ms, "Test");
         result = mergeFuturesAny(nullptr, MergeFlags::IgnoreNullContext, f1, f2);
 
         ASSERT_FALSE(f1.isCanceled());
@@ -202,8 +204,8 @@ TEST(UtilsQt, Futures_Merge_TargetCancellation)
     {
         QFuture<void> result;
 
-        auto f1 = createTimedFuture<int>(50, 123);
-        auto f2 = createTimedFuture<int>(100, 124);
+        auto f1 = createTimedFuture<int>(50ms, 123);
+        auto f2 = createTimedFuture<int>(100ms, 124);
         result = mergeFuturesAny(nullptr, MergeFlags::IgnoreNullContext, std::vector{f1, f2});
 
         ASSERT_FALSE(f1.isCanceled());
@@ -224,10 +226,10 @@ TEST(UtilsQt, Futures_Merge_TargetCancellation)
 TEST(UtilsQt, Futures_Merge_TestResults)
 {
     {
-        auto f1 = createTimedFuture<int>(50, 123);
-        auto f2 = createTimedFuture<std::string>(100, "Test std::string");
-        auto f3 = createTimedCanceledFuture<float>(10);
-        auto f4 = createTimedFuture(50); // void
+        auto f1 = createTimedFuture<int>(50ms, 123);
+        auto f2 = createTimedFuture<std::string>(100ms, "Test std::string");
+        auto f3 = createTimedCanceledFuture<float>(10ms);
+        auto f4 = createTimedFuture(50ms); // void
         auto f5 = createReadyFuture(QString("Test QString"));
         auto futureResult = UtilsQt::mergeFuturesAll(nullptr,
                                                      MergeFlags::IgnoreSomeCancellation | MergeFlags::IgnoreNullContext,
@@ -249,8 +251,8 @@ TEST(UtilsQt, Futures_Merge_TestResults)
 
 TEST(UtilsQt, Futures_Merge_NonIgnoredNullContext)
 {
-    auto f1 = createTimedFuture<int>(50, 123);
-    auto f2 = createTimedFuture<std::string>(100, "Test std::string");
+    auto f1 = createTimedFuture<int>(50ms, 123);
+    auto f2 = createTimedFuture<std::string>(100ms, "Test std::string");
     auto futureResult = UtilsQt::mergeFuturesAll(nullptr, f1, f2);
 
     ASSERT_TRUE(futureResult.isCanceled());

@@ -4,6 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QTimer>
@@ -14,6 +16,7 @@
 #include "internal/LifetimeTracker.h"
 
 using namespace UtilsQt;
+using namespace std::chrono_literals;
 
 namespace {
 
@@ -104,7 +107,7 @@ TEST(UtilsQt, Futures_Utils_createFinished)
 TEST(UtilsQt, Futures_Utils_Timed)
 {
     {
-        auto f = createTimedFuture(20);
+        auto f = createTimedFuture(20ms);
         ASSERT_FALSE(f.isFinished());
         ASSERT_FALSE(f.isCanceled());
         waitForFuture<QEventLoop>(f);
@@ -113,7 +116,7 @@ TEST(UtilsQt, Futures_Utils_Timed)
     }
 
     {
-        auto f = createTimedFuture(20, false);
+        auto f = createTimedFuture(20ms, false);
         ASSERT_FALSE(f.isFinished());
         ASSERT_FALSE(f.isCanceled());
         waitForFuture<QEventLoop>(f);
@@ -123,7 +126,7 @@ TEST(UtilsQt, Futures_Utils_Timed)
     }
 
     {
-        auto f = createTimedCanceledFuture<void>(20);
+        auto f = createTimedCanceledFuture<void>(20ms);
         ASSERT_FALSE(f.isFinished());
         ASSERT_FALSE(f.isCanceled());
         waitForFuture<QEventLoop>(f);
@@ -132,7 +135,7 @@ TEST(UtilsQt, Futures_Utils_Timed)
     }
 
     {
-        auto f = createTimedCanceledFuture<bool>(20);
+        auto f = createTimedCanceledFuture<bool>(20ms);
         ASSERT_FALSE(f.isFinished());
         ASSERT_FALSE(f.isCanceled());
         waitForFuture<QEventLoop>(f);
@@ -141,7 +144,7 @@ TEST(UtilsQt, Futures_Utils_Timed)
     }
 
     {
-        auto f = createTimedExceptionFuture<int>(20, std::make_exception_ptr(std::runtime_error("Test")));
+        auto f = createTimedExceptionFuture<int>(20ms, std::make_exception_ptr(std::runtime_error("Test")));
         ASSERT_FALSE(f.isFinished());
         ASSERT_FALSE(f.isCanceled());
         waitForFuture<QEventLoop>(f);
@@ -151,7 +154,7 @@ TEST(UtilsQt, Futures_Utils_Timed)
     }
 
     {
-        auto f = createTimedExceptionFuture<int>(20, std::runtime_error("Test"));
+        auto f = createTimedExceptionFuture<int>(20ms, std::runtime_error("Test"));
         ASSERT_FALSE(f.isFinished());
         ASSERT_FALSE(f.isCanceled());
         waitForFuture<QEventLoop>(f);
@@ -262,7 +265,7 @@ TEST(UtilsQt, Futures_Utils_Timed_onFinished)
         std::optional<bool> checkpoint1;
         std::optional<bool> checkpoint2;
         std::optional<bool> checkpoint3;
-        auto f = createTimedFuture(20);
+        auto f = createTimedFuture(20ms);
         onFinished(f, &ctx, [&checkpoint1](const std::optional<std::monostate>& optResult){ checkpoint1 = optResult.has_value(); });
         onResult(f, &ctx, [&checkpoint2](){ checkpoint2 = true; });
         onCanceled(f, &ctx, [&checkpoint3](){ checkpoint3 = true; });
@@ -277,7 +280,7 @@ TEST(UtilsQt, Futures_Utils_Timed_onFinished)
         std::optional<int> result;
         int result2 = -1;
         std::optional<bool> checkpoint3;
-        auto f = createTimedFuture(20, 170);
+        auto f = createTimedFuture(20ms, 170);
         onFinished(f, &ctx, [&result](const std::optional<int>& value){ result = value; });
         onResult(f, &ctx, [&result2](int value){ result2 = value; });
         onCanceled(f, &ctx, [&checkpoint3](){ checkpoint3 = true; });
@@ -293,7 +296,7 @@ TEST(UtilsQt, Futures_Utils_Timed_onFinished)
         std::optional<bool> checkpoint1;
         std::optional<bool> checkpoint2;
         std::optional<bool> checkpoint3;
-        auto f = createTimedCanceledFuture<void>(20);
+        auto f = createTimedCanceledFuture<void>(20ms);
         onFinished(f, &ctx, [&checkpoint1](const std::optional<std::monostate>& optResult){ checkpoint1 = optResult.has_value(); });
         onResult(f, &ctx, [&checkpoint2](){ checkpoint2 = true; });
         onCanceled(f, &ctx, [&checkpoint3](){ checkpoint3 = true; });
@@ -308,7 +311,7 @@ TEST(UtilsQt, Futures_Utils_Timed_onFinished)
         std::optional<int> result;
         int result2 = -1;
         std::optional<bool> checkpoint3;
-        auto f = createTimedCanceledFuture<int>(20);
+        auto f = createTimedCanceledFuture<int>(20ms);
         onFinished(f, &ctx, [&result](const std::optional<int>& value){ result = value; });
         onResult(f, &ctx, [&result2](int value){ result2 = value; });
         onCanceled(f, &ctx, [&checkpoint3](){ checkpoint3 = true; });
@@ -323,7 +326,7 @@ TEST(UtilsQt, Futures_Utils_Timed_onFinished)
 TEST(UtilsQt, Futures_Utils_context)
 {
     auto obj = new QObject();
-    auto f = createTimedFuture(20, 170, obj);
+    auto f = createTimedFuture(20ms, 170, obj);
 
     qApp->processEvents();
     qApp->processEvents();
@@ -342,7 +345,7 @@ TEST(UtilsQt, Futures_Utils_reference)
     {
         QObject obj;
         int value = 170;
-        auto f = createTimedFutureRef(20, value, &obj);
+        auto f = createTimedFutureRef(20ms, value, &obj);
         qApp->processEvents();
         qApp->processEvents();
         value = 210;
@@ -355,7 +358,7 @@ TEST(UtilsQt, Futures_Utils_reference)
     {
         auto obj = new QObject();
         int value = 170;
-        auto f = createTimedFutureRef(20, value, obj);
+        auto f = createTimedFutureRef(20ms, value, obj);
         qApp->processEvents();
         qApp->processEvents();
         value = 210;
@@ -378,7 +381,7 @@ TEST(UtilsQt, Futures_Utils_Lifetime)
     ASSERT_EQ(data.count(), 1);
 
     QObject context;
-    auto f = createTimedFuture(10, &context);
+    auto f = createTimedFuture(10ms, &context);
 
     ASSERT_EQ(data.count(), 1);
     onFinished(f, &context, [tracker](const auto&){ (void)tracker; });
@@ -532,7 +535,7 @@ TEST(UtilsQt, Futures_Utils_onCancelNotified)
 {
     QObject obj;
     int calls {};
-    auto f = UtilsQt::createTimedCanceledFuture<void>(10);
+    auto f = UtilsQt::createTimedCanceledFuture<void>(10ms);
 
     UtilsQt::onCancelNotified(f, &obj, [&]() {
         calls++;
@@ -545,7 +548,7 @@ TEST(UtilsQt, Futures_Utils_onCancelNotified)
         calls++;
     });
 
-    waitForFuture<QEventLoop>(createTimedFuture(10, 100));
+    waitForFuture<QEventLoop>(createTimedFuture(10ms, 100));
 
     qApp->processEvents();
     qApp->processEvents();
@@ -555,7 +558,7 @@ TEST(UtilsQt, Futures_Utils_onCancelNotified)
         calls++;
     });
 
-    f = UtilsQt::createTimedFuture<int>(10, 150);
+    f = UtilsQt::createTimedFuture<int>(10ms, 150);
     UtilsQt::onCancelNotified(f, &obj, [&]() {
         calls++;
     });
@@ -563,7 +566,7 @@ TEST(UtilsQt, Futures_Utils_onCancelNotified)
     waitForFuture<QEventLoop>(f);
     ASSERT_EQ(calls, 2);
 
-    f = UtilsQt::createTimedCanceledFuture<int>(10);
+    f = UtilsQt::createTimedCanceledFuture<int>(10ms);
     auto obj2 = std::make_unique<QObject>();
     UtilsQt::onCancelNotified(f, obj2.get(), [&]() {
         calls++;

@@ -3,10 +3,13 @@
  * Contact:  ihor-drachuk-libs@pm.me  */
 
 #include <gtest/gtest.h>
+#include <chrono>
 #include <UtilsQt/Futures/SignalToFuture.h>
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QString>
+
+using namespace std::chrono_literals;
 
 class Futures_SignalToFuture_TestClass : public QObject
 {
@@ -127,20 +130,20 @@ TEST(UtilsQt, Futures_SignalToFuture_Timeout)
     Class obj;
 
     // Timeout trigger
-    auto f = signalToFuture(&obj, &Class::someSignal1, nullptr, 100);
+    auto f = signalToFuture(&obj, &Class::someSignal1, nullptr, 100ms);
 
     qApp->processEvents();
     qApp->processEvents();
     ASSERT_FALSE(f.isFinished());
     ASSERT_FALSE(f.isCanceled());
 
-    waitForFuture<QEventLoop>(createTimedFuture(200));
+    waitForFuture<QEventLoop>(createTimedFuture(200ms));
 
     ASSERT_TRUE(f.isFinished());
     ASSERT_TRUE(f.isCanceled());
 
     // Timeout after signal
-    f = signalToFuture(&obj, &Class::someSignal1, nullptr, 100);
+    f = signalToFuture(&obj, &Class::someSignal1, nullptr, 100ms);
     qApp->processEvents();
     qApp->processEvents();
     ASSERT_FALSE(f.isFinished());
@@ -151,7 +154,7 @@ TEST(UtilsQt, Futures_SignalToFuture_Timeout)
     ASSERT_TRUE(f.isFinished());
     ASSERT_FALSE(f.isCanceled());
 
-    waitForFuture<QEventLoop>(createTimedFuture(200));
+    waitForFuture<QEventLoop>(createTimedFuture(200ms));
 
     ASSERT_TRUE(f.isFinished());
     ASSERT_FALSE(f.isCanceled());

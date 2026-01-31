@@ -83,12 +83,4 @@ QFuture<ResultType> signalToFuture(Object* object, void (Object::* signal)(Args.
     return promise.future();
 }
 
-template<typename Object, typename... Args,
-         typename ResultType = typename Internal::ResultProvider<Args...>::ReturnType,
-         typename std::enable_if<std::is_base_of<QObject, Object>::value>::type* = nullptr>
-QFuture<ResultType> signalToFuture(Object* object, void (Object::* signal)(Args...), QObject* context, unsigned long timeout)
-{
-    return signalToFuture(object, signal, context, std::chrono::milliseconds(timeout));
-}
-
 } // namespace UtilsQt

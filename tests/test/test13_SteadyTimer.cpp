@@ -11,6 +11,8 @@
 
 #include "internal/TestWaitHelpers.h"
 
+using namespace std::chrono_literals;
+
 namespace {
 
 using Clock = std::chrono::steady_clock;
@@ -43,8 +45,7 @@ struct TimerTestHelper {
 
     // Wait for signal with timeout, returns true if signal received
     bool waitForTimeout(std::chrono::milliseconds timeout = TestHelpers::MaxWaitTimeout) {
-        auto f = UtilsQt::signalToFuture(&timer, &SteadyTimer::timeout, nullptr,
-                                         static_cast<int>(timeout.count()));
+        auto f = UtilsQt::signalToFuture(&timer, &SteadyTimer::timeout, nullptr, timeout);
         UtilsQt::waitForFuture<QEventLoop>(f);
         return !f.isCanceled();
     }
@@ -136,7 +137,7 @@ TEST(UtilsQt, SteadyTimer_StartStop)
     helper.start(200);
 
     // Wait a bit, but not long enough for timer
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50));
+    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50ms));
     ASSERT_EQ(helper.triggerCount, 0);
     ASSERT_TRUE(helper.timer.active());
 
@@ -146,7 +147,7 @@ TEST(UtilsQt, SteadyTimer_StartStop)
     ASSERT_FALSE(helper.timer.active());
 
     // Wait more - timer should NOT fire since it's stopped
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(300));
+    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(300ms));
     ASSERT_EQ(helper.triggerCount, 0);
 }
 
@@ -170,14 +171,14 @@ TEST(UtilsQt, SteadyTimer_Repeat)
     helper.timer.stop();
     int countAtStop = helper.triggerCount;
 
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(250));
+    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(250ms));
     ASSERT_EQ(helper.triggerCount, countAtStop) << "Timer triggered after stop";
 }
 
 TEST(UtilsQt, SteadyTimer_ZeroInterval)
 {
     TimerTestHelper helper;
-    auto f = UtilsQt::signalToFuture(&helper.timer, &SteadyTimer::timeout, nullptr, 200);
+    auto f = UtilsQt::signalToFuture(&helper.timer, &SteadyTimer::timeout, nullptr, 200ms);
     helper.timer.start(0);
 
     ASSERT_FALSE(helper.timer.active());  // Should immediately become inactive

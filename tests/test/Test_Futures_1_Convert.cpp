@@ -3,6 +3,7 @@
  * Contact:  ihor-drachuk-libs@pm.me  */
 
 #include <gtest/gtest.h>
+#include <chrono>
 #include <UtilsQt/Futures/Converter.h>
 #include <UtilsQt/Futures/Utils.h>
 #include <QCoreApplication>
@@ -11,6 +12,7 @@
 #include "internal/LifetimeTracker.h"
 
 using namespace UtilsQt;
+using namespace std::chrono_literals;
 
 
 TEST(UtilsQt, Futures_Convert)
@@ -89,7 +91,7 @@ TEST(UtilsQt, Futures_Convert)
 TEST(UtilsQt, Futures_Convert_Timed)
 {
     {
-        auto f = createTimedFuture(20, 170);
+        auto f = createTimedFuture(20ms, 170);
 
         int input = -1;
         const char* const result = "Test";
@@ -104,7 +106,7 @@ TEST(UtilsQt, Futures_Convert_Timed)
     }
 
     {
-        auto f = createTimedFuture(20, 170);
+        auto f = createTimedFuture(20ms, 170);
 
         int input = -1;
 
@@ -117,7 +119,7 @@ TEST(UtilsQt, Futures_Convert_Timed)
     }
 
     {
-        auto f = createTimedFuture(20);
+        auto f = createTimedFuture(20ms);
 
         bool ok = false;
         const char* const result = "Test";
@@ -132,7 +134,7 @@ TEST(UtilsQt, Futures_Convert_Timed)
     }
 
     {
-        auto f = createTimedFuture(20);
+        auto f = createTimedFuture(20ms);
 
         bool ok = false;
 
@@ -145,7 +147,7 @@ TEST(UtilsQt, Futures_Convert_Timed)
     }
 
     {
-        auto f = createTimedCanceledFuture<int>(20);
+        auto f = createTimedCanceledFuture<int>(20ms);
 
         bool ok = false;
 
@@ -158,7 +160,7 @@ TEST(UtilsQt, Futures_Convert_Timed)
     }
 
     {
-        auto f = createTimedCanceledFuture<void>(20);
+        auto f = createTimedCanceledFuture<void>(20ms);
 
         bool ok = false;
 
@@ -178,7 +180,7 @@ TEST(UtilsQt, Futures_Convert_Destruction)
         QFuture<int> resultFuture;
 
         {
-            auto f = createTimedFuture(100, 20);
+            auto f = createTimedFuture(100ms, 20);
 
             QObject ctx;
             resultFuture = convertFuture<int, int>(&ctx, f, [&](int value) -> std::optional<int> { ok = true; return value + 1; });
@@ -214,7 +216,7 @@ TEST(UtilsQt, Futures_Convert_Destruction)
 TEST(UtilsQt, Futures_Convert_StepByStep)
 {
     {
-        auto f = createTimedFuture(50, 1234);
+        auto f = createTimedFuture(50ms, 1234);
 
         auto conv = convertFuture<int, std::string>(nullptr, f, ConverterFlags::IgnoreNullContext, [&](int value) -> std::optional<std::string> { return std::to_string(value); });
 
@@ -253,21 +255,21 @@ TEST(UtilsQt, Futures_Convert_StepByStep)
         fi.reportStarted();
         ASSERT_TRUE(f.isStarted());
 
-        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1ms));
 
         ASSERT_TRUE(conv.isStarted());
         ASSERT_FALSE(conv.isCanceled());
         ASSERT_FALSE(conv.isFinished());
 
         fi.reportCanceled();
-        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1ms));
 
         ASSERT_TRUE(conv.isStarted());
         ASSERT_TRUE(conv.isCanceled());
         ASSERT_FALSE(conv.isFinished());
 
         fi.reportFinished();
-        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1ms));
 
         ASSERT_TRUE(conv.isStarted());
         ASSERT_TRUE(conv.isCanceled());
@@ -286,21 +288,21 @@ TEST(UtilsQt, Futures_Convert_StepByStep)
         ASSERT_FALSE(conv.isFinished());
 
         fi.reportStarted();
-        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1ms));
 
         ASSERT_TRUE(conv.isStarted());
         ASSERT_FALSE(conv.isCanceled());
         ASSERT_FALSE(conv.isFinished());
 
         fi.reportResult(1234);
-        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1ms));
 
         ASSERT_TRUE(conv.isStarted());
         ASSERT_FALSE(conv.isCanceled());
         ASSERT_FALSE(conv.isFinished());
 
         fi.reportFinished();
-        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1ms));
 
         ASSERT_TRUE(conv.isStarted());
         ASSERT_FALSE(conv.isCanceled());
@@ -329,7 +331,7 @@ TEST(UtilsQt, Futures_Convert_CancelTarget)
         ASSERT_FALSE(conv.isFinished());
 
         conv.cancel();
-        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1));
+        waitForFuture<QEventLoop>(createTimedCanceledFuture<void>(1ms));
 
         ASSERT_FALSE(fi.isStarted());
         ASSERT_TRUE(fi.isCanceled());
@@ -383,7 +385,7 @@ TEST(UtilsQt, Futures_Convert_Lifetime)
     LifetimeTracker tracker;
 
     ASSERT_EQ(tracker.count(), 1);
-    auto f = convertFuture(nullptr, createTimedFuture(10), ConverterFlags::IgnoreNullContext, [tracker]() {
+    auto f = convertFuture(nullptr, createTimedFuture(10ms), ConverterFlags::IgnoreNullContext, [tracker]() {
         (void)tracker;
         return QString();
     });
