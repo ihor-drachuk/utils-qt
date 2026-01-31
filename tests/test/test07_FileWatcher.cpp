@@ -18,17 +18,17 @@
 #include "internal/TestWaitHelpers.h"
 
 using namespace UtilsQt;
+using namespace std::chrono_literals;
 
 namespace {
 
 // Maximum time to wait for file system events (generous for slow CI/macOS)
-constexpr auto FileChangeTimeout = std::chrono::milliseconds(5000);
+constexpr auto FileChangeTimeout = 5s;
 
 // Helper to wait for FileWatcher::fileChanged signal with timeout
 bool waitForFileChange(FileWatcher& fw, std::chrono::milliseconds timeout = FileChangeTimeout)
 {
-    auto f = signalToFuture(&fw, &FileWatcher::fileChanged, nullptr,
-                            static_cast<int>(timeout.count()));
+    auto f = signalToFuture(&fw, &FileWatcher::fileChanged, nullptr, timeout);
     waitForFuture<QEventLoop>(f);
     return !f.isCanceled();
 }

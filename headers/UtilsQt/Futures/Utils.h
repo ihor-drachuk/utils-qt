@@ -9,6 +9,7 @@
 #include <tuple>
 #include <memory>
 #include <exception>
+#include <chrono>
 #include <QObject>
 #include <QFuture>
 #include <QFutureInterface>
@@ -67,9 +68,9 @@
  * QFuture<T> createCanceledFuture<T>();
  * QFuture<T> createExceptionFuture<T>(exception e);
 
- * QFuture<T> createTimedFuture<T>(int time, T value, QObject* ctx);
- * QFuture<T> createTimedCanceledFuture<T>(int time, QObject* ctx);
- * QFuture<T> createTimedExceptionFuture<T>(int time, exception e, QObject* ctx);
+ * QFuture<T> createTimedFuture<T>(std::chrono::milliseconds time, T value, QObject* ctx);
+ * QFuture<T> createTimedCanceledFuture<T>(std::chrono::milliseconds time, QObject* ctx);
+ * QFuture<T> createTimedExceptionFuture<T>(std::chrono::milliseconds time, exception e, QObject* ctx);
 
  * getFutureState(QFuture<T>) -> [NotStarted, Running, Completed, CompletedWrong, Canceled, Exception]
 
@@ -572,9 +573,9 @@ template<typename T>
 
 
 template<typename T>
-[[nodiscard]] QFuture<T> createTimedFuture(int time, const T& value, QObject* ctx = nullptr)
+[[nodiscard]] QFuture<T> createTimedFuture(std::chrono::milliseconds time, const T& value, QObject* ctx = nullptr)
 {
-    if (!time)
+    if (time.count() <= 0)
         return createReadyFuture(value);
 
     Promise<T> promise(true);
@@ -594,11 +595,11 @@ template<typename T>
 }
 
 template<typename T>
-[[nodiscard]] QFuture<T> createTimedFutureRef(int time, const T& value, QObject* ctx)
+[[nodiscard]] QFuture<T> createTimedFutureRef(std::chrono::milliseconds time, const T& value, QObject* ctx)
 {
     assert(ctx);
 
-    if (!time)
+    if (time.count() <= 0)
         return createReadyFuture(value);
 
     Promise<T> promise(true);
@@ -616,9 +617,9 @@ template<typename T>
     return promise.future();
 }
 
-[[nodiscard]] static inline QFuture<void> createTimedFuture(int time, QObject* ctx = nullptr)
+[[nodiscard]] static inline QFuture<void> createTimedFuture(std::chrono::milliseconds time, QObject* ctx = nullptr)
 {
-    if (!time)
+    if (time.count() <= 0)
         return createReadyFuture();
 
     Promise<void> promise(true);
@@ -641,9 +642,9 @@ template<typename T>
 
 
 template<typename T>
-[[nodiscard]] QFuture<T> createTimedCanceledFuture(int time, QObject* ctx = nullptr)
+[[nodiscard]] QFuture<T> createTimedCanceledFuture(std::chrono::milliseconds time, QObject* ctx = nullptr)
 {
-    if (!time)
+    if (time.count() <= 0)
         return createCanceledFuture<T>();
 
     Promise<T> promise(true);
@@ -680,9 +681,9 @@ template<typename T,
 }
 
 template<typename T>
-[[nodiscard]] QFuture<T> createTimedExceptionFuture(int time, const std::exception_ptr& eptr, QObject* ctx = nullptr)
+[[nodiscard]] QFuture<T> createTimedExceptionFuture(std::chrono::milliseconds time, const std::exception_ptr& eptr, QObject* ctx = nullptr)
 {
-    if (!time)
+    if (time.count() <= 0)
         return createExceptionFuture<T>(eptr);
 
     Promise<T> promise(true);
@@ -707,7 +708,7 @@ template<typename T,
          typename Ex,
          typename = std::enable_if_t<std::is_base_of_v<std::exception, Ex>>
          >
-[[nodiscard]] QFuture<T> createTimedExceptionFuture(int time, const Ex& ex, QObject* ctx = nullptr)
+[[nodiscard]] QFuture<T> createTimedExceptionFuture(std::chrono::milliseconds time, const Ex& ex, QObject* ctx = nullptr)
 {
     return createTimedExceptionFuture<T>(time, std::make_exception_ptr(ex), ctx);
 }

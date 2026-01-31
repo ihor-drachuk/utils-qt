@@ -14,11 +14,13 @@
 
 namespace TestHelpers {
 
+using namespace std::chrono_literals;
+
 // Maximum timeout for any single wait operation (generous to handle slow CI)
-constexpr auto MaxWaitTimeout = std::chrono::milliseconds(10000);
+constexpr auto MaxWaitTimeout = 10s;
 
 // Poll interval during wait loops
-constexpr auto WaitPollInterval = std::chrono::milliseconds(10);
+constexpr auto WaitPollInterval = 10ms;
 
 // Generic wait helper: waits until predicate returns true or timeout expires.
 // Processes Qt events during wait to allow signal/slot delivery.
@@ -29,8 +31,7 @@ bool waitUntil(Predicate&& pred, std::chrono::milliseconds timeout = MaxWaitTime
     const auto deadline = Clock::now() + timeout;
     while (!pred() && Clock::now() < deadline) {
         // Process Qt events to allow signal/slot delivery
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(
-            static_cast<int>(WaitPollInterval.count())));
+        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(WaitPollInterval));
     }
     return pred();
 }

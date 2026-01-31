@@ -4,6 +4,7 @@
 
 #pragma once
 #include <cassert>
+#include <chrono>
 #include <QObject>
 #include <QTimer>
 #include <UtilsQt/invoke_method.h>
@@ -123,7 +124,7 @@ void onProperty(Object* object,
                 bool once,
                 QObject* context,
                 const Handler& handler,
-                int timeout = -1,
+                std::chrono::milliseconds timeout = std::chrono::milliseconds(-1),
                 const Handler2& cancelHandler = UtilsQt::OnPropertyInternal::cancelStubHandler,
                 Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
@@ -138,7 +139,7 @@ void onProperty(Object* object,
                 comparison,
                 cancelHandler);
 
-    if (timeout > 0) {
+    if (timeout.count() > 0) {
         auto timer = new QTimer();
         QObject::connect(timer, &QTimer::timeout, timer, &QTimer::deleteLater);
         watcher->addDependency(timer, UtilsQt::CancelReason::Timeout);
@@ -163,7 +164,7 @@ QFuture<void> onPropertyFuture(Object* object,
                                const T& expectedValue,
                                UtilsQt::Comparison comparison,
                                QObject* context,
-                               int timeout = -1,
+                               std::chrono::milliseconds timeout = std::chrono::milliseconds(-1),
                                Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
     auto promise = UtilsQt::createPromise<void>(true);
