@@ -11,15 +11,25 @@
 #include <QSignalSpy>
 
 #include <UtilsQt/Futures/Utils.h>
+#include <UtilsQt/Futures/SignalToFuture.h>
 #include <UtilsQt/Qml-Cpp/FileWatcher.h>
 
 using namespace UtilsQt;
 
-#ifdef UTILS_QT_OS_MACOS
-constexpr int WaitTime = 1000;
-#else
-constexpr int WaitTime = 100;
-#endif
+namespace {
+
+// Maximum time to wait for file system events (generous for slow CI/macOS)
+constexpr int FileChangeTimeout = 5000;
+
+// Helper to wait for FileWatcher::fileChanged signal with timeout
+bool waitForFileChange(FileWatcher& fw, int timeoutMs = FileChangeTimeout)
+{
+    auto f = signalToFuture(&fw, &FileWatcher::fileChanged, nullptr, timeoutMs);
+    waitForFuture<QEventLoop>(f);
+    return !f.isCanceled();
+}
+
+} // namespace
 
 TEST(UtilsQt, FileWatcher_Basic)
 {
@@ -79,25 +89,28 @@ TEST(UtilsQt, FileWatcher_Basic)
         ASSERT_EQ(fw.size(), 1);
         ASSERT_EQ(spy.size(), 3);
 
+        // Write more data and wait for file change event
         f.write("b");
         f.close();
-        waitForFuture<QEventLoop>(createTimedFuture(WaitTime));
+        ASSERT_TRUE(waitForFileChange(fw)) << "Timeout waiting for file change after write";
         ASSERT_TRUE(fw.fileExists());
         ASSERT_TRUE(fw.hasAccess());
         ASSERT_EQ(fw.size(), 2);
         ASSERT_EQ(spy.size(), 4);
 
+        // Remove file and wait for event
         QFile::remove(fullPath);
-        waitForFuture<QEventLoop>(createTimedFuture(WaitTime));
+        ASSERT_TRUE(waitForFileChange(fw)) << "Timeout waiting for file change after delete";
 
         ASSERT_FALSE(fw.fileExists());
         ASSERT_FALSE(fw.hasAccess());
         ASSERT_EQ(fw.size(), 0);
         ASSERT_EQ(spy.size(), 5);
 
+        // Recreate file and wait for event
         f.open(QIODevice::WriteOnly);
         f.close();
-        waitForFuture<QEventLoop>(createTimedFuture(WaitTime));
+        ASSERT_TRUE(waitForFileChange(fw)) << "Timeout waiting for file change after recreate";
 
         ASSERT_TRUE(fw.fileExists());
         ASSERT_TRUE(fw.hasAccess());
