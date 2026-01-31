@@ -9,12 +9,11 @@
 #include <UtilsQt/Futures/Utils.h>
 #include <UtilsQt/Futures/SignalToFuture.h>
 
+#include "internal/TestWaitHelpers.h"
+
 namespace {
 
 using Clock = std::chrono::steady_clock;
-
-// Maximum wait time for any timer test (generous for slow CI)
-constexpr auto MaxTestTimeout = 10000; // ms
 
 // Helper to measure elapsed time and wait for timer signal
 struct TimerTestHelper {
@@ -43,20 +42,18 @@ struct TimerTestHelper {
     }
 
     // Wait for signal with timeout, returns true if signal received
-    bool waitForTimeout(int timeoutMs = MaxTestTimeout) {
-        auto f = UtilsQt::signalToFuture(&timer, &SteadyTimer::timeout, nullptr, timeoutMs);
+    bool waitForTimeout(std::chrono::milliseconds timeout = TestHelpers::MaxWaitTimeout) {
+        auto f = UtilsQt::signalToFuture(&timer, &SteadyTimer::timeout, nullptr,
+                                         static_cast<int>(timeout.count()));
         UtilsQt::waitForFuture<QEventLoop>(f);
         return !f.isCanceled();
     }
 
     // Wait for specific number of triggers
-    bool waitForTriggers(int count, int timeoutMs = MaxTestTimeout) {
-        auto deadline = Clock::now() + std::chrono::milliseconds(timeoutMs);
-        while (triggerCount < count && Clock::now() < deadline) {
-            // Process events to allow timer callbacks
-            UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(10));
-        }
-        return triggerCount >= count;
+    bool waitForTriggers(int count, std::chrono::milliseconds timeout = TestHelpers::MaxWaitTimeout) {
+        return TestHelpers::waitUntil([this, count]() {
+            return triggerCount >= count;
+        }, timeout);
     }
 };
 
