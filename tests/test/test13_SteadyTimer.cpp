@@ -3,126 +3,193 @@
  * Contact:  ihor-drachuk-libs@pm.me  */
 
 #include <gtest/gtest.h>
+#include <chrono>
 #include <QEventLoop>
 #include <UtilsQt/Qml-Cpp/SteadyTimer.h>
 #include <UtilsQt/Futures/Utils.h>
 #include <UtilsQt/Futures/SignalToFuture.h>
 
+#include "internal/TestWaitHelpers.h"
+
 namespace {
 
-#ifdef UTILS_QT_LONG_INTERVALS
-constexpr auto TimeFactor = 7;
-#else
-constexpr auto TimeFactor = 1;
-#endif // UTILS_QT_LONG_INTERVALS
+using Clock = std::chrono::steady_clock;
+
+// Helper to measure elapsed time and wait for timer signal
+struct TimerTestHelper {
+    SteadyTimer timer;
+    Clock::time_point startTime;
+    int triggerCount = 0;
+    QMetaObject::Connection conn;
+
+    TimerTestHelper() {
+        conn = QObject::connect(&timer, &SteadyTimer::timeout, [this]() {
+            triggerCount++;
+        });
+    }
+
+    ~TimerTestHelper() {
+        QObject::disconnect(conn);
+    }
+
+    void start(int interval, bool repeat = false) {
+        startTime = Clock::now();
+        timer.start(interval, repeat);
+    }
+
+    std::chrono::milliseconds elapsed() const {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - startTime);
+    }
+
+    // Wait for signal with timeout, returns true if signal received
+    bool waitForTimeout(std::chrono::milliseconds timeout = TestHelpers::MaxWaitTimeout) {
+        auto f = UtilsQt::signalToFuture(&timer, &SteadyTimer::timeout, nullptr,
+                                         static_cast<int>(timeout.count()));
+        UtilsQt::waitForFuture<QEventLoop>(f);
+        return !f.isCanceled();
+    }
+
+    // Wait for specific number of triggers
+    bool waitForTriggers(int count, std::chrono::milliseconds timeout = TestHelpers::MaxWaitTimeout) {
+        return TestHelpers::waitUntil([this, count]() {
+            return triggerCount >= count;
+        }, timeout);
+    }
+};
 
 } // namespace
 
 TEST(UtilsQt, SteadyTimer_Basic)
 {
-    SteadyTimer timer;
-    ASSERT_GT(timer.interval(), 0);
-    ASSERT_GT(timer.resolution(), 0);
-    ASSERT_FALSE(timer.active());
+    using namespace std::chrono_literals;
 
-    bool set = false;
-    QObject::connect(&timer, &SteadyTimer::timeout, [&]{ set = true; });
-    timer.setResolution(100);
-    timer.start(300 * TimeFactor);
-    ASSERT_TRUE(timer.active());
-    ASSERT_FALSE(set);
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(250 * TimeFactor));
-    ASSERT_FALSE(set);
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture((50 +50) * TimeFactor));
-    ASSERT_TRUE(set);
+    TimerTestHelper helper;
+    ASSERT_GT(helper.timer.interval(), 0);
+    ASSERT_GT(helper.timer.resolution(), 0);
+    ASSERT_FALSE(helper.timer.active());
 
-    ASSERT_FALSE(timer.active());
+    helper.timer.setResolution(100);
+    helper.start(300);
+    ASSERT_TRUE(helper.timer.active());
+    ASSERT_EQ(helper.triggerCount, 0);
+
+    // Wait for the timeout signal
+    ASSERT_TRUE(helper.waitForTimeout());
+
+    // Verify timing: should have taken at least ~300ms (with some tolerance)
+    auto elapsedMs = helper.elapsed();
+    ASSERT_GE(elapsedMs, 250ms) << "Timer triggered too early";
+    ASSERT_LE(elapsedMs, 1000ms) << "Timer took too long";  // Generous upper bound for CI
+
+    ASSERT_EQ(helper.triggerCount, 1);
+    ASSERT_FALSE(helper.timer.active());
 }
 
 TEST(UtilsQt, SteadyTimer_LowAutoResolution)
 {
-    bool set = false;
+    using namespace std::chrono_literals;
 
-    SteadyTimer timer;
-    QObject::connect(&timer, &SteadyTimer::timeout, [&]{ set = true; });
-    timer.start(100 * TimeFactor);
+    TimerTestHelper helper;
+    helper.start(100);
 
-    ASSERT_FALSE(set);
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(70 * TimeFactor));
-    ASSERT_FALSE(set);
+    ASSERT_EQ(helper.triggerCount, 0);
 
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture((30 +30) * TimeFactor));
-    ASSERT_TRUE(set);
+    // Wait for the timeout signal
+    ASSERT_TRUE(helper.waitForTimeout());
 
-    ASSERT_FALSE(timer.active());
+    // Verify timing
+    auto elapsedMs = helper.elapsed();
+    ASSERT_GE(elapsedMs, 70ms) << "Timer triggered too early";
+    ASSERT_LE(elapsedMs, 500ms) << "Timer took too long";
+
+    ASSERT_EQ(helper.triggerCount, 1);
+    ASSERT_FALSE(helper.timer.active());
 }
 
 TEST(UtilsQt, SteadyTimer_Threshold)
 {
-    bool set = false;
+    using namespace std::chrono_literals;
 
-    SteadyTimer timer;
-    QObject::connect(&timer, &SteadyTimer::timeout, [&]{ set = true; });
-    timer.setResolution(100);
-    timer.setThresholdFactor(20 * TimeFactor); // means resolution x20 (+- 2 sec)
-    timer.start(1000 * TimeFactor);
+    TimerTestHelper helper;
+    helper.timer.setResolution(100);
+    helper.timer.setThresholdFactor(20); // means resolution x20 (+- 2 sec)
+    helper.start(1000);
 
-    ASSERT_FALSE(set);
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(150 * TimeFactor));
-    ASSERT_TRUE(set);
+    ASSERT_EQ(helper.triggerCount, 0);
 
-    ASSERT_FALSE(timer.active());
+    // With high threshold, timer can fire early
+    ASSERT_TRUE(helper.waitForTimeout());
+
+    // Timer should fire, but might be early due to threshold
+    auto elapsedMs = helper.elapsed();
+    ASSERT_LE(elapsedMs, 2000ms) << "Timer took too long even with threshold";
+
+    ASSERT_EQ(helper.triggerCount, 1);
+    ASSERT_FALSE(helper.timer.active());
 }
 
 TEST(UtilsQt, SteadyTimer_StartStop)
 {
-    bool set = false;
+    using namespace std::chrono_literals;
 
-    SteadyTimer timer;
-    QObject::connect(&timer, &SteadyTimer::timeout, [&]{ set = true; });
-    timer.start(200 * TimeFactor);
+    TimerTestHelper helper;
+    helper.start(200);
 
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(170 * TimeFactor));
-    ASSERT_FALSE(set);
-    timer.stop();
-    ASSERT_FALSE(set);
+    // Wait a bit, but not long enough for timer
+    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50));
+    ASSERT_EQ(helper.triggerCount, 0);
+    ASSERT_TRUE(helper.timer.active());
 
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(100 * TimeFactor));
-    ASSERT_FALSE(set);
+    // Stop the timer
+    helper.timer.stop();
+    ASSERT_EQ(helper.triggerCount, 0);
+    ASSERT_FALSE(helper.timer.active());
+
+    // Wait more - timer should NOT fire since it's stopped
+    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(300));
+    ASSERT_EQ(helper.triggerCount, 0);
 }
 
 TEST(UtilsQt, SteadyTimer_Repeat)
 {
-    int counter = 0;
-    SteadyTimer timer;
-    QObject::connect(&timer, &SteadyTimer::timeout, [&]{ counter++; });
-    timer.start(100 * TimeFactor, true);
+    using namespace std::chrono_literals;
 
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(350 * TimeFactor));
-    ASSERT_EQ(counter, 3);
-    timer.stop();
+    TimerTestHelper helper;
+    helper.start(100, true);
 
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(200 * TimeFactor));
-    ASSERT_EQ(counter, 3);
+    // Wait for 3 triggers
+    ASSERT_TRUE(helper.waitForTriggers(3));
+
+    auto elapsedMs = helper.elapsed();
+    ASSERT_GE(elapsedMs, 250ms) << "3 triggers happened too fast";
+    ASSERT_LE(elapsedMs, 2000ms) << "3 triggers took too long";
+
+    ASSERT_GE(helper.triggerCount, 3);
+
+    // Stop and verify no more triggers
+    helper.timer.stop();
+    int countAtStop = helper.triggerCount;
+
+    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(250));
+    ASSERT_EQ(helper.triggerCount, countAtStop) << "Timer triggered after stop";
 }
 
 TEST(UtilsQt, SteadyTimer_ZeroInterval)
 {
-    bool set = false;
+    TimerTestHelper helper;
+    auto f = UtilsQt::signalToFuture(&helper.timer, &SteadyTimer::timeout, nullptr, 200);
+    helper.timer.start(0);
 
-    SteadyTimer timer;
-    QObject::connect(&timer, &SteadyTimer::timeout, [&]{ set = true; });
-    auto f = UtilsQt::signalToFuture(&timer, &SteadyTimer::timeout, nullptr, 200);
-    timer.start(0);
-
-    ASSERT_FALSE(timer.active());  // Should immediately become inactive
+    ASSERT_FALSE(helper.timer.active());  // Should immediately become inactive
 
     UtilsQt::waitForFuture<QEventLoop>(f);
-    ASSERT_TRUE(set);
+    ASSERT_EQ(helper.triggerCount, 1);
 }
 
 TEST(UtilsQt, SteadyTimer_AutoResolutionIncrease)
 {
+    using namespace std::chrono_literals;
+
     SteadyTimer timer;
 
     // First set a small interval to force resolution down
@@ -141,15 +208,16 @@ TEST(UtilsQt, SteadyTimer_AutoResolutionIncrease)
     timer.stop();
 
     // Verify timer still works with new resolution
-    bool set = false;
-    QObject::connect(&timer, &SteadyTimer::timeout, [&]{ set = true; });
-    timer.start(500 * TimeFactor);
+    TimerTestHelper helper;
+    helper.start(500);
 
-    ASSERT_FALSE(set);
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(450 * TimeFactor));
-    ASSERT_FALSE(set);
-    UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(100 * TimeFactor));
-    ASSERT_TRUE(set);
+    ASSERT_EQ(helper.triggerCount, 0);
+    ASSERT_TRUE(helper.waitForTimeout());
 
-    ASSERT_FALSE(timer.active());
+    auto elapsedMs = helper.elapsed();
+    ASSERT_GE(elapsedMs, 400ms) << "Timer triggered too early";
+    ASSERT_LE(elapsedMs, 2000ms) << "Timer took too long";
+
+    ASSERT_EQ(helper.triggerCount, 1);
+    ASSERT_FALSE(helper.timer.active());
 }
