@@ -66,6 +66,12 @@ public:
 #endif
     Q_PROPERTY(int keyModifiers READ keyModifiers /*WRITE setKeyModifiers*/ NOTIFY keyModifiersChanged)
 
+    // Qt version info
+    Q_PROPERTY(QString qtVersion READ qtVersion CONSTANT)
+    Q_PROPERTY(int qtVersionMajor READ qtVersionMajor CONSTANT)
+    Q_PROPERTY(int qtVersionMinor READ qtVersionMinor CONSTANT)
+    Q_PROPERTY(int qtVersionPatch READ qtVersionPatch CONSTANT)
+
     // Clipboard
     Q_INVOKABLE void clipboardSetText(const QString& text) const;
     Q_INVOKABLE QString clipboardGetText() const;
@@ -154,6 +160,12 @@ public:
     bool systemRequired() const;
 #endif
     int keyModifiers() const;
+
+    // Qt version info
+    QString qtVersion() const;
+    int qtVersionMajor() const;
+    int qtVersionMinor() const;
+    int qtVersionPatch() const;
 
 public slots:
 #ifdef UTILS_QT_OS_WIN

@@ -739,3 +739,23 @@ void QmlUtils::setKeyModifiers(int value)
     impl().keyModifiers = value;
     emit keyModifiersChanged(impl().keyModifiers);
 }
+
+QString QmlUtils::qtVersion() const
+{
+    return QString::fromLatin1(qVersion());
+}
+
+int QmlUtils::qtVersionMajor() const
+{
+    return QT_VERSION_MAJOR;
+}
+
+int QmlUtils::qtVersionMinor() const
+{
+    return QT_VERSION_MINOR;
+}
+
+int QmlUtils::qtVersionPatch() const
+{
+    return QT_VERSION_PATCH;
+}
