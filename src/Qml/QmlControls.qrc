@@ -5,5 +5,7 @@
         <file>UtilsQt/Rectangle2.qml</file>
         <file>UtilsQt/Repeater2.qml</file>
         <file>UtilsQt/DisabledVis.qml</file>
+        <file>UtilsQt/GrainEffect.qml</file>
+        <file>UtilsQt/shaders/grain.frag.qsb</file>
     </qresource>
 </RCC>
