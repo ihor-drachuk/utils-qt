@@ -4,3 +4,4 @@ Assert                 1.0  Assert.qml
 Rectangle2             1.0  Rectangle2.qml
 Repeater2              1.0  Repeater2.qml
 DisabledVis            1.0  DisabledVis.qml
+GrainEffect            1.0  GrainEffect.qml
