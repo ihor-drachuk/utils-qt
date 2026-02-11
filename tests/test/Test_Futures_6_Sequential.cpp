@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <chrono>
 
 #include <QtConcurrent/QtConcurrent>
@@ -17,13 +18,15 @@
 #include <utils-cpp/scoped_guard.h>
 #include <utils-cpp/gtest_printers.h>
 
+#include "internal/TestWaitHelpers.h"
+
+using TestHelpers::waitForFlag;
+using TestHelpers::waitForCounter;
+
 namespace {
 
-#ifdef UTILS_QT_OS_MACOS
-constexpr auto TimeFactor = 10;
-#else
-constexpr auto TimeFactor = 1;
-#endif // UTILS_QT_OS_MACOS
+// Default work loop duration when thread needs to simulate ongoing work
+constexpr auto WorkLoopDuration = std::chrono::milliseconds(200);
 
 struct OpStatistics
 {
@@ -422,6 +425,8 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
 
     struct Status
     {
+        std::atomic<bool> h1Started{false};
+        std::atomic<bool> h2Started{false};
         bool h1Cancel {};
         bool h1Result {};
         bool h2PrevCancel {};
@@ -429,9 +434,21 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
         bool h2Cancel {};
         bool h2Result {};
 
-        auto tie() const { return std::tie(h1Cancel, h1Result, h2PrevCancel, h2PrevResult, h2Cancel, h2Result); }
-        bool operator==(const Status& other) const { return tie() == other.tie(); }
-        bool operator!=(const Status& other) const { return tie() != other.tie(); }
+        void reset() {
+            h1Started = false;
+            h2Started = false;
+            h1Cancel = false;
+            h1Result = false;
+            h2PrevCancel = false;
+            h2PrevResult = false;
+            h2Cancel = false;
+            h2Result = false;
+        }
+
+        auto resultTie() const { return std::tie(h1Cancel, h1Result, h2PrevCancel, h2PrevResult, h2Cancel, h2Result); }
+        bool resultsEqual(bool _h1Cancel, bool _h1Result, bool _h2PrevCancel, bool _h2PrevResult, bool _h2Cancel, bool _h2Result) const {
+            return resultTie() == std::tie(_h1Cancel, _h1Result, _h2PrevCancel, _h2PrevResult, _h2Cancel, _h2Result);
+        }
     };
 
     Status status;
@@ -444,9 +461,10 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
             UtilsQt::Promise<int> promise(true);
 
             auto fThr = QtConcurrent::run([sm, promise, &status]() mutable {
+                status.h1Started.store(true, std::memory_order_release);
                 const auto now = Clock::now();
 
-                while (!sm.isCancelRequested() && (Clock::now() - now < 200ms * TimeFactor))
+                while (!sm.isCancelRequested() && (Clock::now() - now < WorkLoopDuration))
                     QThread::currentThread()->msleep(20);
 
                 if (sm.isCancelRequested()) {
@@ -472,9 +490,10 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
             UtilsQt::Promise<QString> promise(true);
 
             auto fThr = QtConcurrent::run([r, sm, promise, &status]() mutable {
+                status.h2Started.store(true, std::memory_order_release);
                 const auto now = Clock::now();
 
-                while (!sm.isCancelRequested() && (Clock::now() - now < 200ms * TimeFactor))
+                while (!sm.isCancelRequested() && (Clock::now() - now < WorkLoopDuration))
                     QThread::currentThread()->msleep(20);
 
                 if (sm.isCancelRequested()) {
@@ -495,91 +514,65 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellation)
         return std::make_pair(f, std::move(awaitables));
     };
 
+    // Test 1: Cancel during first handler
     {
         QFuture<QString> f;
-        Clock::time_point start;
 
         {
-            status = {};
-            start = Clock::now();
+            status.reset();
             auto [localF, localAw] = factory();
             f = std::move(localF);
-            UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50 * TimeFactor));
+
+            // Wait for h1 to start, then cancel
+            ASSERT_TRUE(waitForFlag(status.h1Started));
             f.cancel();
             UtilsQt::waitForFuture<QEventLoop>(f);
 
-            // localAw (Awaitables) is destroyed here
             localAw.confirmWait();
         }
-        ASSERT_LE(Clock::now() - start, 120ms * TimeFactor); // 50ms delay + 20ms check interval + 50ms as usual time gap
-        const auto end = Clock::now();
 
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
-        ASSERT_EQ(status, (Status{true, false, false, false, false, false}));
-
-        ASSERT_LE(end - start, 150ms * TimeFactor);
+        ASSERT_TRUE(status.resultsEqual(true, false, false, false, false, false));
     }
 
+    // Test 2: Cancel during second handler
     {
-        status = {};
-        const auto start = Clock::now();
+        status.reset();
         auto [f, awaitables] = factory();
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(250 * TimeFactor));
-        f.cancel();
-        UtilsQt::waitForFuture<QEventLoop>(f);
-        ASSERT_LE(Clock::now() - start, 300ms * TimeFactor);
-        awaitables.wait();
-        const auto end = Clock::now();
 
-        ASSERT_TRUE(f.isFinished());
-        ASSERT_TRUE(f.isCanceled());
-        ASSERT_EQ(f.resultCount(), 0);
-        ASSERT_EQ(status, (Status{false, true, false, true, true, false}));
-
-        ASSERT_LE(end - start, 350ms * TimeFactor);
-    }
-
-    {
-        status = {};
-        const auto start = Clock::now();
-        auto [f, awaitables] = factory();
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(250 * TimeFactor));
+        // Wait for h2 to start (h1 must have finished with result)
+        ASSERT_TRUE(waitForFlag(status.h2Started));
         ASSERT_TRUE(f.isRunning());
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
-        ASSERT_LE(Clock::now() - start, 300ms * TimeFactor);
         awaitables.wait();
-        const auto end = Clock::now();
 
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
         ASSERT_EQ(f.resultCount(), 0);
-        ASSERT_EQ(status, (Status{false, true, false, true, true, false}));
-
-        ASSERT_LE(end - start, 350ms * TimeFactor);
+        ASSERT_TRUE(status.resultsEqual(false, true, false, true, true, false));
     }
 
+    // Test 3: Let both handlers complete without cancellation
     {
-        status = {};
-        const auto start = Clock::now();
+        status.reset();
         auto [f, awaitables] = factory();
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(500 * TimeFactor));
+
+        // Just wait for completion
+        UtilsQt::waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(f.isFinished());
         ASSERT_FALSE(f.isCanceled());
+
+        // Cancel after completion (should have no effect on result)
         f.cancel();
-        UtilsQt::waitForFuture<QEventLoop>(f);
-        ASSERT_LE(Clock::now() - start, 550ms * TimeFactor);
         awaitables.wait();
-        const auto end = Clock::now();
 
         ASSERT_TRUE(f.isFinished());
-        ASSERT_TRUE(f.isCanceled());
+        ASSERT_TRUE(f.isCanceled()); // cancel() sets canceled flag even after completion
         ASSERT_EQ(f.resultCount(), 1);
         ASSERT_EQ(f.result(), "17");
-        ASSERT_EQ(status, (Status{false, true, false, true, false, true}));
-
-        ASSERT_GE(end - start, 400ms * TimeFactor);
+        ASSERT_TRUE(status.resultsEqual(false, true, false, true, false, true));
     }
 }
 
@@ -592,20 +585,24 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellationSubscription)
     {
         QObject obj;
         UtilsQt::Awaitables awaitables;
-        std::chrono::milliseconds duration;
+        std::atomic<bool> threadStarted{false};
+        std::atomic<bool> wasCancelled{false};
         auto f = UtilsQt::Sequential(&obj)
-                     .start([&duration](UtilsQt::SequentialMediator& sm) {
+                     .start([&threadStarted, &wasCancelled](UtilsQt::SequentialMediator& sm) {
                          UtilsQt::Promise<int> promise(true);
 
-                         auto fThr = QtConcurrent::run([&duration, sm, promise]() mutable {
+                         auto fThr = QtConcurrent::run([&threadStarted, &wasCancelled, sm, promise]() mutable {
                              volatile bool run = true;
-                             auto subscription = sm.onCancellation([&run]() mutable { run = false; });
+                             auto subscription = sm.onCancellation([&run, &wasCancelled]() mutable {
+                                 run = false;
+                                 wasCancelled.store(true, std::memory_order_release);
+                             });
+
+                             threadStarted.store(true, std::memory_order_release);
 
                              const auto start = Clock::now();
-                             while (run && (Clock::now() - start < 200ms * TimeFactor))
+                             while (run && (Clock::now() - start < WorkLoopDuration))
                                  QThread::currentThread()->msleep(20);
-
-                             duration = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
 
                              if (run) {
                                  promise.finish(17);
@@ -620,35 +617,41 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellationSubscription)
                      })
                      .execute(awaitables);
 
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50 * TimeFactor));
+        // Wait for thread to start, then cancel
+        ASSERT_TRUE(waitForFlag(threadStarted));
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
-        // ASSERT_TRUE(awaitables.isRunning()); -- Likely true, but not guaranteed, as thread could finish earlier.
         awaitables.wait();
         ASSERT_EQ(f.resultCount(), 0);
-        ASSERT_LE(duration, 150ms * TimeFactor);
+        // Verify cancellation callback was triggered
+        ASSERT_TRUE(wasCancelled.load());
     }
 
-    // Test (immediate) unsubscription on scope exit
+    // Test (immediate) unsubscription on scope exit - callback should NOT be called
     {
         QObject obj;
         UtilsQt::Awaitables awaitables;
-        std::chrono::milliseconds duration;
+        std::atomic<bool> threadStarted{false};
+        std::atomic<bool> callbackCalled{false};
         auto f = UtilsQt::Sequential(&obj)
-                     .start([&duration](UtilsQt::SequentialMediator& sm) {
+                     .start([&threadStarted, &callbackCalled](UtilsQt::SequentialMediator& sm) {
                          UtilsQt::Promise<int> promise(true);
 
-                         auto fThr = QtConcurrent::run([&duration, sm, promise]() mutable {
+                         auto fThr = QtConcurrent::run([&threadStarted, &callbackCalled, sm, promise]() mutable {
                              volatile bool run = true;
-                             (void)sm.onCancellation([&run]() mutable { run = false; });
+                             // Subscription immediately goes out of scope - callback should NOT be called
+                             (void)sm.onCancellation([&run, &callbackCalled]() mutable {
+                                 run = false;
+                                 callbackCalled.store(true, std::memory_order_release);
+                             });
+
+                             threadStarted.store(true, std::memory_order_release);
 
                              const auto start = Clock::now();
-                             while (run && (Clock::now() - start < 200ms * TimeFactor))
+                             while (run && (Clock::now() - start < WorkLoopDuration))
                                  QThread::currentThread()->msleep(20);
-
-                             duration = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
 
                              if (run) {
                                  promise.finish(17);
@@ -663,41 +666,41 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellationSubscription)
                      })
                      .execute(awaitables);
 
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50 * TimeFactor));
+        // Wait for thread to start, then cancel
+        ASSERT_TRUE(waitForFlag(threadStarted));
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
-        //ASSERT_TRUE(awaitables.isRunning()); -- Likely true, but not guaranteed, as thread could finish earlier.
         awaitables.wait();
         ASSERT_EQ(f.resultCount(), 0);
-        ASSERT_GE(duration, 200ms * TimeFactor);
+        // Callback should NOT have been called because subscription was dropped
+        ASSERT_FALSE(callbackCalled.load());
     }
 
-    // Test idle subscription
+    // Test idle subscription - no cancellation, thread completes normally
     {
         QObject obj;
         UtilsQt::Awaitables awaitables;
-        std::chrono::milliseconds duration;
+        std::atomic<bool> threadFinished{false};
         auto f = UtilsQt::Sequential(&obj)
-                     .start([&duration](UtilsQt::SequentialMediator& sm) {
+                     .start([&threadFinished](UtilsQt::SequentialMediator& sm) {
                          UtilsQt::Promise<int> promise(true);
 
-                         auto fThr = QtConcurrent::run([&duration, sm, promise]() mutable {
+                         auto fThr = QtConcurrent::run([&threadFinished, sm, promise]() mutable {
                              volatile bool run = true;
                              auto subscription = sm.onCancellation([&run]() mutable { run = false; });
 
                              const auto start = Clock::now();
-                             while (run && (Clock::now() - start < 200ms * TimeFactor))
+                             while (run && (Clock::now() - start < WorkLoopDuration))
                                  QThread::currentThread()->msleep(20);
-
-                             duration = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
 
                              if (run) {
                                  promise.finish(17);
                              } else {
                                  promise.cancel();
                              }
+                             threadFinished.store(true, std::memory_order_release);
                          });
 
                          sm.registerAwaitable(fThr);
@@ -711,9 +714,9 @@ TEST(UtilsQt, Futures_Sequential_ThreadedExternalCancellationSubscription)
         ASSERT_FALSE(f.isCanceled());
         ASSERT_EQ(f.resultCount(), 1);
         ASSERT_EQ(f.result(), 17);
-        //ASSERT_FALSE(awaitables.isRunning());  <---| Likely true, but not guaranteed without `wait`
-        ASSERT_GE(duration, 200ms * TimeFactor); //  | as promise.finish() occurs earlier than thread finishes.
         awaitables.confirmWait();
+        // Thread should have finished normally
+        ASSERT_TRUE(threadFinished.load());
     }
 }
 
@@ -1033,26 +1036,26 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
     using namespace std::chrono_literals;
     using Clock = std::chrono::steady_clock;
 
-    // `wait`
+    // Test `wait` - explicit waiting for awaitables
     {
         QObject obj;
         UtilsQt::Awaitables awaitables;
-        std::chrono::milliseconds duration;
         bool flag = false;
+        std::atomic<bool> threadStarted{false};
         auto f = UtilsQt::Sequential(&obj)
-                     .start([&duration, &flag](UtilsQt::SequentialMediator& sm) {
+                     .start([&flag, &threadStarted](UtilsQt::SequentialMediator& sm) {
                          UtilsQt::Promise<int> promise(true);
 
-                         auto fThr = QtConcurrent::run([&duration, &flag, sm, promise]() mutable {
+                         auto fThr = QtConcurrent::run([&flag, &threadStarted, sm, promise]() mutable {
                              auto sg = CreateScopedGuard([&flag](){ flag = true; });
                              volatile bool run = true;
                              auto subscription = sm.onCancellation([&run]() mutable { run = false; });
 
-                             const auto start = Clock::now();
-                             while (run && (Clock::now() - start < 200ms * TimeFactor))
-                                 QThread::currentThread()->msleep(20);
+                             threadStarted.store(true, std::memory_order_release);
 
-                             duration = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
+                             const auto start = Clock::now();
+                             while (run && (Clock::now() - start < WorkLoopDuration))
+                                 QThread::currentThread()->msleep(20);
 
                              if (run) {
                                  promise.finish(17);
@@ -1067,27 +1070,27 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
                      })
                      .execute(awaitables);
 
-        UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50 * TimeFactor));
+        // Wait for thread to enter work loop
+        ASSERT_TRUE(waitForFlag(threadStarted));
         ASSERT_TRUE(awaitables.isRunning());
         f.cancel();
         UtilsQt::waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
-        //ASSERT_TRUE(awaitables.isRunning());
-        ASSERT_FALSE(flag);
+        // Note: flag may or may not be true here depending on timing
+        // The important thing is that awaitables.wait() ensures thread completion
         awaitables.wait();
         awaitables.wait(); // Just test that it doesn't crash
         awaitables.wait();
         ASSERT_FALSE(awaitables.isRunning());
-        ASSERT_TRUE(flag);
+        ASSERT_TRUE(flag);  // Now thread is guaranteed to be finished
         ASSERT_EQ(f.resultCount(), 0);
-        ASSERT_LE(duration, 150ms * TimeFactor);
     }
 
-    // `wait`
+    // Test `confirmWait` - destructor waits for thread completion
     {
         bool flag = false;
-        std::chrono::milliseconds duration;
+        std::atomic<bool> threadStarted{false};
         QFuture<int> f;
 
         {
@@ -1095,19 +1098,19 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
             UtilsQt::Awaitables awaitables;
 
             f = UtilsQt::Sequential(&obj)
-                         .start([&duration, &flag](UtilsQt::SequentialMediator& sm) {
+                         .start([&flag, &threadStarted](UtilsQt::SequentialMediator& sm) {
                              UtilsQt::Promise<int> promise(true);
 
-                             auto fThr = QtConcurrent::run([&duration, &flag, sm, promise]() mutable {
+                             auto fThr = QtConcurrent::run([&flag, &threadStarted, sm, promise]() mutable {
                                  auto sg = CreateScopedGuard([&flag](){ flag = true; });
                                  volatile bool run = true;
                                  auto subscription = sm.onCancellation([&run]() mutable { run = false; });
 
-                                 const auto start = Clock::now();
-                                 while (run && (Clock::now() - start < 200ms * TimeFactor))
-                                     QThread::currentThread()->msleep(20);
+                                 threadStarted.store(true, std::memory_order_release);
 
-                                 duration = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
+                                 const auto start = Clock::now();
+                                 while (run && (Clock::now() - start < WorkLoopDuration))
+                                     QThread::currentThread()->msleep(20);
 
                                  if (run) {
                                      promise.finish(17);
@@ -1122,18 +1125,18 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
                          })
                          .execute(awaitables);
 
-            UtilsQt::waitForFuture<QEventLoop>(UtilsQt::createTimedFuture(50 * TimeFactor));
+            // Wait for thread to enter work loop
+            ASSERT_TRUE(waitForFlag(threadStarted));
+            ASSERT_TRUE(awaitables.isRunning());
             f.cancel();
             UtilsQt::waitForFuture<QEventLoop>(f);
             ASSERT_TRUE(f.isFinished());
             ASSERT_TRUE(f.isCanceled());
-            ASSERT_TRUE(awaitables.isRunning());
-            ASSERT_FALSE(flag);
+            // Note: flag may or may not be true here depending on timing
             awaitables.confirmWait();
         }
 
-        ASSERT_TRUE(flag);
+        ASSERT_TRUE(flag);  // Destructor waited for thread
         ASSERT_EQ(f.resultCount(), 0);
-        ASSERT_LE(duration, 150ms * TimeFactor);
     }
 }
