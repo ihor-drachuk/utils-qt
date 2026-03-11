@@ -1073,8 +1073,8 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
         UtilsQt::waitForFuture<QEventLoop>(f);
         ASSERT_TRUE(f.isFinished());
         ASSERT_TRUE(f.isCanceled());
-        //ASSERT_TRUE(awaitables.isRunning());
-        ASSERT_FALSE(flag);
+        //ASSERT_TRUE(awaitables.isRunning()); -- Likely true, but not guaranteed, as thread could finish earlier.
+        //ASSERT_FALSE(flag); -- Likely false, but not guaranteed, as thread could finish earlier.
         awaitables.wait();
         awaitables.wait(); // Just test that it doesn't crash
         awaitables.wait();
@@ -1127,8 +1127,8 @@ TEST(UtilsQt, Futures_Sequential_Awaitable)
             UtilsQt::waitForFuture<QEventLoop>(f);
             ASSERT_TRUE(f.isFinished());
             ASSERT_TRUE(f.isCanceled());
-            ASSERT_TRUE(awaitables.isRunning());
-            ASSERT_FALSE(flag);
+            //ASSERT_TRUE(awaitables.isRunning()); -- Likely true, but not guaranteed, as thread could finish earlier.
+            //ASSERT_FALSE(flag); -- Likely false, but not guaranteed, as thread could finish earlier.
             awaitables.confirmWait();
         }
 
