@@ -65,7 +65,7 @@ QFuture<ResultType> signalToFuture(Object* object, void (Object::* signal)(Args.
 
     auto ctx = new QObject();
     QObject::connect(object, &QObject::destroyed, ctx, &QObject::deleteLater);
-    if (context) QObject::connect(context, &QObject::destroyed, ctx, &QObject::deleteLater);
+    if (context) QObject::connect(context, &QObject::destroyed, ctx, &QObject::deleteLater); // NOLINT(readability-suspicious-call-argument)
 
     QObject::connect(object, signal, ctx, [promise, ctx](Args... args) mutable {
         if (!promise.isFinished()) Internal::ResultProvider<Args...>::apply(promise, args...);

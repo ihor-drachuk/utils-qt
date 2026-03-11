@@ -224,24 +224,25 @@ QColor QmlUtils::colorMakeAccent(const QColor& color, double factor) const
     assert(factor >= 0.0 && factor <= 1.0);
 
     const auto hsva = color.toHsv();
-    const double alphaAccentRange = (1.0 - color.alphaF());
-    const double alpha2 = color.alphaF() + (alphaAccentRange * factor);
+    const auto factorF = static_cast<float>(factor);
+    const float alphaAccentRange = (1.0f - color.alphaF());
+    const float alpha2 = color.alphaF() + (alphaAccentRange * factorF);
 
-    if (hsva.alphaF() <= 0.5) {
+    if (hsva.alphaF() <= 0.5f) {
         // Accent via less transparency
-        return colorChangeAlpha(color, alpha2);
+        return colorChangeAlpha(color, static_cast<double>(alpha2));
 
-    } else if (hsva.valueF() <= 0.5) {
+    } else if (hsva.valueF() <= 0.5f) {
         // Accent via value (lighter) + less transparency
-        return QColor::fromHsvF(hsva.hsvHueF(), hsva.hsvSaturationF(), hsva.valueF() + 0.5 * factor, alpha2);
+        return QColor::fromHsvF(hsva.hsvHueF(), hsva.hsvSaturationF(), hsva.valueF() + 0.5f * factorF, alpha2);
 
-    } else if (hsva.hsvSaturationF() <= 0.5) {
+    } else if (hsva.hsvSaturationF() <= 0.5f) {
         // Accent via saturation + less transparency
-        return QColor::fromHsvF(hsva.hsvHueF(), hsva.hsvSaturationF() + 0.5 * factor, hsva.valueF(), alpha2);
+        return QColor::fromHsvF(hsva.hsvHueF(), hsva.hsvSaturationF() + 0.5f * factorF, hsva.valueF(), alpha2);
 
     } else {
         // Accent via less saturation (could look lighter) + less transparency
-        return QColor::fromHsvF(hsva.hsvHueF(), hsva.hsvSaturationF() - 0.5 * factor, hsva.valueF(), alpha2);
+        return QColor::fromHsvF(hsva.hsvHueF(), hsva.hsvSaturationF() - 0.5f * factorF, hsva.valueF(), alpha2);
     }
 }
 

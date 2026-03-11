@@ -12,19 +12,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [linux]
         compiler: [gcc, clang]
         test_libs: [tl_preinstalled, tl_missing]
-        qt: [qt_5.15.2, qt_6.6.1]
+        qt: [qt_5.15.2, qt_6.8.3]
         build_type: [Debug, Release]
 
     runs-on: ubuntu-latest
 
     container:
-      image: ihordrachuk/id-build-env:d12-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.test_libs }}-${{ matrix.qt }}-${{ matrix.arch || 'default' }}
+      image: ihordrachuk/id-build-env:linux-${{ matrix.compiler }}-${{ matrix.test_libs }}-${{ matrix.qt }}-default
       options: --workdir ${{ github.workspace }}
 
-    if: "!contains(github.event.head_commit.message, 'Skip build')"
+    if: "!contains(github.event.head_commit.message, 'CI skip') && !contains(github.event.head_commit.message, 'Skip CI')"
     timeout-minutes: 10
 
     steps:
@@ -58,18 +57,16 @@ jobs:
       fail-fast: false
       matrix:
         compiler_arch: [x64]
-        qt_arch: [win64_msvc2019_64]
-        qt: [5.15.2, 6.6.1]
+        qt: [5.15.2, 6.8.3]
         build_type: [Debug, Release]
         include:
           - compiler_arch: Win32
-            qt_arch: win32_msvc2019
             qt: 5.15.2
             build_type: Debug
 
     runs-on: windows-latest
 
-    if: "!contains(github.event.head_commit.message, 'Skip build')"
+    if: "!contains(github.event.head_commit.message, 'CI skip') && !contains(github.event.head_commit.message, 'Skip CI')"
     timeout-minutes: 30
 
     steps:
@@ -85,7 +82,7 @@ jobs:
           version: ${{ matrix.qt }}
           host: windows
           target: desktop
-          arch: ${{ matrix.qt_arch }}
+          arch: ${{ matrix.compiler_arch == 'Win32' && 'win32_msvc2019' || (matrix.qt == '6.8.3' && 'win64_msvc2022_64' || 'win64_msvc2019_64') }}
           dir: ${{github.workspace}}/qt
           cache: true
           setup-python: true
@@ -115,12 +112,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        qt: [5.15.2, 6.6.1]
+        qt: [5.15.2, 6.8.3]
         build_type: [Debug, Release]
 
     runs-on: macos-latest
 
-    if: "!contains(github.event.head_commit.message, 'Skip build')"
+    if: "!contains(github.event.head_commit.message, 'CI skip') && !contains(github.event.head_commit.message, 'Skip CI')"
     timeout-minutes: 30
 
     steps:
@@ -163,11 +160,11 @@ jobs:
 
 
   CodeChecker:
-    if: "!contains(github.event.head_commit.message, 'Skip SA')"
+    if: "!contains(github.event.head_commit.message, 'CI skip') && !contains(github.event.head_commit.message, 'Skip CI')"
     runs-on: [ubuntu-22.04]
 
     container:
-      image: ihordrachuk/id-build-env:linux-clang-tl_missing-qt_5.15.2-codechecker
+      image: ihordrachuk/id-build-env:linux-clang-tl_missing-qt_6.8.3-codechecker
       options: --workdir ${{ github.workspace }}
 
     steps:
@@ -199,9 +196,9 @@ jobs:
           mkdir codechecker-reports
           # Also 'cppcheck' can be added to analyzers list
           CodeChecker analyze -i build/skipfile.txt build/compile_commands.json -j $(nproc --all) -o report --analyzers clang-tidy clangsa
-          CodeChecker parse ./report --trim-path-prefix "$(pwd)/src" | tee ./codechecker-reports/results.txt || true
-          CodeChecker parse ./report --trim-path-prefix "$(pwd)/src" -e html -o ./codechecker-reports/html > /dev/null || true
-          CodeChecker parse ./report --trim-path-prefix "$(pwd)/src" > /dev/null && touch ./ccOK || true
+          CodeChecker parse ./report -i build/skipfile.txt --trim-path-prefix "$(pwd)/src" | tee ./codechecker-reports/results.txt || true
+          CodeChecker parse ./report -i build/skipfile.txt --trim-path-prefix "$(pwd)/src" -e html -o ./codechecker-reports/html > /dev/null || true
+          CodeChecker parse ./report -i build/skipfile.txt --trim-path-prefix "$(pwd)/src" > /dev/null && touch ./ccOK || true
 
       - name: "Upload the results"
         uses: actions/upload-artifact@v4

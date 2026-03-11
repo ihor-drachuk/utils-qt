@@ -476,6 +476,9 @@ void MergedListModel::selfCheck() const
                         mlm_assert_rel(remappedIndex2);
                         break;
                     }
+
+                    default:
+                        break;
                 }
 
             } else {

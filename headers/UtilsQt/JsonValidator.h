@@ -82,13 +82,13 @@ private:
 
 namespace Internal {
 
-enum class _Exclusive { Exclusive };
-enum class _Optional { Optional };
-enum class _NonEmpty { NonEmpty };
-enum class _Hex { Hex };
-enum class _Base64 { Base64 };
-enum class _IPv4 { IPv4 };
-enum class _Integer { Integer };
+enum class ExclusiveTag { Exclusive };
+enum class OptionalTag { Optional };
+enum class NonEmptyTag { NonEmpty };
+enum class HexTag { Hex };
+enum class Base64Tag { Base64 };
+enum class IPv4Tag { IPv4 };
+enum class IntegerTag { Integer };
 
 struct MinMaxValidator {
     DEFAULT_COPY_MOVE(MinMaxValidator);
@@ -161,7 +161,7 @@ public:
 class Field : public Validator
 {
 public:
-    Field(const QString& key, _Optional, const std::vector<ValidatorCPtr>& validators = {})
+    Field(const QString& key, OptionalTag, const std::vector<ValidatorCPtr>& validators = {})
         : Validator(validators),
           m_optional(true),
           m_key(key)
@@ -183,7 +183,7 @@ private:
 class Or : public Validator
 {
 public:
-    Or(_Exclusive, const std::vector<ValidatorCPtr>& validators)
+    Or(ExclusiveTag, const std::vector<ValidatorCPtr>& validators)
         : Validator(validators),
           m_exclusive(true)
     { }
@@ -214,23 +214,23 @@ public:
         : Validator(validators)
     { }
 
-    String(_NonEmpty, const std::vector<ValidatorCPtr>& validators)
+    String(NonEmptyTag, const std::vector<ValidatorCPtr>& validators)
         : Validator(validators),
           m_nonEmpty(true)
     { }
 
-    String(_Hex, const std::vector<ValidatorCPtr>& validators)
+    String(HexTag, const std::vector<ValidatorCPtr>& validators)
         : Validator(validators),
           m_nonEmpty(true),
           m_hex(true)
     { }
 
-    String(_Base64, const std::vector<ValidatorCPtr>& validators)
+    String(Base64Tag, const std::vector<ValidatorCPtr>& validators)
         : Validator(validators),
           m_base64(true)
     { }
 
-    String(_IPv4, const std::vector<ValidatorCPtr>& validators)
+    String(IPv4Tag, const std::vector<ValidatorCPtr>& validators)
         : Validator(validators),
           m_nonEmpty(true),
           m_ipv4(true)
@@ -262,7 +262,7 @@ public:
         : Validator(validators)
     { }
 
-    Number(_Integer, const std::vector<ValidatorCPtr>& validators)
+    Number(IntegerTag, const std::vector<ValidatorCPtr>& validators)
         : Validator(validators),
           m_isIntegerExpected(true)
     { }
@@ -272,7 +272,7 @@ public:
           m_validator(std::make_unique<MinMaxValidatorDouble>(min, max))
     { }
 
-    Number(_Integer, const std::optional<int64_t>& min, const std::optional<int64_t>& max, const std::vector<ValidatorCPtr>& validators)
+    Number(IntegerTag, const std::optional<int64_t>& min, const std::optional<int64_t>& max, const std::vector<ValidatorCPtr>& validators)
         : Validator(validators),
           m_isIntegerExpected(true),
           m_validator(std::make_unique<MinMaxValidatorInt>(min, max))
@@ -433,13 +433,13 @@ private:
 
 } // namespace Internal
 
-constexpr auto Exclusive = Internal::_Exclusive::Exclusive;
-constexpr auto Optional = Internal::_Optional::Optional;
-constexpr auto NonEmpty = Internal::_NonEmpty::NonEmpty;
-constexpr auto Hex = Internal::_Hex::Hex;
-constexpr auto Base64 = Internal::_Base64::Base64;
-constexpr auto IPv4 = Internal::_IPv4::IPv4;
-constexpr auto Integer = Internal::_Integer::Integer;
+constexpr auto Exclusive = Internal::ExclusiveTag::Exclusive;
+constexpr auto Optional = Internal::OptionalTag::Optional;
+constexpr auto NonEmpty = Internal::NonEmptyTag::NonEmpty;
+constexpr auto Hex = Internal::HexTag::Hex;
+constexpr auto Base64 = Internal::Base64Tag::Base64;
+constexpr auto IPv4 = Internal::IPv4Tag::IPv4;
+constexpr auto Integer = Internal::IntegerTag::Integer;
 using RootValidatorCPtr = Internal::RootValidatorCPtr;
 
 template<typename... Ts>
@@ -461,7 +461,7 @@ ValidatorCPtr Array(const Ts&... validators)
 }
 
 template<typename... Ts>
-ValidatorCPtr Field(const QString& key, Internal::_Optional opt, const Ts&... validators)
+ValidatorCPtr Field(const QString& key, Internal::OptionalTag opt, const Ts&... validators)
 {
     return std::make_shared<Internal::Field>(key, opt, Internal::convertValidators(validators...));
 }
@@ -473,7 +473,7 @@ ValidatorCPtr Field(const QString& key, const Ts&... validators)
 }
 
 template<typename... Ts>
-ValidatorCPtr Or(Internal::_Exclusive exclusive, const Ts&... validators)
+ValidatorCPtr Or(Internal::ExclusiveTag exclusive, const Ts&... validators)
 {
     return std::make_shared<Internal::Or>(exclusive, Internal::convertValidators(validators...));
 }
@@ -497,25 +497,25 @@ ValidatorCPtr String(const Ts&... validators)
 }
 
 template<typename... Ts>
-ValidatorCPtr String(Internal::_NonEmpty ne, const Ts&... validators)
+ValidatorCPtr String(Internal::NonEmptyTag ne, const Ts&... validators)
 {
     return std::make_shared<Internal::String>(ne, Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorCPtr String(Internal::_Hex hex, const Ts&... validators)
+ValidatorCPtr String(Internal::HexTag hex, const Ts&... validators)
 {
     return std::make_shared<Internal::String>(hex, Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorCPtr String(Internal::_Base64 base64, const Ts&... validators)
+ValidatorCPtr String(Internal::Base64Tag base64, const Ts&... validators)
 {
     return std::make_shared<Internal::String>(base64, Internal::convertValidators(validators...));
 }
 
 template<typename... Ts>
-ValidatorCPtr String(Internal::_IPv4 ipv4, const Ts&... validators)
+ValidatorCPtr String(Internal::IPv4Tag ipv4, const Ts&... validators)
 {
     return std::make_shared<Internal::String>(ipv4, Internal::convertValidators(validators...));
 }
@@ -533,7 +533,7 @@ ValidatorCPtr Number(const Ts&... validators)
 }
 
 template<typename... Ts>
-ValidatorCPtr Number(Internal::_Integer integer, const Ts&... validators)
+ValidatorCPtr Number(Internal::IntegerTag integer, const Ts&... validators)
 {
     return std::make_shared<Internal::Number>(integer, Internal::convertValidators(validators...));
 }
@@ -545,7 +545,7 @@ ValidatorCPtr Number(const std::optional<double>& min, const std::optional<doubl
 }
 
 template<typename... Ts>
-ValidatorCPtr Number(Internal::_Integer integer, const std::optional<int64_t>& min, const std::optional<int64_t>& max, const Ts&... validators)
+ValidatorCPtr Number(Internal::IntegerTag integer, const std::optional<int64_t>& min, const std::optional<int64_t>& max, const Ts&... validators)
 {
     return std::make_shared<Internal::Number>(integer, min, max, Internal::convertValidators(validators...));
 }
