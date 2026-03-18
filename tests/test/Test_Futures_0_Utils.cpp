@@ -9,6 +9,8 @@
 #include <QTimer>
 #include <QVector>
 
+#include <optional>
+
 #include <UtilsQt/Futures/Utils.h>
 
 #include "internal/LifetimeTracker.h"
@@ -525,6 +527,63 @@ TEST(UtilsQt, Futures_Utils_Promise)
         p.finishWithException(std::runtime_error("Test"));
         ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Exception);
         ASSERT_THROW(f.waitForFinished(), std::runtime_error);
+    }
+}
+
+TEST(UtilsQt, Futures_Utils_Promise_FinishConstructible)
+{
+    // Test finish() with types constructible to T
+
+    // std::optional from value (int -> std::optional<int>)
+    {
+        Promise<std::optional<int>> p(true);
+        auto f = p.future();
+
+        p.finish(123);
+
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Completed);
+        ASSERT_TRUE(f.result().has_value());
+        ASSERT_EQ(f.result().value(), 123);
+    }
+
+    // std::optional from std::nullopt
+    {
+        Promise<std::optional<int>> p(true);
+        auto f = p.future();
+
+        p.finish(std::nullopt);
+
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Completed);
+        ASSERT_FALSE(f.result().has_value());
+    }
+
+    // Custom type with converting constructor (const char* -> std::string -> wrapper)
+    {
+        struct Wrapper {
+            std::string value;
+            Wrapper() = default;
+            Wrapper(std::string v) : value(std::move(v)) {} // NOLINT
+        };
+
+        Promise<Wrapper> p(true);
+        auto f = p.future();
+
+        p.finish(std::string("hello"));
+
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Completed);
+        ASSERT_EQ(f.result().value, "hello");
+    }
+
+    // Exact type still works
+    {
+        Promise<std::optional<int>> p(true);
+        auto f = p.future();
+
+        p.finish(std::optional<int>(42));
+
+        ASSERT_EQ(UtilsQt::getFutureState(f), UtilsQt::FutureState::Completed);
+        ASSERT_TRUE(f.result().has_value());
+        ASSERT_EQ(f.result().value(), 42);
     }
 }
 

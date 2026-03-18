@@ -246,15 +246,20 @@ public:
         return *this;
     }
 
-    // if [T != void]
-    template<typename X = T>
-    typename std::enable_if<!std::is_same<X, void>::value && std::is_same<X, T>::value, Promise&>::type
-    finish(const X& result)
+    // if [T != void], accepts T or any type constructible to T (supports braced-init)
+    template<typename X = T,
+             std::enable_if_t<!std::is_same_v<X, void> &&
+                              std::is_constructible_v<T, X>, int> = 0>
+    Promise& finish(X&& result)
     {
         assert(isStarted() || isCanceled());
         assert(!isFinished());
 
-        m_interface.reportResult(result);
+        if constexpr (std::is_same_v<std::decay_t<X>, T>) {
+            m_interface.reportResult(std::forward<X>(result));
+        } else {
+            m_interface.reportResult(T(std::forward<X>(result)));
+        }
         m_interface.reportFinished();
         return *this;
     }
