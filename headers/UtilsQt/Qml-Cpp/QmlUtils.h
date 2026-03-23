@@ -11,6 +11,7 @@
 #include <QStringList>
 #include <QVariant>
 #include <chrono>
+#include <functional>
 
 #include <utils-cpp/default_ctor_ops.h>
 #include <utils-cpp/pimpl.h>
@@ -55,6 +56,8 @@ public:
     };
     Q_ENUM(CallDelayedMode)
 
+    using GUIDAnonymizer = std::function<QString(const QString&)>;
+
     static QmlUtils& instance();
     static void registerTypes();
 
@@ -81,6 +84,7 @@ public:
 
     // System info
     Q_INVOKABLE QString machineUniqueId() const;
+    void setMachineUniqueIdAnonymizer(const GUIDAnonymizer& anonymizer);
 
     // Path
     Q_INVOKABLE PathDetails analyzePath(const QString& str) const;

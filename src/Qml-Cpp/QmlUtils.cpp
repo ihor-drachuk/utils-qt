@@ -71,6 +71,7 @@ struct QmlUtils::impl_t
     int keyModifiers {};
     QJSEngine* jsEngine { nullptr };
     QVector<PendingCallInfo> pendingCalls;
+    GUIDAnonymizer machineUniqueIdAnonymizer;
 };
 
 
@@ -147,7 +148,17 @@ QString QmlUtils::getEnvironmentVariable(const QString& name) const
 
 QString QmlUtils::machineUniqueId() const
 {
-    return QSysInfo::machineUniqueId();
+    QString result = QString::fromLatin1(QSysInfo::machineUniqueId());
+
+    if (impl().machineUniqueIdAnonymizer)
+        result = impl().machineUniqueIdAnonymizer(result);
+
+    return result;
+}
+
+void QmlUtils::setMachineUniqueIdAnonymizer(const GUIDAnonymizer& anonymizer)
+{
+    impl().machineUniqueIdAnonymizer = anonymizer;
 }
 
 PathDetails QmlUtils::analyzePath(const QString& str) const
