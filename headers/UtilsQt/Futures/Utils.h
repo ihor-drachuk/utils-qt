@@ -32,13 +32,12 @@
 
    If T == void, then QFuture<Type> is converted to std::optional<std::monostate>.
 
- * onFinishedNP(QFuture<T>, context, handler);
+ * onFinishedNoParamNoExcept(QFuture<T>, context, handler);
 
    QFuture<Type>  -->  void  (always)
 
-   Similar to onFinished, but it doesn't call `QFuture::result()` internally and
-   doesn't pass it to handler. This is mitigation solution to work safely with
-   futures which contain exception.
+   Similar to onFinished, but doesn't call `QFuture::result()` internally,
+   so it's safe for futures that may contain an exception.
 
 
  * onResult(QFuture<T>, context, handler);
@@ -356,7 +355,7 @@ void onFinished(const QFuture<Type>& future,
 
 
 template<typename Type, typename Callable>
-void onFinishedNP(const QFuture<Type>& future,
+void onFinishedNoParamNoExcept(const QFuture<Type>& future,
                   QObject* context,
                   const Callable& callable,
                   Qt::ConnectionType connectionType = Qt::AutoConnection)

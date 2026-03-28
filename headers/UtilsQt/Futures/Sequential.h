@@ -448,7 +448,7 @@ public:
             QObject::connect(m_settings.context, &QObject::destroyed, this, [this](){ cancel(); });
 
         UtilsQt::onCancelNotified(m_promise.future(), this, [this](){ cancel(); });
-        UtilsQt::onFinishedNP(m_promise.future(), this, &QObject::deleteLater);
+        UtilsQt::onFinishedNoParamNoExcept(m_promise.future(), this, &QObject::deleteLater);
     }
 
     template<size_t I, typename... Args>
@@ -553,7 +553,7 @@ public:
                     }
                 };
 
-                UtilsQt::onFinishedNP(fResult, this, [this, futureToResult]() mutable {
+                UtilsQt::onFinishedNoParamNoExcept(fResult, this, [this, futureToResult]() mutable {
                     auto asyncResult = futureToResult();
                     call<I + 1>(std::move(asyncResult));
                 });

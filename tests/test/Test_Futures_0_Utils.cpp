@@ -644,20 +644,20 @@ TEST(UtilsQt, Futures_Utils_onCancelNotified)
     ASSERT_EQ(calls, 3);
 }
 
-TEST(UtilsQt, Futures_Utils_onFinishedNP)
+TEST(UtilsQt, Futures_Utils_onFinishedNoParamNoExcept)
 {
     QObject obj;
     int calls {};
 
-    UtilsQt::onFinishedNP(UtilsQt::createCanceledFuture<int>(), &obj, [&]() mutable {
+    UtilsQt::onFinishedNoParamNoExcept(UtilsQt::createCanceledFuture<int>(), &obj, [&]() mutable {
         calls++;
     });
 
-    UtilsQt::onFinishedNP(UtilsQt::createReadyFuture(QString("123")), &obj, [&]() mutable {
+    UtilsQt::onFinishedNoParamNoExcept(UtilsQt::createReadyFuture(QString("123")), &obj, [&]() mutable {
         calls++;
     });
 
-    UtilsQt::onFinishedNP(UtilsQt::createExceptionFuture<QString>(std::runtime_error("Test")), &obj, [&]() mutable {
+    UtilsQt::onFinishedNoParamNoExcept(UtilsQt::createExceptionFuture<QString>(std::runtime_error("Test")), &obj, [&]() mutable {
         calls++;
     });
 
