@@ -41,7 +41,7 @@ jobs:
          echo "CORES=$(nproc --all)" >> $GITHUB_ENV
          echo "WORKSPACE=$(pwd)" >> $GITHUB_ENV
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           path: ${{github.workspace}}/src
           submodules: true
@@ -98,7 +98,7 @@ jobs:
         with:
           arch: ${{ matrix.compiler_arch == 'Win32' && 'x86' || 'x64' }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           path: ${{github.workspace}}/src
           submodules: true
@@ -149,7 +149,7 @@ jobs:
         run: |
           echo "${{github.workspace}}/qt" >> $GITHUB_PATH
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           path: ${{github.workspace}}/src
           submodules: true
@@ -180,7 +180,7 @@ jobs:
          echo "WORKSPACE=$(pwd)" >> $GITHUB_ENV
 
       - name: "Check out repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: ${{github.workspace}}/src
           submodules: true
@@ -206,7 +206,7 @@ jobs:
           CodeChecker parse ./report -i build/skipfile.txt --trim-path-prefix "$(pwd)/src" > /dev/null && touch ./ccOK || true
 
       - name: "Upload the results"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: "CodeChecker report"
           path: ${{github.workspace}}/codechecker-reports
