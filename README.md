@@ -1,10 +1,10 @@
 <p align="center">
   <h1 align="center">utils-qt</h1>
   <p align="center">
-    <strong>Comprehensive Utility Library for Qt Applications</strong>
+    <strong>Extended Qt toolkit</strong>
   </p>
   <p align="center">
-    Modern C++17 utilities for async operations, QML integration, and model manipulation
+    Qt utilities for async operations, QML integration, and model manipulation
   </p>
 </p>
 
@@ -20,7 +20,6 @@
 
 ## Table of Contents
 
-- [Requirements](#requirements)
 - [Installation](#installation)
 - [Build Options](#build-options)
 - [Key Features](#key-features)
@@ -39,24 +38,9 @@
 
 ---
 
-## Requirements
-
-| Requirement | Version |
-|-------------|---------|
-| C++ Standard | C++17 |
-| CMake | 3.16+ |
-| Qt | 5.15+ or 6.x |
-| Compiler | GCC 9+, Clang 10+, or MSVC 2019+ |
-
-### Supported Platforms
-
-- **Windows** (MSVC 2019+)
-- **Linux** (GCC 9+, Clang 10+)
-- **macOS** (Apple Clang, M1/M2 supported)
-
----
-
 ## Installation
+
+The library depends on [utils-cpp](https://github.com/ihor-drachuk/utils-cpp), which is bundled as a submodule and built automatically.
 
 ### Option 1: FetchContent (Recommended)
 
@@ -84,14 +68,14 @@ target_link_libraries(your_target PRIVATE utils-qt)
 ### QML Registration
 
 ```cpp
-#include <UtilsQt/Qml/qml.h>
+#include <UtilsQt/qml.h>
 
 int main(int argc, char* argv[])
 {
     QGuiApplication app(argc, argv);
     QQmlApplicationEngine engine;
 
-    UtilsQt::Qml::registerAll(&engine);
+    UtilsQt::Qml::registerAll(engine);
 
     // ...
 }
@@ -107,6 +91,7 @@ int main(int argc, char* argv[])
 | `UTILS_QT_ENABLE_BENCHMARK` | OFF | Enable benchmarks |
 | `UTILS_QT_NO_GUI_TESTS` | OFF | Disable GUI-dependent tests |
 | `UTILS_QT_GTEST_SEARCH_MODE` | Auto | GTest search: Auto, Force, Skip |
+| `UTILS_QT_LONG_INTERVALS` | OFF | Enable long intervals in tests |
 
 ---
 
@@ -138,6 +123,24 @@ auto canceled = UtilsQt::createCanceledFuture<int>();
 auto timed = UtilsQt::createTimedFuture<QString>(1000, "Delayed result");
 ```
 
+**Sequential async chains** with cancellation support and mediator:
+
+```cpp
+#include <UtilsQt/Futures/Sequential.h>
+
+auto future = UtilsQt::Sequential(context)
+    .start([]() {
+        return fetchUserAsync();
+    })
+    .then([](const UtilsQt::AsyncResult<User>& result) {
+        return fetchDetailsAsync(result.value().id);
+    })
+    .then([](const UtilsQt::AsyncResult<Details>& result) {
+        return processAsync(result.value());
+    })
+    .execute();
+```
+
 **Merge multiple futures** with configurable cancellation behavior:
 
 ```cpp
@@ -166,7 +169,7 @@ auto merged = UtilsQt::mergeFuturesAll(this,
 // Transform future types
 auto intFuture = UtilsQt::convertFuture<QString, int>(
     context, stringFuture,
-    [](const QString& s) { return s.toInt(); }
+    [](const QString& s) -> std::optional<int> { return s.toInt(); }
 );
 ```
 
@@ -177,12 +180,13 @@ auto intFuture = UtilsQt::convertFuture<QString, int>(
 
 auto future = UtilsQt::createRetryingFuture(
     context,
-    []() { return fetchDataAsync(); },  // Async operation
-    [](const Data& d) {                  // Validator
-        return d.isValid() ? ValidationDecision::ResultIsValid :
-                             ValidationDecision::NeedRetry;
+    []() { return fetchDataAsync(); },    // Async operation
+    [](const std::optional<Data>& result) // Validator (nullopt if canceled)
+        -> UtilsQt::ValidatorDecision {
+        return result ? ValidatorDecision::ResultIsValid :
+                        ValidatorDecision::NeedRetry;
     },
-    5,    // Max retries
+    5,    // Max retries (or UtilsQt::RetryingFuture::UnlimitedCalls)
     1000  // Retry interval (ms)
 );
 ```
@@ -193,7 +197,21 @@ auto future = UtilsQt::createRetryingFuture(
 #include <UtilsQt/Futures/SignalToFuture.h>
 
 auto future = UtilsQt::signalToFuture(&object, &MyClass::dataReady);
-// Returns QFuture with signal argument type
+
+// With timeout
+auto future = UtilsQt::signalToFuture(&object, &MyClass::dataReady, context, 5000);
+```
+
+**Future broker** for transparent source replacement:
+
+```cpp
+#include <UtilsQt/Futures/Broker.h>
+
+UtilsQt::Broker<QString> broker;
+auto stableFuture = broker.future(); // Always valid, survives rebinds
+
+broker.rebind(fetchAsync());   // Bind to first source
+broker.rebind(fetchAsync());   // Transparently switch to new source
 ```
 
 ---
@@ -231,6 +249,20 @@ Item {
 
         // Size formatting
         var formatted = QmlUtils.sizeConv(1234567) // "1.2 MB"
+
+        // System info
+        var id = QmlUtils.machineUniqueId()
+        var qtVer = QmlUtils.qtVersion
+
+        // File operations
+        var files = QmlUtils.listFiles(path, ["*.txt"], true)
+
+        // Window state
+        var visible = QmlUtils.isWindowVisible(Window.window)
+        var foreground = QmlUtils.isWindowForeground(Window.window)
+
+        // Delayed calls
+        QmlUtils.callDelayed(this, function() { console.log("delayed") }, 100)
     }
 }
 ```
@@ -254,13 +286,13 @@ FileWatcher {
 **AugmentedModel** - Add calculated roles to existing models:
 
 ```cpp
-#include <UtilsQt/Qml-Cpp/AugmentedModel.h>
+#include <UtilsQt/AugmentedModel.h>
 
 AugmentedModel model;
 model.setSourceModel(sourceModel);
 model.addCalculatedRole("fullName", {"firstName", "lastName"},
-    [](const QVariantMap& data) {
-        return data["firstName"].toString() + " " + data["lastName"].toString();
+    [](const QVariantList& data) {
+        return data[0].toString() + " " + data[1].toString();
     });
 ```
 
@@ -347,7 +379,7 @@ UtilsQt::onProperty(
     &MyClass::status,
     &MyClass::statusChanged,
     Status::Ready,                           // Expected value
-    UtilsQt::OnProperty::Comparison::Equal,
+    UtilsQt::Comparison::Equal,
     true,                                    // Once
     context,
     []() { qDebug() << "Ready!"; },
@@ -358,33 +390,13 @@ UtilsQt::onProperty(
 // Or get a future instead
 auto future = UtilsQt::onPropertyFuture(
     object, &MyClass::status, &MyClass::statusChanged,
-    Status::Ready
+    Status::Ready, UtilsQt::Comparison::Equal, context
 );
 ```
 
 ---
 
 ### Data Conversion
-
-**Type-safe QVariant conversion:**
-
-```cpp
-#include <UtilsQt/qvariant_conv.h>
-
-QVariant var = getVariant();
-
-// Safe loading with checks
-int value;
-if (UtilsQt::load(var, value, UtilsQt::Check_Type)) {
-    // value is valid
-}
-
-// Or with optional
-auto opt = UtilsQt::load<double>(var, UtilsQt::Check_ConvResult);
-if (opt) {
-    double d = *opt;
-}
-```
 
 **Enum utilities:**
 
@@ -394,10 +406,10 @@ if (opt) {
 enum class Color { Red, Green, Blue };
 Q_ENUM(Color)
 
-auto str = UtilsQt::toString(Color::Red);        // "Red"
-auto val = UtilsQt::fromString<Color>("Green");  // Color::Green
-auto names = UtilsQt::allNames<Color>();         // {"Red", "Green", "Blue"}
-bool valid = UtilsQt::isValid<Color>(value);
+auto str = Enum::toString(Color::Red);        // "Red"
+auto val = Enum::fromString<Color>("Green");  // Color::Green
+auto names = Enum::allNames<Color>();         // {"Red", "Green", "Blue"}
+bool valid = Enum::isValid<Color>(value);
 ```
 
 ---
@@ -411,20 +423,20 @@ Comprehensive JSON structure validation:
 
 using namespace UtilsQt::JsonValidator;
 
-Logger logger;
-bool valid = check(jsonValue, logger,
-    Object {
-        {"name", String{}},
-        {"age", Integer{}},
-        {"email", Optional{String{}}},
-        {"tags", Array{String{}}}
-    }
+auto validator = RootValidator(
+    Object(
+        Field("name", String()),
+        Field("age", Integer()),
+        Field("email", Optional, String()),
+        Field("tags", Array(String()))
+    )
 );
 
-if (!valid) {
-    for (const auto& error : logger.errors()) {
-        qWarning() << error;
-    }
+ErrorInfo errorInfo;
+bool valid = validator->check(errorInfo, jsonValue);
+
+if (errorInfo.hasError()) {
+    qWarning() << errorInfo.toString();
 }
 ```
 
@@ -463,26 +475,53 @@ TextField {
 
 | Header | Description |
 |--------|-------------|
-| `Futures/Utils.h` | Core utilities: `onFinished`, `onResult`, `onCanceled`, `Promise`, `createReadyFuture`, `createTimedFuture` |
+| `Futures/Utils.h` | Core: `onFinished`, `onResult`, `onCanceled`, `onFinishedNoParamNoExcept`, `onCancelNotified`, `Promise`, `createReadyFuture`, `createTimedFuture`, `createExceptionFuture`, `getFutureState`, `hasResult` |
+| `Futures/Sequential.h` | Sequential async chains: `Sequential`, `AsyncResult`, `Awaitables`, `SequentialMediator` |
+| `Futures/Broker.h` | Future proxy: `Broker<T>` for transparent QFuture replacement |
 | `Futures/Merge.h` | Combine futures: `mergeFuturesAll`, `mergeFuturesAny` |
 | `Futures/Converter.h` | Transform futures: `convertFuture` |
-| `Futures/RetryingFuture.h` | Auto-retry: `createRetryingFuture` |
-| `Futures/SignalToFuture.h` | Signal conversion: `signalToFuture` |
+| `Futures/RetryingFuture.h` | Auto-retry: `createRetryingFuture`, `createRetryingFutureRR` |
+| `Futures/SignalToFuture.h` | Signal-to-future conversion with optional timeout |
+| `Futures/Traits.h` | Type traits: `IsQFuture`, `QFutureUnwrap` |
 
 ### QML-Cpp Module
 
 | Component | Description |
 |-----------|-------------|
-| `QmlUtils` | Singleton with clipboard, path, image, color utilities |
+| `QmlUtils` | Singleton: clipboard, path, image, color, system info, delayed calls |
 | `FileWatcher` | Monitor file changes |
 | `PathElider` | Elide long paths for display |
 | `AugmentedModel` | Add calculated roles to models |
 | `MergedListModel` | Join two models by key |
 | `PlusOneProxyModel` | Add artificial rows |
 | `ListModelItemProxy` | Track single item |
+| `ListModelTools` | Read model data, bulk collection via `collectData` / `collectDataByRoles` |
 | `Multibinding` | Synchronize multiple properties |
 | `NumericalValidator` | Numeric input validation |
 | `Geometry` | Polygon operations |
+| `SteadyTimer` | Monotonic timer (immune to system clock changes) |
+| `FilterBehavior` | QML property interceptor with delay and conditional filtering |
+| `PropertyInterceptor` | Property interceptor with before/after update signals |
+| `ValueSequenceWatcher` | Detect specific value change sequences with timing |
+| `MaskInverter` | Invert hit-test area of child items |
+| `MaskInvertedRoundedRect` | Inverted rounded-rectangle hit-test mask |
+
+### QML Components
+
+| Component | Description |
+|-----------|-------------|
+| `DisabledVis` | Disabled state visual overlay |
+| `GrainEffect` | Film grain shader effect |
+| `Assert` | QML assertion helper |
+| `Rectangle2` | Enhanced rectangle |
+| `Repeater2` | Enhanced repeater |
+
+### Image Providers
+
+| Provider | Description |
+|----------|-------------|
+| `ImageProviderScaled` | Scaled image provider with caching |
+| `ImageProviderBorderImage` | Border image provider with stretch/tile fill modes |
 
 ### Core Utilities
 
@@ -490,10 +529,16 @@ TextField {
 |--------|-------------|
 | `qvariant_conv.h` | Type-safe QVariant conversion |
 | `enum_utils.h` | Enum serialization utilities |
-| `JsonValidator.h` | JSON structure validation |
+| `JsonValidator.h` | JSON structure validation (`ErrorInfo`, `LoggedErrorInfo`) |
 | `OnProperty.h` | Property change monitoring |
 | `Multicontext.h` | Shared lifetime management |
 | `dpitools.h` | DPI/scaling configuration |
+| `SetterWithDeferredSignal.h` | Set values first, emit signals at scope exit |
+| `StdinListener.h` | Qt-wrapped stdin listener |
+| `invoke_method.h` | Cross-Qt-version `invokeMethod` wrapper |
+| `convertcontainer.h` | Qt container conversion helpers |
+| `qvariant_traits.h` | QVariant type inspection utilities |
+| `qvariant_migration.h` | Qt5/Qt6 QVariant compatibility layer |
 
 ---
 
@@ -510,4 +555,3 @@ Copyright (c) 2018-2026 Ihor Drachuk
 **Ihor Drachuk** — [ihor-drachuk-libs@pm.me](mailto:ihor-drachuk-libs@pm.me)
 
 [GitHub](https://github.com/ihor-drachuk/utils-qt)
-
