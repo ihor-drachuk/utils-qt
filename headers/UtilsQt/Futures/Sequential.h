@@ -316,14 +316,19 @@ public:
 private: // For Executor
     void cancel()
     {
-        std::lock_guard lock(m_data->mutex);
+        decltype(m_data->handlers) handlersCopy;
 
-        if (m_data->cancelRequested)
-            return;
+        {
+            std::lock_guard lock(m_data->mutex);
 
-        m_data->cancelRequested = true;
+            if (m_data->cancelRequested)
+                return;
 
-        for (const auto& [_, handler] : m_data->handlers)
+            m_data->cancelRequested = true;
+            handlersCopy = m_data->handlers;
+        }
+
+        for (const auto& [_, handler] : handlersCopy)
             handler();
     }
 
