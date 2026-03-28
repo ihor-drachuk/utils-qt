@@ -563,7 +563,7 @@ template<typename T>
     return Promise<T>(true).finish(value).future();
 }
 
-[[nodiscard]] static QFuture<void> createReadyFuture()
+[[nodiscard]] inline QFuture<void> createReadyFuture()
 {
     return Promise<void>(true).finish().future();
 }
@@ -621,7 +621,7 @@ template<typename T>
     return promise.future();
 }
 
-[[nodiscard]] static inline QFuture<void> createTimedFuture(int time, QObject* ctx = nullptr)
+[[nodiscard]] inline QFuture<void> createTimedFuture(int time, QObject* ctx = nullptr)
 {
     if (!time)
         return createReadyFuture();

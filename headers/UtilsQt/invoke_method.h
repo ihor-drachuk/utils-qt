@@ -11,16 +11,9 @@ namespace UtilsQt {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 
 template<typename Callable>
-void invokeMethod(QObject* context, const Callable& callable, Qt::ConnectionType connectionType = Qt::AutoConnection)
-{
-    const auto c = callable;
-    QMetaObject::invokeMethod(context, std::move(callable), connectionType);
-}
-
-template<typename Callable>
 void invokeMethod(QObject* context, Callable&& callable, Qt::ConnectionType connectionType = Qt::AutoConnection)
 {
-    QMetaObject::invokeMethod(context, callable, connectionType);
+    QMetaObject::invokeMethod(context, std::forward<Callable>(callable), connectionType);
 }
 
 template<typename Obj,
