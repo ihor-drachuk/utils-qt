@@ -78,11 +78,6 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: "Set env values"
-        shell: bash
-        run: |
-          echo "CORES=$NUMBER_OF_PROCESSORS" >> $GITHUB_ENV
-
       - name: Install Qt
         if: ${{ matrix.qt != 'qt_no' }}
         uses: jurplel/install-qt-action@v4
@@ -95,11 +90,13 @@ jobs:
           cache: true
           setup-python: true
 
-      - name: "Add Qt to PATH"
-        if: ${{ matrix.qt != 'qt_no' }}
-        shell: bash
-        run: |
-          echo "${{github.workspace}}/qt" >> $GITHUB_PATH
+      - name: Install Ninja
+        run: choco install ninja -y
+
+      - name: Setup MSVC environment
+        uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: ${{ matrix.compiler_arch == 'Win32' && 'x86' || 'x64' }}
 
       - uses: actions/checkout@v4
         with:
@@ -110,8 +107,8 @@ jobs:
         working-directory: ${{github.workspace}}
         shell: bash
         run: |
-          cmake -DUTILS_QT_LONG_INTERVALS=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -A "${{matrix.compiler_arch}}" -G "Visual Studio 17 2022" -S "./src" -B "./build"
-          cmake --build "./build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
+          cmake -DUTILS_QT_LONG_INTERVALS=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Ninja" -S "./src" -B "./build"
+          cmake --build "./build" --config "${{matrix.build_type}}"
           cd ./build/tests
           ctest --no-tests=error --rerun-failed --output-on-failure --timeout 45 -C "${{matrix.build_type}}"
 
