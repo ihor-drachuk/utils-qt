@@ -5,6 +5,7 @@ option(UTILS_QT_ENABLE_TESTS     "utils-qt: Enable tests" OFF)
 option(UTILS_QT_ENABLE_BENCHMARK "utils-qt: Enable benchmark" OFF)
 option(UTILS_QT_NO_GUI_TESTS     "utils-qt: Disable GUI tests" OFF)
 option(UTILS_QT_LONG_INTERVALS   "utils-qt: Enable long intervals in tests" OFF)
+option(UTILS_QT_WERROR           "utils-qt: Treat warnings as errors" OFF)
 
 set(UTILS_QT_GTEST_SEARCH_MODE "Auto" CACHE STRING "utils-qt: Set GTest search mode")
 set_property(CACHE UTILS_QT_GTEST_SEARCH_MODE PROPERTY STRINGS "Auto" "Force" "Skip")
@@ -34,14 +35,18 @@ set_property(TARGET utils-qt PROPERTY AUTORCC ON)
 if(MSVC)
     target_link_options(utils-qt PRIVATE "/ignore:4221")
     set_target_properties(utils-qt PROPERTIES STATIC_LIBRARY_OPTIONS "/ignore:4221")
-    target_compile_options(utils-qt PRIVATE "/WX")
+    if(UTILS_QT_WERROR)
+        target_compile_options(utils-qt PRIVATE "/WX")
+    endif()
 
     # MSVC 2022 + Qt5 + QVector::operator== warning mitigation
     if(Qt5_FOUND AND MSVC_VERSION GREATER_EQUAL 1929)
         target_compile_definitions(utils-qt PUBLIC _SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS=1 _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING=1)
     endif()
 else()
-    target_compile_options(utils-qt PRIVATE "-Werror")
+    if(UTILS_QT_WERROR)
+        target_compile_options(utils-qt PRIVATE "-Werror")
+    endif()
 endif()
 
 # --- System detection ---

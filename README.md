@@ -90,6 +90,7 @@ int main(int argc, char* argv[])
 | `UTILS_QT_ENABLE_TESTS` | OFF | Enable unit tests |
 | `UTILS_QT_ENABLE_BENCHMARK` | OFF | Enable benchmarks |
 | `UTILS_QT_NO_GUI_TESTS` | OFF | Disable GUI-dependent tests |
+| `UTILS_QT_WERROR` | OFF | Treat warnings as errors |
 | `UTILS_QT_GTEST_SEARCH_MODE` | Auto | GTest search: Auto, Force, Skip |
 | `UTILS_QT_LONG_INTERVALS` | OFF | Enable long intervals in tests |
 
