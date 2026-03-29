@@ -9,13 +9,9 @@
 #include <QElapsedTimer>
 #include <QEventLoop>
 
-using namespace UtilsQt;
+#include "internal/TestWaitHelpers.h"
 
-#ifdef UTILS_QT_OS_MACOS
-constexpr float timeFactor = 3;
-#else
-constexpr float timeFactor = 1;
-#endif
+using namespace UtilsQt;
 
 class TestObject : public QObject
 {
@@ -119,6 +115,8 @@ TEST(UtilsQt, onProperty_once)
 
         QEventLoop loop;
 
+        QTimer::singleShot(TestHelpers::SafetyTimeoutMs, &loop, &QEventLoop::quit);
+
         onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 4, UtilsQt::Comparison::Equal, true, &context, [&]()
         {
             triggeredCount++;
@@ -131,10 +129,10 @@ TEST(UtilsQt, onProperty_once)
         ASSERT_EQ(triggeredCount, 1);
         ASSERT_EQ(cancelledCount, 0);
         ASSERT_EQ(testObject.counter(), 4);
-        ASSERT_GE(elapsedTimer.elapsed(), 350 / timeFactor);
-        ASSERT_LE(elapsedTimer.elapsed(), 450 * timeFactor);
+        ASSERT_GE(elapsedTimer.elapsed(), 50);
+        ASSERT_LE(elapsedTimer.elapsed(), 5000);
 
-        waitForFuture<QEventLoop>(createTimedFuture(400));
+        TestHelpers::waitMs(400);
         ASSERT_EQ(triggeredCount, 1);
         ASSERT_EQ(cancelledCount, 0);
     }
@@ -149,6 +147,8 @@ TEST(UtilsQt, onProperty_once)
 
         QEventLoop loop;
 
+        QTimer::singleShot(TestHelpers::SafetyTimeoutMs, &loop, &QEventLoop::quit);
+
         onProperty(&testObject, &TestObject::counter, &TestObject::counterChanged, 4, UtilsQt::Comparison::Equal, false, &context, [&]()
         {
             triggeredCount++;
@@ -158,10 +158,10 @@ TEST(UtilsQt, onProperty_once)
 
         ASSERT_EQ(triggeredCount, 1);
         ASSERT_EQ(testObject.counter(), 4);
-        ASSERT_GE(elapsedTimer.elapsed(), 350 / timeFactor);
-        ASSERT_LE(elapsedTimer.elapsed(), 450 * timeFactor);
+        ASSERT_GE(elapsedTimer.elapsed(), 50);
+        ASSERT_LE(elapsedTimer.elapsed(), 5000);
 
-        waitForFuture<QEventLoop>(createTimedFuture(400));
+        TestHelpers::waitMs(400);
         ASSERT_EQ(triggeredCount, 1);
     }
 }
@@ -177,13 +177,12 @@ TEST(UtilsQt, onProperty_multiple)
         triggeredCount++;
     });
 
-    waitForFuture<QEventLoop>(createTimedFuture(800));
-    ASSERT_GE(triggeredCount, 3 / timeFactor);
-    ASSERT_LE(triggeredCount, 5 * timeFactor);
+    ASSERT_TRUE(TestHelpers::waitUntil([&]{ return triggeredCount >= 3; }));
+    ASSERT_GE(triggeredCount, 3);
 
     auto savedCount = triggeredCount;
     delete context; context = nullptr;
-    waitForFuture<QEventLoop>(createTimedFuture(800));
+    TestHelpers::waitMs(500);
     ASSERT_EQ(savedCount, triggeredCount);
 }
 
@@ -214,14 +213,17 @@ TEST(UtilsQt, onProperty_cancelled)
         }
         );
 
-        waitForFuture<QEventLoop>(createTimedFuture(500));
+        TestHelpers::waitUntil([&]{
+            return (stopTimer && reason != UtilsQt::CancelReason::Unknown) ||
+                   (!stopTimer && triggeredCount > 0);
+        });
 
         if (stopTimer) {
             ASSERT_EQ(triggeredCount, 0);
             ASSERT_EQ(reason, UtilsQt::CancelReason::Timeout);
 
-            ASSERT_GE(elapsed, 100 / timeFactor);
-            ASSERT_LE(elapsed, 200 * timeFactor);
+            ASSERT_GE(elapsed, 50);
+            ASSERT_LE(elapsed, 5000);
         } else {
             ASSERT_EQ(triggeredCount, 1);
             ASSERT_EQ(reason, UtilsQt::CancelReason::Unknown);

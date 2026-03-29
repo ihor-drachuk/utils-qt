@@ -13,13 +13,9 @@
 #include <UtilsQt/Futures/Utils.h>
 #include <UtilsQt/Qml-Cpp/FileWatcher.h>
 
-using namespace UtilsQt;
+#include "internal/TestWaitHelpers.h"
 
-#ifdef UTILS_QT_OS_MACOS
-constexpr int WaitTime = 1000;
-#else
-constexpr int WaitTime = 100;
-#endif
+using namespace UtilsQt;
 
 TEST(UtilsQt, FileWatcher_Basic)
 {
@@ -81,14 +77,14 @@ TEST(UtilsQt, FileWatcher_Basic)
 
         f.write("b");
         f.close();
-        waitForFuture<QEventLoop>(createTimedFuture(WaitTime));
+        ASSERT_TRUE(TestHelpers::waitUntil([&]{ return spy.size() >= 4; }));
         ASSERT_TRUE(fw.fileExists());
         ASSERT_TRUE(fw.hasAccess());
         ASSERT_EQ(fw.size(), 2);
         ASSERT_EQ(spy.size(), 4);
 
         QFile::remove(fullPath);
-        waitForFuture<QEventLoop>(createTimedFuture(WaitTime));
+        ASSERT_TRUE(TestHelpers::waitUntil([&]{ return spy.size() >= 5; }));
 
         ASSERT_FALSE(fw.fileExists());
         ASSERT_FALSE(fw.hasAccess());
@@ -97,7 +93,7 @@ TEST(UtilsQt, FileWatcher_Basic)
 
         f.open(QIODevice::WriteOnly);
         f.close();
-        waitForFuture<QEventLoop>(createTimedFuture(WaitTime));
+        ASSERT_TRUE(TestHelpers::waitUntil([&]{ return spy.size() >= 6; }));
 
         ASSERT_TRUE(fw.fileExists());
         ASSERT_TRUE(fw.hasAccess());

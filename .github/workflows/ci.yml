@@ -54,7 +54,7 @@ jobs:
         run: |
           GTEST_SEARCH_MODE=$([[ "${{ matrix.test_libs }}" == "tl_missing" ]] && echo "Skip" || echo "Force")
 
-          cmake -DUTILS_QT_LONG_INTERVALS=ON -DUTILS_QT_NO_GUI_TESTS=ON -DUTILS_QT_WERROR=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DUTILS_QT_GTEST_SEARCH_MODE:STRING=$GTEST_SEARCH_MODE -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Unix Makefiles" -S "./src" -B "./build"
+          cmake -DUTILS_QT_NO_GUI_TESTS=ON -DUTILS_QT_WERROR=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DUTILS_QT_GTEST_SEARCH_MODE:STRING=$GTEST_SEARCH_MODE -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Unix Makefiles" -S "./src" -B "./build"
           cmake --build "./build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
           cd ./build/tests
           ctest --no-tests=error --rerun-failed --output-on-failure --timeout 45 -C "${{matrix.build_type}}"
@@ -107,7 +107,7 @@ jobs:
         working-directory: ${{github.workspace}}
         shell: bash
         run: |
-          cmake -DUTILS_QT_LONG_INTERVALS=ON -DUTILS_QT_WERROR=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Ninja" -S "./src" -B "./build"
+          cmake -DUTILS_QT_WERROR=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Ninja" -S "./src" -B "./build"
           cmake --build "./build" --config "${{matrix.build_type}}"
           cd ./build/tests
           ctest --no-tests=error --rerun-failed --output-on-failure --timeout 45 -C "${{matrix.build_type}}"
@@ -158,7 +158,7 @@ jobs:
         working-directory: ${{github.workspace}}
         shell: bash
         run: |
-          cmake -DCMAKE_OSX_ARCHITECTURES=x86_64 -DUTILS_QT_LONG_INTERVALS=ON -DUTILS_QT_WERROR=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Unix Makefiles" -S "./src" -B "./build"
+          cmake -DCMAKE_OSX_ARCHITECTURES=x86_64 -DUTILS_QT_WERROR=ON -DUTILS_QT_ENABLE_TESTS=ON -DUTILS_QT_ENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE="${{matrix.build_type}}" -G "Unix Makefiles" -S "./src" -B "./build"
           cmake --build "./build" --config "${{matrix.build_type}}" -j "${{env.CORES}}"
           cd ./build/tests
           ctest --no-tests=error --rerun-failed --output-on-failure --timeout 180 -C "${{matrix.build_type}}"
